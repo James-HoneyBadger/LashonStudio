@@ -10,13 +10,14 @@ pub(crate) enum Val {
 
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Ast {
-    // Kept for parity with the Python AST contract; the JSON form omits it.
-    #[allow(dead_code)]
     pub node_type: String,
     pub value: Option<Value>,
     pub children: Vec<Ast>,
     pub line: usize,
     pub column: usize,
+    /// Source slice for the node, matching the Python AST contract. The JSON
+    /// form omits it, so the Rust core does not read it back.
+    #[allow(dead_code)]
     pub source_text: String,
 }
 

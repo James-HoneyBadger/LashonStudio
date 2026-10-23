@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""
-Visual Configuration Editor for Honey Badger LCS
+"""Visual configuration editor (Tk).
 
-Provides a simple GUI to edit keyword mappings and functions.
-Integrates with the IDE via Language → Tools → Visual Config Editor.
+A small GUI for editing keyword mappings and functions. It lives in the IDE
+package because it is a widget, not part of the config model.
 """
+
+from __future__ import annotations
+
 import tkinter as tk
 from tkinter import messagebox, ttk
 from typing import Callable, Optional
 
-from .language_config import KeywordMapping, LanguageConfig
+from parsercraft.config.language_config import KeywordMapping, LanguageConfig
 
 
 class VisualConfigEditor(ttk.Frame):

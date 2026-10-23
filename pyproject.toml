@@ -58,6 +58,8 @@ codex = "codex.codex:main"
 include-package-data = true
 
 [tool.setuptools.packages.find]
+include = ["parsercraft*"]
+namespaces = false
 where = ["src"]
 
 [tool.setuptools.dynamic]

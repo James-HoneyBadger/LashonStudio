@@ -56,8 +56,21 @@ Documentation
 __version__ = "4.0.0"
 __author__ = "James-HoneyBadger"
 
-# Backward-compatible top-level imports
-from parsercraft.config.language_config import LanguageConfig
-from parsercraft.runtime.language_runtime import LanguageRuntime
-
 __all__ = ["LanguageConfig", "LanguageRuntime"]
+
+
+def __getattr__(name: str):
+    """Import compatibility shims lazily so ``import parsercraft`` stays cheap."""
+    if name == "LanguageConfig":
+        from parsercraft.config.language_config import LanguageConfig
+
+        return LanguageConfig
+    if name == "LanguageRuntime":
+        from parsercraft.runtime.language_runtime import LanguageRuntime
+
+        return LanguageRuntime
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    return sorted(__all__)

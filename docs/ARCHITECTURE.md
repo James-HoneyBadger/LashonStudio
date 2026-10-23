@@ -62,7 +62,6 @@ the PEG path.
 | `runtime/stdlib.py` | `StdLib`, `StdModule`, builtins and module tables |
 | `runtime/ffi.py` | `FFIBridge` (ctypes + Python bindings) |
 | `runtime/module_system.py` | `ModuleManager`, import/export parsing, dependency graph |
-| `runtime/interpreter_generator.py` | packages an interpreter for CodeEx |
 | `tooling/cli.py` | argument parser and command registry (`main()`) |
 | `tooling/commands/config.py` | create/validate/info/export/import/convert/diff/update/delete/list-presets |
 | `tooling/commands/execution.py` | REPL, batch, test harness, translation helpers |
@@ -75,7 +74,6 @@ the PEG path.
 | `tooling/lsp/lsp_server.py` | `LSPServer`, `DocumentManager`, stdio loop, grammar-aware diagnostics |
 | `tooling/lsp/grammar_index.py` | PEG rule index: hover, definition, references, rename, symbols |
 | `tooling/lsp/lsp_advanced.py` | refactoring, formatting, semantic highlighting |
-| `tooling/lsp/lsp_integration.py` | feature integration layer |
 | `tooling/debug/debug_adapter.py` | `Debugger`, `DebugAdapter`, safe expression evaluator |
 | `tooling/debug/dap_server.py` | TCP DAP server with source-mapped execution, breakpoints, stepping |
 | `tooling/error_localization.py` | `ErrorLocalizer` and the English catalog |

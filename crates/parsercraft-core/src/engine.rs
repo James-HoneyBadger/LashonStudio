@@ -540,6 +540,35 @@ fn class_matches(class: &str, ch: char) -> bool {
 /// Outcome of a parse: either the JSON AST document or an error tuple.
 pub type ParseOutcome = Result<String, (String, usize, String)>;
 
+/// Parse and return the AST value (no JSON encoding).
+pub fn parse_to_ast(grammar: &Grammar, source: &str) -> Result<Ast, (String, usize, String)> {
+    let mut engine = Engine::new(grammar, source).map_err(|error| (error, 0, String::new()))?;
+    let start = grammar.start.clone();
+    let result = engine.match_rule(&start, 0);
+
+    if !result.ok {
+        let message = engine.error_message();
+        return Err((message, engine.max_pos, engine.max_rule.clone()));
+    }
+    let trailing = engine.skip_ignored(result.pos);
+    let rest: String = engine.chars[trailing.min(engine.chars.len())..]
+        .iter()
+        .collect();
+    if !rest.trim().is_empty() {
+        let (line, column) = engine.line_col(trailing);
+        let context: String = rest.trim().chars().take(30).collect();
+        return Err((
+            format!("Unexpected input at line {line}, column {column}: '{context}'"),
+            trailing,
+            String::new(),
+        ));
+    }
+    Ok(match result.node {
+        Some(Val::Ast(ast)) => ast,
+        _ => Ast { node_type: start, ..Default::default() },
+    })
+}
+
 pub fn parse_document(grammar: &Grammar, source: &str) -> ParseOutcome {
     let mut engine = Engine::new(grammar, source).map_err(|error| (error, 0, String::new()))?;
     let start = grammar.start.clone();

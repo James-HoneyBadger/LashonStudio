@@ -3,13 +3,13 @@
 use serde_json::Value;
 
 #[derive(Clone, Debug)]
-pub(crate) enum Val {
+pub enum Val {
     Ast(Ast),
     Text(String),
 }
 
 #[derive(Clone, Debug, Default)]
-pub(crate) struct Ast {
+pub struct Ast {
     pub node_type: String,
     pub value: Option<Value>,
     pub children: Vec<Ast>,
@@ -21,7 +21,7 @@ pub(crate) struct Ast {
     pub source_text: String,
 }
 
-pub(crate) fn write_ast(ast: &Ast, out: &mut String) {
+pub fn write_ast(ast: &Ast, out: &mut String) {
     out.push_str("{\"type\":");
     out.push_str(&json_string(&ast.node_type));
     out.push_str(",\"value\":");

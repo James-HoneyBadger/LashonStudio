@@ -29,6 +29,11 @@ All notable changes to ParserCraft. This project follows
 
 ### Added
 
+- **C backend in Rust** (`crates/parsercraft-core/src/backends/c.rs`): emits
+  assignments, prints, functions, `if`/`else`, `while`, returns, and arithmetic;
+  `parsercraft-rs codegen-c ... [--compile] [--run]` builds and runs a program
+  with no Python installed. All three Aurora samples produce byte-identical
+  program output to the Python backend.
 - **Rust core crate** (`crates/parsercraft-core`): the PEG grammar model, PEG
   text-notation parser, packrat engine, and AST JSON writer, plus PyO3
   bindings behind an optional `python` feature.

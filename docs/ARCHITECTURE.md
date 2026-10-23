@@ -281,7 +281,8 @@ crates/parsercraft-cli/     `parsercraft-rs` binary
 | PEG text parsing, matching, AST | Rust (`parsercraft-core`) | done, conformance-checked |
 | Python bindings | PyO3, loaded by `parsercraft.parser.native` | done, opt-in via `backend="auto"` |
 | `parsercraft-rs validate / rules / ast / parse` | Rust | done |
-| Transpiler + C/WASM/LLVM backends | Python only | **not ported** |
+| C backend | Rust (`backends/c.rs`), output verified against the Python backend | done |
+| Transpiler + WASM/LLVM backends | Python only | **not ported** |
 | CLI, LSP, DAP, Studio, packaging | Python only | **not ported** |
 
 That split is deliberate: the core is where a native implementation pays for

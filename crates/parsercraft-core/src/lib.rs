@@ -8,11 +8,20 @@
 //!   (`parsercraft_native`), which `parsercraft.parser.native` loads.
 
 pub mod ast;
+pub mod backends;
 pub mod engine;
 pub mod grammar;
 
 pub use grammar::{parse_peg_text, Grammar, Pattern, Rule};
-pub use engine::parse_document;
+pub use ast::Ast;
+pub use engine::{parse_document, parse_to_ast};
+
+/// Generate C source for a program.
+pub fn generate_c(grammar_text: &str, source: &str) -> Result<String, String> {
+    let grammar = parse_peg_text(grammar_text)?;
+    let ast = parse_to_ast(&grammar, source).map_err(|(message, _, _)| message)?;
+    Ok(backends::c::generate_c(&ast))
+}
 
 /// Parse ``source`` with PEG text notation, returning the JSON AST document.
 pub fn parse_text(grammar_text: &str, source: &str) -> Result<String, String> {

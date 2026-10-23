@@ -7,7 +7,7 @@
 use std::path::Path;
 use std::process::ExitCode;
 
-use parsercraft_core::{parse_document, parse_peg_text};
+use parsercraft_core::{generate_c, parse_document, parse_peg_text};
 
 const USAGE: &str = "\
 parsercraft-rs — Rust core front end
@@ -17,6 +17,7 @@ usage:
   parsercraft-rs rules <grammar.peg>
   parsercraft-rs ast <grammar.peg> <program>
   parsercraft-rs parse <grammar.peg> <program>
+  parsercraft-rs codegen-c <grammar.peg> <program> [-o out.c] [--compile] [--run]
   parsercraft-rs version
 ";
 
@@ -33,6 +34,7 @@ fn main() -> ExitCode {
         "rules" => rules(args.get(1)),
         "ast" => ast(args.get(1), args.get(2)),
         "parse" => parse(args.get(1), args.get(2)),
+        "codegen-c" => codegen_c(&args[1..]),
         "help" | "--help" | "-h" | "" => {
             print!("{USAGE}");
             Ok(())
@@ -162,4 +164,68 @@ fn count_nodes(value: &serde_json::Value) -> usize {
         .and_then(serde_json::Value::as_array)
         .map(|children| children.iter().map(count_nodes).sum())
         .unwrap_or(0)
+}
+
+
+fn codegen_c(args: &[String]) -> Result<(), String> {
+    let grammar_path = args.first().ok_or("missing grammar path")?;
+    let program_path = args.get(1).ok_or("missing program path")?;
+    let mut output = program_path.trim_end_matches(".aur").to_string() + ".c";
+    let mut compile = false;
+    let mut run = false;
+
+    let mut index = 2;
+    while index < args.len() {
+        match args[index].as_str() {
+            "-o" | "--output" => {
+                index += 1;
+                output = args
+                    .get(index)
+                    .ok_or("missing value for --output")?
+                    .clone();
+            }
+            "--compile" => compile = true,
+            "--run" => {
+                compile = true;
+                run = true;
+            }
+            other => return Err(format!("unknown option '{other}'")),
+        }
+        index += 1;
+    }
+
+    let grammar_text = std::fs::read_to_string(grammar_path)
+        .map_err(|error| format!("cannot read {grammar_path}: {error}"))?;
+    let source = std::fs::read_to_string(program_path)
+        .map_err(|error| format!("cannot read {program_path}: {error}"))?;
+
+    let code = generate_c(&grammar_text, &source)?;
+    std::fs::write(&output, &code).map_err(|error| format!("cannot write {output}: {error}"))?;
+    println!("wrote {output} ({} lines)", code.lines().count());
+
+    if compile {
+        let binary = output.trim_end_matches(".c").to_string() + ".out";
+        let status = std::process::Command::new("cc")
+            .args(["-std=c99", "-O1", "-o", &binary, &output])
+            .status()
+            .map_err(|error| format!("cannot run cc: {error}"))?;
+        if !status.success() {
+            return Err(format!("cc failed for {output}"));
+        }
+        println!("compiled {binary}");
+        if run {
+            let executable = if binary.contains('/') {
+                binary.clone()
+            } else {
+                format!("./{binary}")
+            };
+            let status = std::process::Command::new(&executable)
+                .status()
+                .map_err(|error| format!("cannot run {binary}: {error}"))?;
+            if !status.success() {
+                return Err(format!("{binary} exited with {status}"));
+            }
+        }
+    }
+    Ok(())
 }

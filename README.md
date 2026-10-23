@@ -59,7 +59,7 @@ Start with a grammar. Get a working language. Ship it anywhere.
 | **Grammar** | PEG with ordered choice, sequences, quantifiers (`*`,`+`,`?`), and predicate operators |
 | **Parsing** | Packrat memoization for O(n) guaranteed parse time; built-in `NUMBER`, `IDENT`, `STRING` tokens |
 | **Architecture** | Enforced layering (core → app → adapters) with import contracts, no cycles, lazy package imports, `parsercraft.ast` as the single AST contract |
-| **Rust core** | Grammar model, PEG text parser, and packrat engine also exist in Rust (`crates/`), conformance-checked against the Python engine and usable standalone via `parsercraft-rs` (`validate`, `rules`, `ast`, `parse`) |
+| **Rust core** | Grammar model, PEG text parser, and packrat engine also exist in Rust (`crates/`), conformance-checked against the Python engine and usable standalone via `parsercraft-rs` (`validate`, `rules`, `ast`, `parse`, `codegen-c --run`) |
 | **Incremental** | `IncrementalParser` re-parses only changed regions — suitable for real-time IDE use |
 | **Backends** | Python transpiler, ANSI C (with `main()`), WebAssembly Text (WAT), LLVM IR (SSA) |
 | **Config** | YAML/JSON language definitions with keyword remapping, custom functions, syntax toggles |

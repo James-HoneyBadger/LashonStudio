@@ -176,3 +176,139 @@ class TestStdioDispatch:
             "method": "workspace/didChangeConfiguration",
             "params": {},
         }) is None
+
+
+class TestGrammarDiagnostics:
+    """Diagnostics produced by parsing against the project grammar."""
+
+    AURORA = (
+        "program       <- statement+\n"
+        "statement     <- print_stmt / assignment\n"
+        "print_stmt    <- 'print' expr ';'\n"
+        "assignment    <- IDENT '=' expr ';'\n"
+        "expr          <- term (('+' / '-') term)*\n"
+        "term          <- NUMBER / IDENT\n"
+    )
+
+    @staticmethod
+    def _server():
+        from parsercraft.parser.grammar import GrammarParser
+
+        grammar = GrammarParser().parse(TestGrammarDiagnostics.AURORA)
+        return LSPServer(LanguageConfig(), grammar=grammar)
+
+    def test_valid_document_has_no_grammar_error(self):
+        server = self._server()
+        server.handle_did_open(URI, "x = 1 ;\nprint x ;\n")
+        assert server.diagnostics(URI) == []
+
+    def test_syntax_error_reports_real_position(self):
+        server = self._server()
+        server.handle_did_open(URI, "x = 1 ;\nprint ;\n")
+        diagnostics = server.diagnostics(URI)
+
+        assert diagnostics
+        error = diagnostics[0]
+        assert error["severity"] == 1
+        assert error["code"] == "parse-error"
+        assert error["range"]["start"] == {"line": 1, "character": 0}
+        assert "Parse error" in error["message"] or "Unexpected" in error["message"]
+        assert "|" not in error["message"]
+
+    def test_diagnostics_notification_is_published(self):
+        server = self._server()
+        server.handle_did_open(URI, "print ;\n")
+        notification = server.drain_notifications()[0]
+        assert notification["method"] == "textDocument/publishDiagnostics"
+        assert notification["params"]["diagnostics"]
+
+    def test_without_grammar_no_parse_error_diagnostic(self):
+        server = LSPServer(LanguageConfig())
+        server.handle_did_open(URI, "print ;\n")
+        codes = [d.get("code") for d in server.diagnostics(URI)]
+        assert "parse-error" not in codes
+
+
+class TestGrammarIntelligence:
+    """Rule-aware hover, definition, references, rename, and completion."""
+
+    TEXT = (
+        "// demo grammar\n"
+        "program   <- statement+\n"
+        "statement <- 'print' expr ';'\n"
+        "expr      <- term (('+' / '-') term)*\n"
+        "term      <- NUMBER / IDENT\n"
+    )
+    URI = "file:///demo/grammar.peg"
+
+    @pytest.fixture
+    def server(self):
+        from parsercraft.tooling.lsp.grammar_index import GrammarIndex
+
+        assert GrammarIndex(self.TEXT).rules
+        from parsercraft.parser.grammar import GrammarParser
+
+        grammar = GrammarParser().parse(
+            "program <- statement+\n"
+            "statement <- 'print' expr ';'\n"
+            "expr <- term (('+' / '-') term)*\n"
+            "term <- NUMBER / IDENT\n"
+        )
+        server = LSPServer(
+            LanguageConfig(), grammar=grammar, grammar_path="/demo/grammar.peg"
+        )
+        server.handle_did_open(self.URI, self.TEXT)
+        return server
+
+    def test_hover_shows_rule_pattern(self, server):
+        result = server.hover(self.URI, Position(3, 0))
+        assert result is not None
+        assert "expr <- term" in result["contents"]["value"]
+
+    def test_definition_jumps_to_rule(self, server):
+        result = server.definition(self.URI, Position(1, 1))
+        assert result["range"]["start"] == {"line": 1, "character": 0}
+        assert result["uri"] == self.URI
+
+    def test_references_finds_every_use(self, server):
+        result = server.references(self.URI, Position(3, 0))
+        lines = sorted({ref["range"]["start"]["line"] for ref in result})
+        assert lines == [2, 3]
+
+    def test_rename_returns_workspace_edits(self, server):
+        result = server.rename(self.URI, Position(3, 0), "expression")
+        edits = result["changes"][self.URI]
+        assert len(edits) == 2
+        assert all(edit["newText"] == "expression" for edit in edits)
+
+    def test_completion_offers_rules(self, server):
+        items = server.completions(self.URI, Position(4, 18))
+        labels = [item["label"] for item in items]
+        assert "NUMBER" in labels
+
+    def test_document_symbols_list_rules(self, server):
+        names = [symbol["name"] for symbol in server.document_symbols(self.URI)]
+        assert names == ["program", "statement", "expr", "term"]
+
+    def test_hover_builtin_token_describes_token(self, server):
+        result = server.hover(self.URI, Position(4, 16))
+        assert "built-in token" in result["contents"]["value"]
+
+
+def test_grammar_document_reports_undefined_rules():
+    from parsercraft.parser.grammar import GrammarParser
+
+    server = LSPServer(
+        LanguageConfig(),
+        grammar=GrammarParser().parse("program <- statement+\nstatement <- IDENT\n"),
+        grammar_path="/g/grammar.peg",
+    )
+    server.handle_did_open(
+        "file:///g/grammar.peg", "program <- statement+\nstatement <- mystery\n"
+    )
+
+    diagnostics = server.diagnostics("file:///g/grammar.peg")
+    assert diagnostics
+    assert diagnostics[0]["code"] == "undefined-rule"
+    assert diagnostics[0]["severity"] == 2
+    assert "mystery" in diagnostics[0]["message"]

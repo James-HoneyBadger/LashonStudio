@@ -34,11 +34,20 @@ import re
 import sys
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from pathlib import Path
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:  # pragma: no cover
+    from parsercraft.parser.grammar import Grammar
+    from parsercraft.tooling.lsp.grammar_index import (
+        GrammarIndex,
+        RuleLocation,
+    )
 
 from parsercraft.config.language_config import LanguageConfig
 from parsercraft.config.language_validator import LanguageValidator
 from parsercraft.parser.parser_generator import Lexer, Token
+from parsercraft.tooling.lsp.grammar_index import GrammarIndex, RuleLocation
 
 # Log to stderr only; set PARSERCRAFT_LSP_LOG to also write a file.
 _log_handlers: list[logging.Handler] = [logging.StreamHandler(sys.stderr)]
@@ -447,8 +456,15 @@ class LanguageServerAnalyzer:
 class LSPServer:
     """Language Server Protocol server implementation."""
 
-    def __init__(self, config: LanguageConfig):
+    def __init__(
+        self,
+        config: LanguageConfig,
+        grammar: Optional["Grammar"] = None,
+        grammar_path: Optional[str] = None,
+    ):
         self.config = config
+        self.grammar = grammar
+        self.grammar_path = grammar_path
         self.document_manager = DocumentManager()
         self.analyzer = LanguageServerAnalyzer(config)
         self.server_capabilities = self._build_capabilities()
@@ -506,14 +522,78 @@ class LSPServer:
         self.document_manager.close_document(uri)
 
     def diagnostics(self, uri: str) -> list[dict]:
-        """Return analyzer diagnostics for a document as LSP dicts."""
+        """Return diagnostics for a document as LSP dicts.
+
+        When the server was given a grammar, the document is parsed for real
+        and any syntax error is reported at its exact position. Lexical
+        diagnostics still run so simple mistakes keep their fast feedback.
+        """
         content = self.document_manager.get_document(uri)
         if content is None:
             return []
-        return [
+
+        index = self.grammar_index(uri)
+        if index is not None:
+            return self._grammar_document_diagnostics(index)
+
+        diagnostics = [
             diagnostic.to_dict()
             for diagnostic in self.analyzer.get_diagnostics(content)
         ]
+        grammar_diagnostic = self._grammar_diagnostic(content)
+        if grammar_diagnostic is not None:
+            diagnostics.insert(0, grammar_diagnostic)
+        return diagnostics
+
+    def _grammar_document_diagnostics(
+        self, index: "GrammarIndex"
+    ) -> list[dict]:
+        """Report structural problems inside the grammar itself."""
+        diagnostics = []
+        for problem in index.validation_problems():
+            match = re.match(r"line (\d+):\s*(.*)", problem)
+            line = int(match.group(1)) if match else 1
+            message = match.group(2) if match else problem
+            diagnostics.append(
+                Diagnostic(
+                    range=Range(
+                        start=Position(line=line - 1, character=0),
+                        end=Position(line=line - 1, character=0),
+                    ),
+                    message=message,
+                    severity=DiagnosticSeverity.WARNING,
+                    code="undefined-rule",
+                ).to_dict()
+            )
+        return diagnostics
+
+    def _grammar_diagnostic(self, content: str) -> Optional[dict]:
+        """Parse ``content`` with the project grammar and report failures."""
+        if self.grammar is None or not content.strip():
+            return None
+
+        from parsercraft.parser.grammar import PEGInterpreter
+
+        try:
+            PEGInterpreter(self.grammar).parse(content)
+            return None
+        except SyntaxError as error:
+            message = str(error)
+            line, column = _error_position(message)
+            end_column = _error_end_column(content, line, column)
+            diagnostic = Diagnostic(
+                range=Range(
+                    start=Position(line=line - 1, character=column - 1),
+                    end=Position(line=line - 1, character=end_column),
+                ),
+                message=_clean_error_message(message),
+                severity=DiagnosticSeverity.ERROR,
+                code="parse-error",
+            )
+            return diagnostic.to_dict()
+        except Exception:  # pragma: no cover - defensive
+            logger.debug("Grammar diagnostics failed", exc_info=True)
+            return None
 
     def _publish_diagnostics(self, uri: str) -> None:
         """Queue a textDocument/publishDiagnostics notification."""
@@ -533,17 +613,102 @@ class LSPServer:
         self.pending_notifications = []
         return notifications
 
+    def grammar_index(self, uri: str) -> Optional["GrammarIndex"]:
+        """Return a grammar index when ``uri`` is the grammar document."""
+        if not self.grammar_path:
+            return None
+        if Path(uri).name != Path(self.grammar_path).name:
+            return None
+        content = self.document_manager.get_document(uri)
+        if content is None:
+            path = Path(self.grammar_path)
+            if not path.is_file():
+                return None
+            content = path.read_text(encoding="utf-8")
+        return GrammarIndex(content)
+
     def completions(self, uri: str, position: Position) -> list[dict]:
         """Handle textDocument/completion request."""
         content = self.document_manager.get_document(uri)
+        index = self.grammar_index(uri)
+        if index is not None and content is not None:
+            lines = content.splitlines()
+            prefix = ""
+            if position.line < len(lines):
+                prefix = lines[position.line][: position.character]
+                prefix = prefix.split()[-1] if prefix.split() else ""
+            return [
+                {
+                    "label": name,
+                    "kind": 3,
+                    "detail": "grammar rule",
+                    "insertText": name,
+                }
+                for name in index.completion_items(prefix)
+            ]
         items = self.analyzer.get_completions(content, position)
         return [item.to_dict() for item in items]
 
     def hover(self, uri: str, position: Position) -> Optional[dict]:
         """Handle textDocument/hover request."""
+        index = self.grammar_index(uri)
+        if index is not None:
+            word = index.word_at(position.line, position.character)
+            text = index.hover(word) if word else None
+            if text:
+                return {"contents": {"kind": "markdown", "value": text}}
+            return None
+
         content = self.document_manager.get_document(uri)
         hover_info = self.analyzer.get_hover_info(content, position)
         return hover_info.to_dict() if hover_info else None
+
+    def definition(self, uri: str, position: Position) -> Optional[dict]:
+        """Handle textDocument/definition for grammar rules."""
+        index = self.grammar_index(uri)
+        if index is None:
+            return None
+        word = index.word_at(position.line, position.character)
+        location = index.definition(word) if word else None
+        if location is None:
+            return None
+        return {"uri": uri, "range": _rule_range(location)}
+
+    def references(self, uri: str, position: Position) -> list[dict]:
+        """Handle textDocument/references for grammar rules."""
+        index = self.grammar_index(uri)
+        if index is None:
+            return []
+        word = index.word_at(position.line, position.character)
+        if not word or word not in index.rules:
+            return []
+        return [
+            {"uri": uri, "range": _exact_range(line, column, len(word))}
+            for line, column in index.references(word)
+        ]
+
+    def rename(
+        self, uri: str, position: Position, new_name: str
+    ) -> Optional[dict]:
+        """Handle textDocument/rename for grammar rules."""
+        index = self.grammar_index(uri)
+        if index is None:
+            return None
+        word = index.word_at(position.line, position.character)
+        if not word or word not in index.rules:
+            return None
+        try:
+            index.rename(word, new_name)
+        except ValueError:
+            return None
+        edits = [
+            {
+                "range": _exact_range(line, column, len(word)),
+                "newText": new_name,
+            }
+            for line, column in index.references(word)
+        ]
+        return {"changes": {uri: edits}}
 
     def signature_help(self, uri: str, position: Position) -> Optional[dict]:
         """Handle textDocument/signatureHelp request."""
@@ -552,6 +717,9 @@ class LSPServer:
 
     def document_symbols(self, uri: str) -> list[dict]:
         """Handle textDocument/documentSymbol request."""
+        index = self.grammar_index(uri)
+        if index is not None:
+            return index.symbols()
         content = self.document_manager.get_document(uri)
         return self.analyzer.get_symbols(content)
 
@@ -771,10 +939,65 @@ def _write_message(message: dict) -> None:
     sys.stdout.buffer.flush()
 
 
-def create_lsp_server(config_path: str) -> LSPServer:
+def _exact_range(line: int, column: int, length: int) -> dict:
+    """Return a zero-based LSP range from a 1-based line/column."""
+    return {
+        "start": {"line": line - 1, "character": column - 1},
+        "end": {"line": line - 1, "character": column - 1 + length},
+    }
+
+
+def _rule_range(location: "RuleLocation") -> dict:
+    return _exact_range(location.line, location.column, len(location.name))
+
+
+_ERROR_POSITION = re.compile(
+    r"line (\d+), column (\d+)", re.IGNORECASE
+)
+_SNIPPET_START = "\n  "
+
+
+def _error_position(message: str) -> tuple[int, int]:
+    """Extract a 1-based (line, column) pair from a parse error message."""
+    match = _ERROR_POSITION.search(message)
+    if match is None:
+        return 1, 1
+    return int(match.group(1)), int(match.group(2))
+
+
+def _error_end_column(content: str, line: int, column: int) -> int:
+    """Return the 0-based column where the error highlight should stop."""
+    lines = content.splitlines()
+    if not (1 <= line <= len(lines)):
+        return max(column - 1, 0)
+    text = lines[line - 1]
+    rest = text[column - 1:]
+    stripped = rest.strip()
+    if not stripped:
+        return max(len(text), column - 1)
+    token = stripped.split()[0]
+    return min(column - 1 + len(token), len(text))
+
+
+def _clean_error_message(message: str) -> str:
+    """Drop the rendered source snippet from a parse error message."""
+    return message.split(_SNIPPET_START)[0].strip()
+
+
+def create_lsp_server(
+    config_path: str,
+    grammar_path: Optional[str] = None,
+) -> LSPServer:
     """Factory function to create LSP server with given config."""
     config = LanguageConfig.load(config_path)
-    return LSPServer(config)
+    grammar = None
+    if grammar_path:
+        from parsercraft.parser.grammar import GrammarParser
+
+        grammar = GrammarParser().parse(
+            Path(grammar_path).read_text(encoding="utf-8")
+        )
+    return LSPServer(config, grammar=grammar, grammar_path=grammar_path)
 
 
 if __name__ == "__main__":

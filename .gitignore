@@ -63,3 +63,4 @@ Thumbs.db
 # MkDocs build output
 site/
 _site/
+native/**/target/

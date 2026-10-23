@@ -5,7 +5,37 @@ All notable changes to ParserCraft. This project follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Modular core**: `parser/grammar.py` split into `model` / `peg_parser` /
+  `interpreter` / `builder` / `defaults`; `python_transpiler.py` split into
+  `codegen/python/{transpiler,statements,control_flow,expressions}`;
+  `tooling/cli.py` split into `cli/{parser,dispatch}`; presets extracted to
+  `config/presets.py`. Every historical import path still works.
+- **`parsercraft.ast`** now owns `SourceAST`, removing the
+  `parser` ⇄ `codegen` import cycle; `ast_integration` moved to
+  `codegen/ast_integration.py` (shim kept).
+- **Layering is enforced** by `tests/test_architecture.py`: core may not import
+  runtime/adapters, adapters may not import Tk from `tooling`, no package
+  cycles, `__all__` required.
+- **Wheel contents fixed**: package discovery is restricted to
+  `parsercraft*`, so the stray top-level `codex` package (1,090 LOC) is no
+  longer shipped. It is deleted, along with the dead
+  `runtime/interpreter_generator.py` and `tooling/lsp/lsp_integration.py`.
+- **`import parsercraft`** is lazy: ~70-115 ms → ~5 ms.
+- **Parser performance**: comment patterns are compiled once and matched
+  in place; whitespace skipping no longer slices the source. ~146 → ~315 KB/s
+  on the 2,000-line benchmark.
+
 ### Added
+
+- **Conformance corpus** (`tests/conformance/cases.json`) pinning grammars,
+  programs, and exact ASTs/error positions, plus `benchmarks/parse_bench.py`.
+- **Optional native PEG engine** (`native/parsercraft-native`, Rust + PyO3),
+  built with `scripts/build_native.sh` and selected via
+  `PEGInterpreter(grammar, backend="auto"|"native")`. Measured ~5x the Python
+  engine for matching and ~1.8x end to end; falls back automatically for
+  unsupported grammars.
 
 - **`parsercraft doctor`** — environment diagnostics (Python, PyYAML, entry
   points, Tk/display, gcc/clang, wasmtime, writable directories) with `--json`

@@ -39,8 +39,18 @@ class PEGInterpreter:
     and source code, and produces a SourceAST.
     """
 
-    def __init__(self, grammar: Grammar):
+    def __init__(self, grammar: Grammar, backend: str = "python"):
+        """Create an interpreter.
+
+        Args:
+            grammar: the grammar to interpret.
+            backend: ``"python"`` (default, reference engine), ``"native"``
+                (require the optional Rust engine) or ``"auto"`` (use it when
+                it is built and the grammar is in scope). The
+                ``PARSERCRAFT_PARSER`` environment variable sets the default.
+        """
         self.grammar = grammar
+        self.backend = backend
         self.source = ""
         self.line_starts: List[int] = []
         self.memo: Dict[Tuple[str, int], ParseResult] = {}  # Packrat memoization
@@ -48,11 +58,34 @@ class PEGInterpreter:
         self.max_rule = ""      # Rule being tried at max_pos
         self._rule_stack: List[str] = []
 
+    def _native_engine(self):
+        """Return the native engine module when it should be used."""
+        if self.backend == "python":
+            return None
+        from parsercraft.parser import native as native_engine
+
+        if not native_engine.available():
+            if self.backend == "native":
+                raise RuntimeError(
+                    "the native parser is not built; run scripts/build_native.sh"
+                )
+            return None
+        if self.backend == "auto" and not native_engine.supports(self.grammar):
+            return None
+        return native_engine
+
     def parse(self, source: str) -> SourceAST:
         """Parse source code using the grammar.
 
         Returns a SourceAST tree, or raises SyntaxError on failure.
         """
+        engine = self._native_engine()
+        if engine is not None:
+            self.source = source
+            try:
+                return engine.parse(self.grammar, source)
+            except engine.NativeUnsupported:
+                pass  # grammar feature not covered natively; use Python
         return self._parse_from_rule(self.grammar.start_rule, source)
 
     def parse_rule(self, rule_name: str, source: str) -> SourceAST:

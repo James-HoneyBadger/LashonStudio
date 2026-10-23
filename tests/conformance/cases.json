@@ -1,0 +1,1629 @@
+[
+  {
+    "name": "assignment",
+    "grammar": "// Aurora \u2014 canonical PEG grammar\n// Edit this file in ParserCraft Studio; it is synced into language.yaml on save.\n\nprogram       <- statement+\nstatement     <- function_def / if_stmt / while_stmt / return_stmt / print_stmt / assignment / expr_stmt\nfunction_def  <- 'fn' IDENT '(' param_list? ')' block\nblock         <- '{' statement* '}'\nparam_list    <- IDENT (',' IDENT)*\nif_stmt       <- 'if' comparison block ('else' block)?\nwhile_stmt    <- 'while' comparison block\nreturn_stmt   <- 'return' expr ';'\nprint_stmt    <- 'print' expr ';'\nassignment    <- IDENT '=' expr ';'\nexpr_stmt     <- call ';'\ncomparison    <- expr ('==' / '!=' / '<=' / '>=' / '<' / '>') expr\nexpr          <- term (('+' / '-') term)*\nterm          <- factor (('*' / '/' / '%') factor)*\nfactor        <- call / NUMBER / STRING / boolean / IDENT / '(' expr ')'\ncall          <- IDENT '(' arg_list? ')'\narg_list      <- expr (',' expr)*\nboolean       <- 'true' / 'false'\n",
+    "source": "x = 1 ;\n",
+    "expect": {
+      "ok": true,
+      "ast": {
+        "type": "program",
+        "value": null,
+        "children": [
+          {
+            "type": "statement",
+            "value": null,
+            "children": [
+              {
+                "type": "assignment",
+                "value": null,
+                "children": [
+                  {
+                    "type": "Identifier",
+                    "value": "x",
+                    "children": [],
+                    "line": 1,
+                    "column": 1
+                  },
+                  {
+                    "type": "Operator",
+                    "value": "=",
+                    "children": [],
+                    "line": 1,
+                    "column": 1
+                  },
+                  {
+                    "type": "expr",
+                    "value": null,
+                    "children": [
+                      {
+                        "type": "term",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "factor",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "Number",
+                                "value": 1,
+                                "children": [],
+                                "line": 1,
+                                "column": 5
+                              }
+                            ],
+                            "line": 1,
+                            "column": 5
+                          }
+                        ],
+                        "line": 1,
+                        "column": 5
+                      }
+                    ],
+                    "line": 1,
+                    "column": 5
+                  },
+                  {
+                    "type": "Operator",
+                    "value": ";",
+                    "children": [],
+                    "line": 1,
+                    "column": 1
+                  }
+                ],
+                "line": 1,
+                "column": 1
+              }
+            ],
+            "line": 1,
+            "column": 1
+          }
+        ],
+        "line": 1,
+        "column": 1
+      }
+    }
+  },
+  {
+    "name": "arithmetic",
+    "grammar": "program  <- statement+\nstatement <- print_stmt / assignment\nprint_stmt <- 'print' expr ';'\nassignment <- IDENT '=' expr ';'\nexpr     <- term (('+' / '-') term)*\nterm     <- factor (('*' / '/' / '%') factor)*\nfactor   <- NUMBER / STRING / IDENT / '(' expr ')'",
+    "source": "x = (1 + 2) * 3 % 4 ;\nprint x ;\n",
+    "expect": {
+      "ok": true,
+      "ast": {
+        "type": "program",
+        "value": null,
+        "children": [
+          {
+            "type": "statement",
+            "value": null,
+            "children": [
+              {
+                "type": "assignment",
+                "value": null,
+                "children": [
+                  {
+                    "type": "Identifier",
+                    "value": "x",
+                    "children": [],
+                    "line": 1,
+                    "column": 1
+                  },
+                  {
+                    "type": "Operator",
+                    "value": "=",
+                    "children": [],
+                    "line": 1,
+                    "column": 1
+                  },
+                  {
+                    "type": "expr",
+                    "value": null,
+                    "children": [
+                      {
+                        "type": "term",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "factor",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "Operator",
+                                "value": "(",
+                                "children": [],
+                                "line": 1,
+                                "column": 5
+                              },
+                              {
+                                "type": "expr",
+                                "value": null,
+                                "children": [
+                                  {
+                                    "type": "term",
+                                    "value": null,
+                                    "children": [
+                                      {
+                                        "type": "factor",
+                                        "value": null,
+                                        "children": [
+                                          {
+                                            "type": "Number",
+                                            "value": 1,
+                                            "children": [],
+                                            "line": 1,
+                                            "column": 6
+                                          }
+                                        ],
+                                        "line": 1,
+                                        "column": 6
+                                      }
+                                    ],
+                                    "line": 1,
+                                    "column": 6
+                                  },
+                                  {
+                                    "type": "Operator",
+                                    "value": "+",
+                                    "children": [],
+                                    "line": 1,
+                                    "column": 6
+                                  },
+                                  {
+                                    "type": "term",
+                                    "value": null,
+                                    "children": [
+                                      {
+                                        "type": "factor",
+                                        "value": null,
+                                        "children": [
+                                          {
+                                            "type": "Number",
+                                            "value": 2,
+                                            "children": [],
+                                            "line": 1,
+                                            "column": 10
+                                          }
+                                        ],
+                                        "line": 1,
+                                        "column": 10
+                                      }
+                                    ],
+                                    "line": 1,
+                                    "column": 10
+                                  }
+                                ],
+                                "line": 1,
+                                "column": 6
+                              },
+                              {
+                                "type": "Operator",
+                                "value": ")",
+                                "children": [],
+                                "line": 1,
+                                "column": 5
+                              }
+                            ],
+                            "line": 1,
+                            "column": 5
+                          },
+                          {
+                            "type": "Operator",
+                            "value": "*",
+                            "children": [],
+                            "line": 1,
+                            "column": 5
+                          },
+                          {
+                            "type": "factor",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "Number",
+                                "value": 3,
+                                "children": [],
+                                "line": 1,
+                                "column": 15
+                              }
+                            ],
+                            "line": 1,
+                            "column": 15
+                          },
+                          {
+                            "type": "Operator",
+                            "value": "%",
+                            "children": [],
+                            "line": 1,
+                            "column": 5
+                          },
+                          {
+                            "type": "factor",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "Number",
+                                "value": 4,
+                                "children": [],
+                                "line": 1,
+                                "column": 19
+                              }
+                            ],
+                            "line": 1,
+                            "column": 19
+                          }
+                        ],
+                        "line": 1,
+                        "column": 5
+                      }
+                    ],
+                    "line": 1,
+                    "column": 5
+                  },
+                  {
+                    "type": "Operator",
+                    "value": ";",
+                    "children": [],
+                    "line": 1,
+                    "column": 1
+                  }
+                ],
+                "line": 1,
+                "column": 1
+              }
+            ],
+            "line": 1,
+            "column": 1
+          },
+          {
+            "type": "statement",
+            "value": null,
+            "children": [
+              {
+                "type": "print_stmt",
+                "value": null,
+                "children": [
+                  {
+                    "type": "Operator",
+                    "value": "print",
+                    "children": [],
+                    "line": 2,
+                    "column": 1
+                  },
+                  {
+                    "type": "expr",
+                    "value": null,
+                    "children": [
+                      {
+                        "type": "term",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "factor",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "Identifier",
+                                "value": "x",
+                                "children": [],
+                                "line": 2,
+                                "column": 7
+                              }
+                            ],
+                            "line": 2,
+                            "column": 7
+                          }
+                        ],
+                        "line": 2,
+                        "column": 7
+                      }
+                    ],
+                    "line": 2,
+                    "column": 7
+                  },
+                  {
+                    "type": "Operator",
+                    "value": ";",
+                    "children": [],
+                    "line": 2,
+                    "column": 1
+                  }
+                ],
+                "line": 2,
+                "column": 1
+              }
+            ],
+            "line": 2,
+            "column": 1
+          }
+        ],
+        "line": 1,
+        "column": 1
+      }
+    }
+  },
+  {
+    "name": "print-string",
+    "grammar": "program  <- statement+\nstatement <- print_stmt / assignment\nprint_stmt <- 'print' expr ';'\nassignment <- IDENT '=' expr ';'\nexpr     <- term (('+' / '-') term)*\nterm     <- factor (('*' / '/' / '%') factor)*\nfactor   <- NUMBER / STRING / IDENT / '(' expr ')'",
+    "source": "print \"hello\" ;\n",
+    "expect": {
+      "ok": true,
+      "ast": {
+        "type": "program",
+        "value": null,
+        "children": [
+          {
+            "type": "statement",
+            "value": null,
+            "children": [
+              {
+                "type": "print_stmt",
+                "value": null,
+                "children": [
+                  {
+                    "type": "Operator",
+                    "value": "print",
+                    "children": [],
+                    "line": 1,
+                    "column": 1
+                  },
+                  {
+                    "type": "expr",
+                    "value": null,
+                    "children": [
+                      {
+                        "type": "term",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "factor",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "String",
+                                "value": "hello",
+                                "children": [],
+                                "line": 1,
+                                "column": 7
+                              }
+                            ],
+                            "line": 1,
+                            "column": 7
+                          }
+                        ],
+                        "line": 1,
+                        "column": 7
+                      }
+                    ],
+                    "line": 1,
+                    "column": 7
+                  },
+                  {
+                    "type": "Operator",
+                    "value": ";",
+                    "children": [],
+                    "line": 1,
+                    "column": 1
+                  }
+                ],
+                "line": 1,
+                "column": 1
+              }
+            ],
+            "line": 1,
+            "column": 1
+          }
+        ],
+        "line": 1,
+        "column": 1
+      }
+    }
+  },
+  {
+    "name": "fizzbuzz-step",
+    "grammar": "// Aurora \u2014 canonical PEG grammar\n// Edit this file in ParserCraft Studio; it is synced into language.yaml on save.\n\nprogram       <- statement+\nstatement     <- function_def / if_stmt / while_stmt / return_stmt / print_stmt / assignment / expr_stmt\nfunction_def  <- 'fn' IDENT '(' param_list? ')' block\nblock         <- '{' statement* '}'\nparam_list    <- IDENT (',' IDENT)*\nif_stmt       <- 'if' comparison block ('else' block)?\nwhile_stmt    <- 'while' comparison block\nreturn_stmt   <- 'return' expr ';'\nprint_stmt    <- 'print' expr ';'\nassignment    <- IDENT '=' expr ';'\nexpr_stmt     <- call ';'\ncomparison    <- expr ('==' / '!=' / '<=' / '>=' / '<' / '>') expr\nexpr          <- term (('+' / '-') term)*\nterm          <- factor (('*' / '/' / '%') factor)*\nfactor        <- call / NUMBER / STRING / boolean / IDENT / '(' expr ')'\ncall          <- IDENT '(' arg_list? ')'\narg_list      <- expr (',' expr)*\nboolean       <- 'true' / 'false'\n",
+    "source": "i = 3 ;\nif i % 15 == 0 {\n  print \"FizzBuzz\" ;\n} else {\n  print i ;\n}\n",
+    "expect": {
+      "ok": true,
+      "ast": {
+        "type": "program",
+        "value": null,
+        "children": [
+          {
+            "type": "statement",
+            "value": null,
+            "children": [
+              {
+                "type": "assignment",
+                "value": null,
+                "children": [
+                  {
+                    "type": "Identifier",
+                    "value": "i",
+                    "children": [],
+                    "line": 1,
+                    "column": 1
+                  },
+                  {
+                    "type": "Operator",
+                    "value": "=",
+                    "children": [],
+                    "line": 1,
+                    "column": 1
+                  },
+                  {
+                    "type": "expr",
+                    "value": null,
+                    "children": [
+                      {
+                        "type": "term",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "factor",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "Number",
+                                "value": 3,
+                                "children": [],
+                                "line": 1,
+                                "column": 5
+                              }
+                            ],
+                            "line": 1,
+                            "column": 5
+                          }
+                        ],
+                        "line": 1,
+                        "column": 5
+                      }
+                    ],
+                    "line": 1,
+                    "column": 5
+                  },
+                  {
+                    "type": "Operator",
+                    "value": ";",
+                    "children": [],
+                    "line": 1,
+                    "column": 1
+                  }
+                ],
+                "line": 1,
+                "column": 1
+              }
+            ],
+            "line": 1,
+            "column": 1
+          },
+          {
+            "type": "statement",
+            "value": null,
+            "children": [
+              {
+                "type": "if_stmt",
+                "value": null,
+                "children": [
+                  {
+                    "type": "Operator",
+                    "value": "if",
+                    "children": [],
+                    "line": 2,
+                    "column": 1
+                  },
+                  {
+                    "type": "comparison",
+                    "value": null,
+                    "children": [
+                      {
+                        "type": "expr",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "term",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "factor",
+                                "value": null,
+                                "children": [
+                                  {
+                                    "type": "Identifier",
+                                    "value": "i",
+                                    "children": [],
+                                    "line": 2,
+                                    "column": 4
+                                  }
+                                ],
+                                "line": 2,
+                                "column": 4
+                              },
+                              {
+                                "type": "Operator",
+                                "value": "%",
+                                "children": [],
+                                "line": 2,
+                                "column": 4
+                              },
+                              {
+                                "type": "factor",
+                                "value": null,
+                                "children": [
+                                  {
+                                    "type": "Number",
+                                    "value": 15,
+                                    "children": [],
+                                    "line": 2,
+                                    "column": 8
+                                  }
+                                ],
+                                "line": 2,
+                                "column": 8
+                              }
+                            ],
+                            "line": 2,
+                            "column": 4
+                          }
+                        ],
+                        "line": 2,
+                        "column": 4
+                      },
+                      {
+                        "type": "Operator",
+                        "value": "==",
+                        "children": [],
+                        "line": 2,
+                        "column": 4
+                      },
+                      {
+                        "type": "expr",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "term",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "factor",
+                                "value": null,
+                                "children": [
+                                  {
+                                    "type": "Number",
+                                    "value": 0,
+                                    "children": [],
+                                    "line": 2,
+                                    "column": 14
+                                  }
+                                ],
+                                "line": 2,
+                                "column": 14
+                              }
+                            ],
+                            "line": 2,
+                            "column": 14
+                          }
+                        ],
+                        "line": 2,
+                        "column": 14
+                      }
+                    ],
+                    "line": 2,
+                    "column": 4
+                  },
+                  {
+                    "type": "block",
+                    "value": null,
+                    "children": [
+                      {
+                        "type": "Operator",
+                        "value": "{",
+                        "children": [],
+                        "line": 2,
+                        "column": 16
+                      },
+                      {
+                        "type": "statement",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "print_stmt",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "Operator",
+                                "value": "print",
+                                "children": [],
+                                "line": 3,
+                                "column": 3
+                              },
+                              {
+                                "type": "expr",
+                                "value": null,
+                                "children": [
+                                  {
+                                    "type": "term",
+                                    "value": null,
+                                    "children": [
+                                      {
+                                        "type": "factor",
+                                        "value": null,
+                                        "children": [
+                                          {
+                                            "type": "String",
+                                            "value": "FizzBuzz",
+                                            "children": [],
+                                            "line": 3,
+                                            "column": 9
+                                          }
+                                        ],
+                                        "line": 3,
+                                        "column": 9
+                                      }
+                                    ],
+                                    "line": 3,
+                                    "column": 9
+                                  }
+                                ],
+                                "line": 3,
+                                "column": 9
+                              },
+                              {
+                                "type": "Operator",
+                                "value": ";",
+                                "children": [],
+                                "line": 3,
+                                "column": 3
+                              }
+                            ],
+                            "line": 3,
+                            "column": 3
+                          }
+                        ],
+                        "line": 3,
+                        "column": 3
+                      },
+                      {
+                        "type": "Operator",
+                        "value": "}",
+                        "children": [],
+                        "line": 2,
+                        "column": 16
+                      }
+                    ],
+                    "line": 2,
+                    "column": 16
+                  },
+                  {
+                    "type": "Operator",
+                    "value": "else",
+                    "children": [],
+                    "line": 2,
+                    "column": 1
+                  },
+                  {
+                    "type": "block",
+                    "value": null,
+                    "children": [
+                      {
+                        "type": "Operator",
+                        "value": "{",
+                        "children": [],
+                        "line": 4,
+                        "column": 8
+                      },
+                      {
+                        "type": "statement",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "print_stmt",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "Operator",
+                                "value": "print",
+                                "children": [],
+                                "line": 5,
+                                "column": 3
+                              },
+                              {
+                                "type": "expr",
+                                "value": null,
+                                "children": [
+                                  {
+                                    "type": "term",
+                                    "value": null,
+                                    "children": [
+                                      {
+                                        "type": "factor",
+                                        "value": null,
+                                        "children": [
+                                          {
+                                            "type": "Identifier",
+                                            "value": "i",
+                                            "children": [],
+                                            "line": 5,
+                                            "column": 9
+                                          }
+                                        ],
+                                        "line": 5,
+                                        "column": 9
+                                      }
+                                    ],
+                                    "line": 5,
+                                    "column": 9
+                                  }
+                                ],
+                                "line": 5,
+                                "column": 9
+                              },
+                              {
+                                "type": "Operator",
+                                "value": ";",
+                                "children": [],
+                                "line": 5,
+                                "column": 3
+                              }
+                            ],
+                            "line": 5,
+                            "column": 3
+                          }
+                        ],
+                        "line": 5,
+                        "column": 3
+                      },
+                      {
+                        "type": "Operator",
+                        "value": "}",
+                        "children": [],
+                        "line": 4,
+                        "column": 8
+                      }
+                    ],
+                    "line": 4,
+                    "column": 8
+                  }
+                ],
+                "line": 2,
+                "column": 1
+              }
+            ],
+            "line": 2,
+            "column": 1
+          }
+        ],
+        "line": 1,
+        "column": 1
+      }
+    }
+  },
+  {
+    "name": "while-loop",
+    "grammar": "// Aurora \u2014 canonical PEG grammar\n// Edit this file in ParserCraft Studio; it is synced into language.yaml on save.\n\nprogram       <- statement+\nstatement     <- function_def / if_stmt / while_stmt / return_stmt / print_stmt / assignment / expr_stmt\nfunction_def  <- 'fn' IDENT '(' param_list? ')' block\nblock         <- '{' statement* '}'\nparam_list    <- IDENT (',' IDENT)*\nif_stmt       <- 'if' comparison block ('else' block)?\nwhile_stmt    <- 'while' comparison block\nreturn_stmt   <- 'return' expr ';'\nprint_stmt    <- 'print' expr ';'\nassignment    <- IDENT '=' expr ';'\nexpr_stmt     <- call ';'\ncomparison    <- expr ('==' / '!=' / '<=' / '>=' / '<' / '>') expr\nexpr          <- term (('+' / '-') term)*\nterm          <- factor (('*' / '/' / '%') factor)*\nfactor        <- call / NUMBER / STRING / boolean / IDENT / '(' expr ')'\ncall          <- IDENT '(' arg_list? ')'\narg_list      <- expr (',' expr)*\nboolean       <- 'true' / 'false'\n",
+    "source": "i = 0 ;\nwhile i < 3 {\n  i = i + 1 ;\n}\nprint i ;\n",
+    "expect": {
+      "ok": true,
+      "ast": {
+        "type": "program",
+        "value": null,
+        "children": [
+          {
+            "type": "statement",
+            "value": null,
+            "children": [
+              {
+                "type": "assignment",
+                "value": null,
+                "children": [
+                  {
+                    "type": "Identifier",
+                    "value": "i",
+                    "children": [],
+                    "line": 1,
+                    "column": 1
+                  },
+                  {
+                    "type": "Operator",
+                    "value": "=",
+                    "children": [],
+                    "line": 1,
+                    "column": 1
+                  },
+                  {
+                    "type": "expr",
+                    "value": null,
+                    "children": [
+                      {
+                        "type": "term",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "factor",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "Number",
+                                "value": 0,
+                                "children": [],
+                                "line": 1,
+                                "column": 5
+                              }
+                            ],
+                            "line": 1,
+                            "column": 5
+                          }
+                        ],
+                        "line": 1,
+                        "column": 5
+                      }
+                    ],
+                    "line": 1,
+                    "column": 5
+                  },
+                  {
+                    "type": "Operator",
+                    "value": ";",
+                    "children": [],
+                    "line": 1,
+                    "column": 1
+                  }
+                ],
+                "line": 1,
+                "column": 1
+              }
+            ],
+            "line": 1,
+            "column": 1
+          },
+          {
+            "type": "statement",
+            "value": null,
+            "children": [
+              {
+                "type": "while_stmt",
+                "value": null,
+                "children": [
+                  {
+                    "type": "Operator",
+                    "value": "while",
+                    "children": [],
+                    "line": 2,
+                    "column": 1
+                  },
+                  {
+                    "type": "comparison",
+                    "value": null,
+                    "children": [
+                      {
+                        "type": "expr",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "term",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "factor",
+                                "value": null,
+                                "children": [
+                                  {
+                                    "type": "Identifier",
+                                    "value": "i",
+                                    "children": [],
+                                    "line": 2,
+                                    "column": 7
+                                  }
+                                ],
+                                "line": 2,
+                                "column": 7
+                              }
+                            ],
+                            "line": 2,
+                            "column": 7
+                          }
+                        ],
+                        "line": 2,
+                        "column": 7
+                      },
+                      {
+                        "type": "Operator",
+                        "value": "<",
+                        "children": [],
+                        "line": 2,
+                        "column": 7
+                      },
+                      {
+                        "type": "expr",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "term",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "factor",
+                                "value": null,
+                                "children": [
+                                  {
+                                    "type": "Number",
+                                    "value": 3,
+                                    "children": [],
+                                    "line": 2,
+                                    "column": 11
+                                  }
+                                ],
+                                "line": 2,
+                                "column": 11
+                              }
+                            ],
+                            "line": 2,
+                            "column": 11
+                          }
+                        ],
+                        "line": 2,
+                        "column": 11
+                      }
+                    ],
+                    "line": 2,
+                    "column": 7
+                  },
+                  {
+                    "type": "block",
+                    "value": null,
+                    "children": [
+                      {
+                        "type": "Operator",
+                        "value": "{",
+                        "children": [],
+                        "line": 2,
+                        "column": 13
+                      },
+                      {
+                        "type": "statement",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "assignment",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "Identifier",
+                                "value": "i",
+                                "children": [],
+                                "line": 3,
+                                "column": 3
+                              },
+                              {
+                                "type": "Operator",
+                                "value": "=",
+                                "children": [],
+                                "line": 3,
+                                "column": 3
+                              },
+                              {
+                                "type": "expr",
+                                "value": null,
+                                "children": [
+                                  {
+                                    "type": "term",
+                                    "value": null,
+                                    "children": [
+                                      {
+                                        "type": "factor",
+                                        "value": null,
+                                        "children": [
+                                          {
+                                            "type": "Identifier",
+                                            "value": "i",
+                                            "children": [],
+                                            "line": 3,
+                                            "column": 7
+                                          }
+                                        ],
+                                        "line": 3,
+                                        "column": 7
+                                      }
+                                    ],
+                                    "line": 3,
+                                    "column": 7
+                                  },
+                                  {
+                                    "type": "Operator",
+                                    "value": "+",
+                                    "children": [],
+                                    "line": 3,
+                                    "column": 7
+                                  },
+                                  {
+                                    "type": "term",
+                                    "value": null,
+                                    "children": [
+                                      {
+                                        "type": "factor",
+                                        "value": null,
+                                        "children": [
+                                          {
+                                            "type": "Number",
+                                            "value": 1,
+                                            "children": [],
+                                            "line": 3,
+                                            "column": 11
+                                          }
+                                        ],
+                                        "line": 3,
+                                        "column": 11
+                                      }
+                                    ],
+                                    "line": 3,
+                                    "column": 11
+                                  }
+                                ],
+                                "line": 3,
+                                "column": 7
+                              },
+                              {
+                                "type": "Operator",
+                                "value": ";",
+                                "children": [],
+                                "line": 3,
+                                "column": 3
+                              }
+                            ],
+                            "line": 3,
+                            "column": 3
+                          }
+                        ],
+                        "line": 3,
+                        "column": 3
+                      },
+                      {
+                        "type": "Operator",
+                        "value": "}",
+                        "children": [],
+                        "line": 2,
+                        "column": 13
+                      }
+                    ],
+                    "line": 2,
+                    "column": 13
+                  }
+                ],
+                "line": 2,
+                "column": 1
+              }
+            ],
+            "line": 2,
+            "column": 1
+          },
+          {
+            "type": "statement",
+            "value": null,
+            "children": [
+              {
+                "type": "print_stmt",
+                "value": null,
+                "children": [
+                  {
+                    "type": "Operator",
+                    "value": "print",
+                    "children": [],
+                    "line": 5,
+                    "column": 1
+                  },
+                  {
+                    "type": "expr",
+                    "value": null,
+                    "children": [
+                      {
+                        "type": "term",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "factor",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "Identifier",
+                                "value": "i",
+                                "children": [],
+                                "line": 5,
+                                "column": 7
+                              }
+                            ],
+                            "line": 5,
+                            "column": 7
+                          }
+                        ],
+                        "line": 5,
+                        "column": 7
+                      }
+                    ],
+                    "line": 5,
+                    "column": 7
+                  },
+                  {
+                    "type": "Operator",
+                    "value": ";",
+                    "children": [],
+                    "line": 5,
+                    "column": 1
+                  }
+                ],
+                "line": 5,
+                "column": 1
+              }
+            ],
+            "line": 5,
+            "column": 1
+          }
+        ],
+        "line": 1,
+        "column": 1
+      }
+    }
+  },
+  {
+    "name": "function",
+    "grammar": "// Aurora \u2014 canonical PEG grammar\n// Edit this file in ParserCraft Studio; it is synced into language.yaml on save.\n\nprogram       <- statement+\nstatement     <- function_def / if_stmt / while_stmt / return_stmt / print_stmt / assignment / expr_stmt\nfunction_def  <- 'fn' IDENT '(' param_list? ')' block\nblock         <- '{' statement* '}'\nparam_list    <- IDENT (',' IDENT)*\nif_stmt       <- 'if' comparison block ('else' block)?\nwhile_stmt    <- 'while' comparison block\nreturn_stmt   <- 'return' expr ';'\nprint_stmt    <- 'print' expr ';'\nassignment    <- IDENT '=' expr ';'\nexpr_stmt     <- call ';'\ncomparison    <- expr ('==' / '!=' / '<=' / '>=' / '<' / '>') expr\nexpr          <- term (('+' / '-') term)*\nterm          <- factor (('*' / '/' / '%') factor)*\nfactor        <- call / NUMBER / STRING / boolean / IDENT / '(' expr ')'\ncall          <- IDENT '(' arg_list? ')'\narg_list      <- expr (',' expr)*\nboolean       <- 'true' / 'false'\n",
+    "source": "fn twice(x) {\n  return x * 2 ;\n}\nprint twice(21) ;\n",
+    "expect": {
+      "ok": true,
+      "ast": {
+        "type": "program",
+        "value": null,
+        "children": [
+          {
+            "type": "statement",
+            "value": null,
+            "children": [
+              {
+                "type": "function_def",
+                "value": null,
+                "children": [
+                  {
+                    "type": "Operator",
+                    "value": "fn",
+                    "children": [],
+                    "line": 1,
+                    "column": 1
+                  },
+                  {
+                    "type": "Identifier",
+                    "value": "twice",
+                    "children": [],
+                    "line": 1,
+                    "column": 4
+                  },
+                  {
+                    "type": "Operator",
+                    "value": "(",
+                    "children": [],
+                    "line": 1,
+                    "column": 1
+                  },
+                  {
+                    "type": "param_list",
+                    "value": null,
+                    "children": [
+                      {
+                        "type": "Identifier",
+                        "value": "x",
+                        "children": [],
+                        "line": 1,
+                        "column": 10
+                      }
+                    ],
+                    "line": 1,
+                    "column": 10
+                  },
+                  {
+                    "type": "Operator",
+                    "value": ")",
+                    "children": [],
+                    "line": 1,
+                    "column": 1
+                  },
+                  {
+                    "type": "block",
+                    "value": null,
+                    "children": [
+                      {
+                        "type": "Operator",
+                        "value": "{",
+                        "children": [],
+                        "line": 1,
+                        "column": 13
+                      },
+                      {
+                        "type": "statement",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "return_stmt",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "Operator",
+                                "value": "return",
+                                "children": [],
+                                "line": 2,
+                                "column": 3
+                              },
+                              {
+                                "type": "expr",
+                                "value": null,
+                                "children": [
+                                  {
+                                    "type": "term",
+                                    "value": null,
+                                    "children": [
+                                      {
+                                        "type": "factor",
+                                        "value": null,
+                                        "children": [
+                                          {
+                                            "type": "Identifier",
+                                            "value": "x",
+                                            "children": [],
+                                            "line": 2,
+                                            "column": 10
+                                          }
+                                        ],
+                                        "line": 2,
+                                        "column": 10
+                                      },
+                                      {
+                                        "type": "Operator",
+                                        "value": "*",
+                                        "children": [],
+                                        "line": 2,
+                                        "column": 10
+                                      },
+                                      {
+                                        "type": "factor",
+                                        "value": null,
+                                        "children": [
+                                          {
+                                            "type": "Number",
+                                            "value": 2,
+                                            "children": [],
+                                            "line": 2,
+                                            "column": 14
+                                          }
+                                        ],
+                                        "line": 2,
+                                        "column": 14
+                                      }
+                                    ],
+                                    "line": 2,
+                                    "column": 10
+                                  }
+                                ],
+                                "line": 2,
+                                "column": 10
+                              },
+                              {
+                                "type": "Operator",
+                                "value": ";",
+                                "children": [],
+                                "line": 2,
+                                "column": 3
+                              }
+                            ],
+                            "line": 2,
+                            "column": 3
+                          }
+                        ],
+                        "line": 2,
+                        "column": 3
+                      },
+                      {
+                        "type": "Operator",
+                        "value": "}",
+                        "children": [],
+                        "line": 1,
+                        "column": 13
+                      }
+                    ],
+                    "line": 1,
+                    "column": 13
+                  }
+                ],
+                "line": 1,
+                "column": 1
+              }
+            ],
+            "line": 1,
+            "column": 1
+          },
+          {
+            "type": "statement",
+            "value": null,
+            "children": [
+              {
+                "type": "print_stmt",
+                "value": null,
+                "children": [
+                  {
+                    "type": "Operator",
+                    "value": "print",
+                    "children": [],
+                    "line": 4,
+                    "column": 1
+                  },
+                  {
+                    "type": "expr",
+                    "value": null,
+                    "children": [
+                      {
+                        "type": "term",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "factor",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "call",
+                                "value": null,
+                                "children": [
+                                  {
+                                    "type": "Identifier",
+                                    "value": "twice",
+                                    "children": [],
+                                    "line": 4,
+                                    "column": 7
+                                  },
+                                  {
+                                    "type": "Operator",
+                                    "value": "(",
+                                    "children": [],
+                                    "line": 4,
+                                    "column": 7
+                                  },
+                                  {
+                                    "type": "arg_list",
+                                    "value": null,
+                                    "children": [
+                                      {
+                                        "type": "expr",
+                                        "value": null,
+                                        "children": [
+                                          {
+                                            "type": "term",
+                                            "value": null,
+                                            "children": [
+                                              {
+                                                "type": "factor",
+                                                "value": null,
+                                                "children": [
+                                                  {
+                                                    "type": "Number",
+                                                    "value": 21,
+                                                    "children": [],
+                                                    "line": 4,
+                                                    "column": 13
+                                                  }
+                                                ],
+                                                "line": 4,
+                                                "column": 13
+                                              }
+                                            ],
+                                            "line": 4,
+                                            "column": 13
+                                          }
+                                        ],
+                                        "line": 4,
+                                        "column": 13
+                                      }
+                                    ],
+                                    "line": 4,
+                                    "column": 13
+                                  },
+                                  {
+                                    "type": "Operator",
+                                    "value": ")",
+                                    "children": [],
+                                    "line": 4,
+                                    "column": 7
+                                  }
+                                ],
+                                "line": 4,
+                                "column": 7
+                              }
+                            ],
+                            "line": 4,
+                            "column": 7
+                          }
+                        ],
+                        "line": 4,
+                        "column": 7
+                      }
+                    ],
+                    "line": 4,
+                    "column": 7
+                  },
+                  {
+                    "type": "Operator",
+                    "value": ";",
+                    "children": [],
+                    "line": 4,
+                    "column": 1
+                  }
+                ],
+                "line": 4,
+                "column": 1
+              }
+            ],
+            "line": 4,
+            "column": 1
+          }
+        ],
+        "line": 1,
+        "column": 1
+      }
+    }
+  },
+  {
+    "name": "comments",
+    "grammar": "// Aurora \u2014 canonical PEG grammar\n// Edit this file in ParserCraft Studio; it is synced into language.yaml on save.\n\nprogram       <- statement+\nstatement     <- function_def / if_stmt / while_stmt / return_stmt / print_stmt / assignment / expr_stmt\nfunction_def  <- 'fn' IDENT '(' param_list? ')' block\nblock         <- '{' statement* '}'\nparam_list    <- IDENT (',' IDENT)*\nif_stmt       <- 'if' comparison block ('else' block)?\nwhile_stmt    <- 'while' comparison block\nreturn_stmt   <- 'return' expr ';'\nprint_stmt    <- 'print' expr ';'\nassignment    <- IDENT '=' expr ';'\nexpr_stmt     <- call ';'\ncomparison    <- expr ('==' / '!=' / '<=' / '>=' / '<' / '>') expr\nexpr          <- term (('+' / '-') term)*\nterm          <- factor (('*' / '/' / '%') factor)*\nfactor        <- call / NUMBER / STRING / boolean / IDENT / '(' expr ')'\ncall          <- IDENT '(' arg_list? ')'\narg_list      <- expr (',' expr)*\nboolean       <- 'true' / 'false'\n",
+    "source": "// leading comment\nx = 1 ; // trailing\n/* block\n comment */\nprint x ;\n",
+    "expect": {
+      "ok": true,
+      "ast": {
+        "type": "program",
+        "value": null,
+        "children": [
+          {
+            "type": "statement",
+            "value": null,
+            "children": [
+              {
+                "type": "assignment",
+                "value": null,
+                "children": [
+                  {
+                    "type": "Identifier",
+                    "value": "x",
+                    "children": [],
+                    "line": 2,
+                    "column": 1
+                  },
+                  {
+                    "type": "Operator",
+                    "value": "=",
+                    "children": [],
+                    "line": 2,
+                    "column": 1
+                  },
+                  {
+                    "type": "expr",
+                    "value": null,
+                    "children": [
+                      {
+                        "type": "term",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "factor",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "Number",
+                                "value": 1,
+                                "children": [],
+                                "line": 2,
+                                "column": 5
+                              }
+                            ],
+                            "line": 2,
+                            "column": 5
+                          }
+                        ],
+                        "line": 2,
+                        "column": 5
+                      }
+                    ],
+                    "line": 2,
+                    "column": 5
+                  },
+                  {
+                    "type": "Operator",
+                    "value": ";",
+                    "children": [],
+                    "line": 2,
+                    "column": 1
+                  }
+                ],
+                "line": 2,
+                "column": 1
+              }
+            ],
+            "line": 2,
+            "column": 1
+          },
+          {
+            "type": "statement",
+            "value": null,
+            "children": [
+              {
+                "type": "print_stmt",
+                "value": null,
+                "children": [
+                  {
+                    "type": "Operator",
+                    "value": "print",
+                    "children": [],
+                    "line": 5,
+                    "column": 1
+                  },
+                  {
+                    "type": "expr",
+                    "value": null,
+                    "children": [
+                      {
+                        "type": "term",
+                        "value": null,
+                        "children": [
+                          {
+                            "type": "factor",
+                            "value": null,
+                            "children": [
+                              {
+                                "type": "Identifier",
+                                "value": "x",
+                                "children": [],
+                                "line": 5,
+                                "column": 7
+                              }
+                            ],
+                            "line": 5,
+                            "column": 7
+                          }
+                        ],
+                        "line": 5,
+                        "column": 7
+                      }
+                    ],
+                    "line": 5,
+                    "column": 7
+                  },
+                  {
+                    "type": "Operator",
+                    "value": ";",
+                    "children": [],
+                    "line": 5,
+                    "column": 1
+                  }
+                ],
+                "line": 5,
+                "column": 1
+              }
+            ],
+            "line": 5,
+            "column": 1
+          }
+        ],
+        "line": 2,
+        "column": 1
+      }
+    }
+  },
+  {
+    "name": "missing-semicolon",
+    "grammar": "// Aurora \u2014 canonical PEG grammar\n// Edit this file in ParserCraft Studio; it is synced into language.yaml on save.\n\nprogram       <- statement+\nstatement     <- function_def / if_stmt / while_stmt / return_stmt / print_stmt / assignment / expr_stmt\nfunction_def  <- 'fn' IDENT '(' param_list? ')' block\nblock         <- '{' statement* '}'\nparam_list    <- IDENT (',' IDENT)*\nif_stmt       <- 'if' comparison block ('else' block)?\nwhile_stmt    <- 'while' comparison block\nreturn_stmt   <- 'return' expr ';'\nprint_stmt    <- 'print' expr ';'\nassignment    <- IDENT '=' expr ';'\nexpr_stmt     <- call ';'\ncomparison    <- expr ('==' / '!=' / '<=' / '>=' / '<' / '>') expr\nexpr          <- term (('+' / '-') term)*\nterm          <- factor (('*' / '/' / '%') factor)*\nfactor        <- call / NUMBER / STRING / boolean / IDENT / '(' expr ')'\ncall          <- IDENT '(' arg_list? ')'\narg_list      <- expr (',' expr)*\nboolean       <- 'true' / 'false'\n",
+    "source": "x = 1\n",
+    "expect": {
+      "ok": false,
+      "error_contains": "Parse error at line 2, column 1 (in rule 'term'): unexpected ''"
+    }
+  },
+  {
+    "name": "bad-expression",
+    "grammar": "// Aurora \u2014 canonical PEG grammar\n// Edit this file in ParserCraft Studio; it is synced into language.yaml on save.\n\nprogram       <- statement+\nstatement     <- function_def / if_stmt / while_stmt / return_stmt / print_stmt / assignment / expr_stmt\nfunction_def  <- 'fn' IDENT '(' param_list? ')' block\nblock         <- '{' statement* '}'\nparam_list    <- IDENT (',' IDENT)*\nif_stmt       <- 'if' comparison block ('else' block)?\nwhile_stmt    <- 'while' comparison block\nreturn_stmt   <- 'return' expr ';'\nprint_stmt    <- 'print' expr ';'\nassignment    <- IDENT '=' expr ';'\nexpr_stmt     <- call ';'\ncomparison    <- expr ('==' / '!=' / '<=' / '>=' / '<' / '>') expr\nexpr          <- term (('+' / '-') term)*\nterm          <- factor (('*' / '/' / '%') factor)*\nfactor        <- call / NUMBER / STRING / boolean / IDENT / '(' expr ')'\ncall          <- IDENT '(' arg_list? ')'\narg_list      <- expr (',' expr)*\nboolean       <- 'true' / 'false'\n",
+    "source": "y = ;\n",
+    "expect": {
+      "ok": false,
+      "error_contains": "Parse error at line 1, column 5 (in rule 'term'): unexpected ';'"
+    }
+  }
+]

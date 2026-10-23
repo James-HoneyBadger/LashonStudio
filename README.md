@@ -58,6 +58,8 @@ Start with a grammar. Get a working language. Ship it anywhere.
 |---|---|
 | **Grammar** | PEG with ordered choice, sequences, quantifiers (`*`,`+`,`?`), and predicate operators |
 | **Parsing** | Packrat memoization for O(n) guaranteed parse time; built-in `NUMBER`, `IDENT`, `STRING` tokens |
+| **Architecture** | Enforced layering (core → app → adapters) with import contracts, no cycles, lazy package imports, `parsercraft.ast` as the single AST contract |
+| **Native option** | Optional Rust PEG engine (`native/`) behind PyO3: ~5× faster matching, ~1.8× end to end, opt-in with automatic fallback |
 | **Incremental** | `IncrementalParser` re-parses only changed regions — suitable for real-time IDE use |
 | **Backends** | Python transpiler, ANSI C (with `main()`), WebAssembly Text (WAT), LLVM IR (SSA) |
 | **Config** | YAML/JSON language definitions with keyword remapping, custom functions, syntax toggles |
@@ -74,6 +76,7 @@ Start with a grammar. Get a working language. Ship it anywhere.
 | **Diagnostics** | `doctor`, `lint`, JSON `validate`, and grammar-aware LSP diagnostics with real error positions |
 | **VS Code** | Generates a buildable VS Code extension for any language config (TS scaffold, `language.yaml`, launch integration) |
 | **CLI** | 40+ subcommands covering the full language lifecycle |
+| **Verification** | Conformance corpus pinning grammars, programs, ASTs, and error positions for every engine |
 
 ---
 

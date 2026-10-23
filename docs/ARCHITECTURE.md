@@ -40,6 +40,34 @@ the PEG path.
 
 ---
 
+## Layering and contracts
+
+The package is a layered hexagon: a parsing core that knows nothing about I/O,
+an application layer, and adapters. Lower layers may be imported by higher
+ones, never the reverse.
+
+| Layer | Packages | May import |
+|---|---|---|
+| **core** | `ast`, `config`, `parser`, `codegen`, `types` | stdlib only (no Tk, sockets, HTTP, argparse; no YAML outside `config`) |
+| **app** | `runtime` | core |
+| **adapters** | `tooling`, `ide`, `packaging` | core, app, and the allow-listed headless modules of other adapters |
+
+`tests/test_architecture.py` enforces this by parsing every module's imports:
+
+- core → app/adapters is a failure, as is app → adapters;
+- adapter-to-adapter edges are allow-listed (`tooling → ide.studio`,
+  `tooling → packaging`);
+- `tooling` may not import Tk modules, so the CLI and LSP stay headless;
+- no import cycles between top-level packages (a cycle between `parser` and
+  `codegen` is what motivated moving `SourceAST` into `parsercraft.ast`);
+- every public package declares `__all__`.
+
+`import parsercraft` is lazy: the root package exposes `LanguageConfig` and
+`LanguageRuntime` through `__getattr__`, so a CLI start no longer pays for the
+whole runtime and backend stack (~5 ms instead of ~70-115 ms).
+
+---
+
 ## Package map
 
 | Path | Responsibility |
@@ -47,13 +75,22 @@ the PEG path.
 | `config/language_config.py` | `LanguageConfig` model, YAML/JSON loading, normalization, `validate()`, `validation_warnings()` |
 | `config/language_validator.py` | schema/identifier validation helpers |
 | `config/identifier_validator.py` | identifier rules per language style |
-| `config/visual_config_editor.py` | Tkinter keyword/function editor (used from the legacy IDE) |
-| `parser/grammar.py` | `GrammarParser`, `Grammar`, `GrammarRule`, `PEGNode`, `PEGInterpreter`, `grammar_from_config`, default grammar |
+| `config/presets.py` | named preset configurations (`apply_preset`) |
+| `ast.py` | `SourceAST` — the core AST contract shared by parsers and backends |
+| `parser/grammar/model.py` | `Grammar`, `GrammarRule`, `PEGNode`, `PEGNodeType`, `SUPPORTED_TOKENS` |
+| `parser/grammar/peg_parser.py` | `GrammarParser` (PEG text notation → `Grammar`) |
+| `parser/grammar/interpreter.py` | `PEGInterpreter` (packrat matching → `SourceAST`) |
+| `parser/grammar/builder.py` | `GrammarBuilder`, `grammar_from_config` |
+| `parser/grammar/defaults.py` | built-in fallback grammar |
+| `parser/native.py` | loader/serializer for the optional Rust PEG engine |
 | `parser/incremental.py` | `IncrementalParser` — region-based re-parse with full-parse fallback |
 | `parser/parser_generator.py` | tokenizer/parser scaffolding generation |
-| `parser/ast_integration.py` | adapters that feed ASTs to the C/WASM generators |
 | `codegen/common.py` | Shared AST traversal (`meaningful_children`, `split_chain`, `inline_assignment`, operator sets) |
-| `codegen/python_transpiler.py` | `PythonTranspiler`, `TranspileOptions`, `transpile_to_python`, `transpile_and_exec` |
+| `codegen/python/transpiler.py` | `PythonTranspiler` (composes the emitters), `TranspileOptions`, module entry points |
+| `codegen/python/statements.py` | statement emitters (`assignment`, `function_def`, …) |
+| `codegen/python/control_flow.py` | `if` / `while` / `for` emitters |
+| `codegen/python/expressions.py` | expression emitters and precedence handling |
+| `codegen/ast_integration.py` | adapters that feed ASTs to the C/WASM generators |
 | `codegen/codegen_c.py` | `CCodeGenerator` (AST → C) |
 | `codegen/codegen_wasm.py` | `WasmGenerator`, `WasmModule`, WAT serialization |
 | `codegen/llvm_ir.py` | `LLVMIRGenerator` (AST → SSA IR text) |
@@ -62,7 +99,8 @@ the PEG path.
 | `runtime/stdlib.py` | `StdLib`, `StdModule`, builtins and module tables |
 | `runtime/ffi.py` | `FFIBridge` (ctypes + Python bindings) |
 | `runtime/module_system.py` | `ModuleManager`, import/export parsing, dependency graph |
-| `tooling/cli.py` | argument parser and command registry (`main()`) |
+| `tooling/cli/parser.py` | argument parser construction |
+| `tooling/cli/dispatch.py` | command table and `main()` |
 | `tooling/commands/config.py` | create/validate/info/export/import/convert/diff/update/delete/list-presets |
 | `tooling/commands/execution.py` | REPL, batch, test harness, translation helpers |
 | `tooling/commands/codegen.py` | `codegen-c/wasm/llvm` implementations |
@@ -86,7 +124,9 @@ the PEG path.
 | `packaging/vscode_integration.py` | VS Code extension generation |
 | `packaging/documentation_generator.py` | Markdown/HTML language reference |
 | `packaging/package_registry.py` | `Package`, `Version`, `VersionConstraint`, `PackageRegistry` |
+| `ide/config_editor.py` | Tkinter keyword/function editor |
 | `ide/studio.py` | headless `LanguageStudio`, `StudioProject` |
+| `native/parsercraft-native/` | optional Rust PEG engine (PyO3), built by `scripts/build_native.sh` |
 | `ide/studio_app.py` | Tkinter Studio UI |
 | `ide/app.py` | compatibility shim (`ParserCraftIDE`) |
 | `ide/editor.py`, `ide/project.py` | editor widget and project files |
@@ -212,12 +252,61 @@ the widgets when a display is available.
 | Want to… | Do this |
 |---|---|
 | Add a backend | new class in `codegen/`, `translate_source_ast`, export in `codegen/__init__.py`, add CLI command |
-| Add a CLI command | implement `cmd_*` in `tooling/commands/`, export it from `commands/__init__.py`, register a subparser and dispatch entry in `tooling/cli.py` |
+| Add a CLI command | implement `cmd_*` in `tooling/commands/`, export it from `commands/__init__.py`, add a subparser in `tooling/cli/parser.py` and a dispatch entry in `tooling/cli/dispatch.py` |
 | Add a stdlib module | build a `StdModule`, `stdlib.add_module(...)` |
 | Bind native code | `FFIBridge.bind` / `register_python` |
 | Add diagnostics | extend `ErrorLocalizer` catalog or `TypeChecker` |
 | Customize grammar nodes | use fragments with `node_type=...` |
 | Add sample projects | put a directory under `projects/` and mirror it into `parsercraft/ide/samples/` if it should ship |
+
+---
+
+## Performance and the native backend
+
+Parsing is written for clarity first; `benchmarks/parse_bench.py` keeps the
+numbers honest. Reference machine, Aurora grammar, 2,000 lines (35 KB):
+
+| Measurement | Result |
+|---|---|
+| `import parsercraft` | ~5 ms (was ~70-115 ms before lazy exports) |
+| Python engine, full parse | ~110-125 ms → **~300 KB/s** |
+| Native engine, match + JSON | ~24 ms → **~1.4 MB/s** (about 5× Python) |
+| Native engine, end to end | ~61-69 ms → **~520 KB/s** (about 1.8× Python) |
+
+Two optimisations produced most of the Python-side gain without changing the
+algorithm: comment patterns are compiled once per parse and matched with
+`pattern.match(source, pos)` instead of slicing the remaining input (the slice
+was an O(n) copy on every whitespace skip), and the whitespace loop skips the
+regex path entirely unless the next character can start a comment.
+
+The optional native engine ([`native/parsercraft-native`](../native/parsercraft-native))
+ports the same packrat algorithm to Rust and is behind a PyO3 extension:
+
+```bash
+scripts/build_native.sh                     # builds and installs the .so
+python benchmarks/parse_bench.py            # compare both engines
+parsercraft run prog.aur -c lang.yaml       # unchanged: Python by default
+```
+
+```python
+PEGInterpreter(grammar, backend="auto")     # native when built and in scope
+PEGInterpreter(grammar, backend="native")   # require it
+```
+
+Why end-to-end is only ~1.8× and not ~5×: the Python side still decodes the
+JSON AST and constructs one `SourceAST` object per node, which costs more than
+matching does. **The AST object boundary, not the matching algorithm, is the
+limit** — so a native core only pays off if the AST is consumed natively (for
+example by moving the backends to Rust) or materialised lazily. That is the
+finding the spike was meant to produce, and it is why the native path stays
+opt-in.
+
+Correctness for both engines is pinned by `tests/conformance/cases.json`
+(regenerate with `python tests/conformance/generate.py`): the corpus records a
+grammar, a program, and the exact AST or error position, and the native engine
+must agree with the Python engine on every case. A grammar that uses an
+unimplemented feature (custom comment patterns, semantic actions) is detected
+by `native.supports()` and silently falls back to Python.
 
 ---
 

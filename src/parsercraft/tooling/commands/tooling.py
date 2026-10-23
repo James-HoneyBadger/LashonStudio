@@ -18,8 +18,14 @@ def cmd_lsp(args):
         print(f"Error: Configuration file not found: {config_path}")
         return 1
 
+    grammar_path = getattr(args, "grammar", None)
+    if not grammar_path:
+        candidate = config_path.parent / "grammar.peg"
+        if candidate.is_file():
+            grammar_path = str(candidate)
+
     try:
-        server = create_lsp_server(str(config_path))
+        server = create_lsp_server(str(config_path), grammar_path)
         print(
             f"\u2713 LSP Server started for {server.config.name}",
             file=sys.stderr,
@@ -65,7 +71,8 @@ def cmd_extension(args):
         print(f"  1. cd {args.output}")
         print("  2. npm install")
         print("  3. npm run compile")
-        print("  4. code --install-extension .vscode-ext")
+        print("  4. npx vsce package")
+        print("  5. code --install-extension <generated .vsix>")
         return 0
     except CONFIG_LOAD_ERRORS as error:
         print(f"Error loading config: {error}")
@@ -168,6 +175,13 @@ def cmd_format(args):
 
         formatter = CodeFormatter(tab_size=args.tab_size)
         formatted = formatter.format(source)
+
+        if getattr(args, "check", False):
+            if formatted != source:
+                print(f"Would reformat: {args.file}")
+                return 1
+            print(f"✓ Already formatted: {args.file}")
+            return 0
 
         output_file = args.output or (args.file if args.in_place else None)
 

@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -90,8 +91,8 @@ def _run_sandboxed(code: str, timeout: float) -> int:
     return completed.returncode
 
 
-def cmd_run(args) -> int:
-    """Parse and execute a source file."""
+def _run_once(args) -> int:
+    """Parse and execute a source file once."""
     source_path = Path(args.file)
     if not source_path.exists():
         print(f"Error: Source file not found: {source_path}", file=sys.stderr)
@@ -144,3 +145,40 @@ def cmd_run(args) -> int:
             file=sys.stderr,
         )
         return 1
+
+
+def _stamps(args) -> tuple:
+    stamps = []
+    for value in (args.file, args.config, args.grammar):
+        if value:
+            path = Path(value)
+            try:
+                stat = path.stat()
+            except OSError:
+                stamps.append(None)
+            else:
+                stamps.append((stat.st_mtime_ns, stat.st_size))
+        else:
+            stamps.append(None)
+    return tuple(stamps)
+
+
+def cmd_run(args) -> int:
+    """Parse and execute a source file, optionally watching for changes."""
+    if not getattr(args, "watch", False):
+        return _run_once(args)
+
+    previous = None
+    print("Watching for changes (Ctrl+C to stop)")
+    try:
+        while True:
+            current = _stamps(args)
+            if current != previous:
+                previous = current
+                print()
+                print(f"--- {time.strftime('%H:%M:%S')} ---")
+                _run_once(args)
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        print("\nStopped watching.")
+        return 0

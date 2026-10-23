@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -89,6 +90,22 @@ def cmd_validate(args):
         config = LanguageConfig.load(filepath)
         errors = config.validate()
         warnings = config.validation_warnings()
+
+        if args.json:
+            json.dump(
+                {
+                    "file": str(filepath),
+                    "valid": not errors,
+                    "errors": errors,
+                    "warnings": warnings,
+                    "name": config.name,
+                    "version": config.version,
+                },
+                sys.stdout,
+                indent=2,
+            )
+            sys.stdout.write("\n")
+            return 1 if errors else 0
 
         if errors:
             print(f"❌ Validation failed for: {filepath}")
@@ -345,6 +362,7 @@ def cmd_diff(args):
         print(f"Error loading configs: {error}")
         return 1
 
+    identical = config1.to_dict() == config2.to_dict()
     print(f"Comparing: {file1} vs {file2}")
     print("=" * 70)
 
@@ -427,6 +445,8 @@ def cmd_diff(args):
     else:
         print("\n✓ Syntax options are identical")
 
+    if args.exit_code and not identical:
+        return 1
     return 0
 
 def cmd_update(args) -> int:

@@ -14,6 +14,9 @@ from .config import (
     cmd_update,
     cmd_validate,
 )
+from .config_tools import cmd_config
+from .demo import cmd_demo
+from .doctor import cmd_doctor
 from .execution import (
     cmd_batch,
     cmd_repl,
@@ -22,7 +25,9 @@ from .execution import (
 )
 from .generics import cmd_generics
 from .init import cmd_init
+from .lint import cmd_lint
 from .modules import cmd_module_cycles, cmd_module_deps, cmd_module_info
+from .playground import cmd_play
 from .run import cmd_run
 from .tooling import (
     cmd_check_protocol,
@@ -43,11 +48,14 @@ __all__ = [
     "cmd_codegen_c",
     "cmd_codegen_llvm",
     "cmd_codegen_wasm",
+    "cmd_config",
     "cmd_convert",
     "cmd_create",
     "cmd_debug_launch",
+    "cmd_demo",
     "cmd_delete",
     "cmd_diff",
+    "cmd_doctor",
     "cmd_edit",
     "cmd_export",
     "cmd_extension",
@@ -56,6 +64,7 @@ __all__ = [
     "cmd_import",
     "cmd_info",
     "cmd_init",
+    "cmd_lint",
     "cmd_list_presets",
     "cmd_lsp",
     "cmd_module_cycles",
@@ -63,6 +72,7 @@ __all__ = [
     "cmd_module_info",
     "cmd_package_install",
     "cmd_package_search",
+    "cmd_play",
     "cmd_refactor_rename",
     "cmd_repl",
     "cmd_run",

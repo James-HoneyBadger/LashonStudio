@@ -507,6 +507,7 @@ class PEGInterpreter:
         self.memo: Dict[Tuple[str, int], ParseResult] = {}  # Packrat memoization
         self.max_pos = 0        # Furthest position reached (for error reporting)
         self.max_rule = ""      # Rule being tried at max_pos
+        self._rule_stack: List[str] = []
 
     def parse(self, source: str) -> SourceAST:
         """Parse source code using the grammar.
@@ -531,6 +532,7 @@ class PEGInterpreter:
         self.memo.clear()
         self.max_pos = 0
         self.max_rule = rule_name
+        self._rule_stack = []
         self._compute_line_starts()
 
         result = self._match_rule(rule_name, 0)
@@ -541,17 +543,32 @@ class PEGInterpreter:
             raise SyntaxError(
                 f"Parse error at line {line}, column {col} "
                 f"(in rule '{self.max_rule}'): unexpected '{ctx}'"
+                + self._snippet(line, col)
             )
 
-        # Check we consumed all input (ignoring trailing whitespace)
-        remaining = self.source[result.pos:].strip()
+        # Check we consumed all input (ignoring whitespace and comments)
+        trailing_pos = self._skip_ignored(result.pos)
+        remaining = self.source[trailing_pos:].strip()
         if remaining:
-            line, col = self._pos_to_line_col(result.pos)
+            line, col = self._pos_to_line_col(trailing_pos)
             raise SyntaxError(
-                f"Unexpected input at line {line}, column {col}: '{remaining[:30]}'"
+                f"Unexpected input at line {line}, column {col}: "
+                f"'{remaining[:30]}'" + self._snippet(line, col)
             )
 
         return result.node if result.node else SourceAST(rule_name)
+
+    def _snippet(self, line: int, column: int) -> str:
+        """Render a source line with a caret for error messages."""
+        lines = self.source.splitlines()
+        if line < 1 or line > len(lines):
+            return ""
+        text = lines[line - 1]
+        if not text:
+            return ""
+        caret = " " * max(column - 1, 0) + "^"
+        gutter = " " * len(str(line))
+        return f"\n  {line} | {text}\n  {gutter} | {caret}"
 
     def _match_rule(self, rule_name: str, pos: int) -> ParseResult:
         """Match a named grammar rule at the given position."""
@@ -577,7 +594,11 @@ class PEGInterpreter:
             return result
 
         pos = self._skip_ignored(pos)
-        result = self._match_node(rule.pattern, pos)
+        self._rule_stack.append(rule_name)
+        try:
+            result = self._match_node(rule.pattern, pos)
+        finally:
+            self._rule_stack.pop()
 
         if result.success and not rule.is_fragment:
             # Build AST node for this rule
@@ -617,6 +638,13 @@ class PEGInterpreter:
         self.memo[memo_key] = result
         return result
 
+    def _note_failure(self, pos: int) -> None:
+        """Record the furthest failing position for error reporting."""
+        if pos > self.max_pos:
+            self.max_pos = pos
+            if self._rule_stack:
+                self.max_rule = self._rule_stack[-1]
+
     def _match_node(self, node: PEGNode, pos: int) -> ParseResult:
         """Match a PEG node at the given position."""
         if node.node_type == PEGNodeType.LITERAL:
@@ -628,6 +656,7 @@ class PEGInterpreter:
         elif node.node_type == PEGNodeType.ANY_CHAR:
             if pos < len(self.source):
                 return ParseResult(True, pos + 1, self.source[pos])
+            self._note_failure(pos)
             return ParseResult(False, pos)
 
         elif node.node_type == PEGNodeType.RULE_REF:
@@ -679,19 +708,23 @@ class PEGInterpreter:
             # a longer identifier.
             if text.isalpha() and end < len(self.source) and (
                     self.source[end].isalnum() or self.source[end] == '_'):
+                self._note_failure(pos)
                 return ParseResult(False, pos)
             return ParseResult(True, end, text)
+        self._note_failure(pos)
         return ParseResult(False, pos)
 
     def _match_char_class(self, pattern: str, pos: int) -> ParseResult:
         """Match a character class like [a-zA-Z0-9_]."""
         if pos >= len(self.source):
+            self._note_failure(pos)
             return ParseResult(False, pos)
 
         regex = f"[{pattern}]"
         m = re.match(regex, self.source[pos:])
         if m:
             return ParseResult(True, pos + 1, self.source[pos])
+        self._note_failure(pos)
         return ParseResult(False, pos)
 
     def _match_sequence(self, children: List[PEGNode], pos: int) -> ParseResult:
@@ -791,6 +824,7 @@ class PEGInterpreter:
             if not remaining:
                 return ParseResult(True, pos)
 
+        self._note_failure(pos)
         return ParseResult(False, pos)
 
     def _skip_ignored(self, pos: int) -> int:

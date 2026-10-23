@@ -64,3 +64,5 @@ Thumbs.db
 site/
 _site/
 native/**/target/
+target/
+crates/*/target/

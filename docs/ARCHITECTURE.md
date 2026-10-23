@@ -126,7 +126,8 @@ whole runtime and backend stack (~5 ms instead of ~70-115 ms).
 | `packaging/package_registry.py` | `Package`, `Version`, `VersionConstraint`, `PackageRegistry` |
 | `ide/config_editor.py` | Tkinter keyword/function editor |
 | `ide/studio.py` | headless `LanguageStudio`, `StudioProject` |
-| `native/parsercraft-native/` | optional Rust PEG engine (PyO3), built by `scripts/build_native.sh` |
+| `crates/parsercraft-core/` | Rust core: grammar model, PEG text parser, packrat engine, AST JSON, PyO3 bindings |
+| `crates/parsercraft-cli/` | `parsercraft-rs` binary: `validate`, `rules`, `ast`, `parse`, `version` |
 | `ide/studio_app.py` | Tkinter Studio UI |
 | `ide/app.py` | compatibility shim (`ParserCraftIDE`) |
 | `ide/editor.py`, `ide/project.py` | editor widget and project files |
@@ -261,6 +262,36 @@ the widgets when a display is available.
 
 ---
 
+## Rust core
+
+The parsing half of the project exists twice: the Python reference
+implementation and a Rust core in a Cargo workspace. They are kept
+interchangeable by `tests/conformance/cases.json`, and the Rust side is
+self-sufficient (it parses PEG text itself, so it needs no Python to run).
+
+```
+Cargo.toml                  workspace
+crates/parsercraft-core/    grammar model · PEG text parser · packrat engine · AST JSON
+                            PyO3 bindings behind the optional `python` feature
+crates/parsercraft-cli/     `parsercraft-rs` binary
+```
+
+| Surface | Implementation | Status |
+|---|---|---|
+| PEG text parsing, matching, AST | Rust (`parsercraft-core`) | done, conformance-checked |
+| Python bindings | PyO3, loaded by `parsercraft.parser.native` | done, opt-in via `backend="auto"` |
+| `parsercraft-rs validate / rules / ast / parse` | Rust | done |
+| Transpiler + C/WASM/LLVM backends | Python only | **not ported** |
+| CLI, LSP, DAP, Studio, packaging | Python only | **not ported** |
+
+That split is deliberate: the core is where a native implementation pays for
+itself, and everything above it is I/O and glue that gains little from Rust.
+Porting a backend is mechanical but only worth it to remove the last Python
+dependency — the C backend is the natural first step because it needs no
+runtime to validate its output.
+
+---
+
 ## Performance and the native backend
 
 Parsing is written for clarity first; `benchmarks/parse_bench.py` keeps the
@@ -279,13 +310,14 @@ algorithm: comment patterns are compiled once per parse and matched with
 was an O(n) copy on every whitespace skip), and the whitespace loop skips the
 regex path entirely unless the next character can start a comment.
 
-The optional native engine ([`native/parsercraft-native`](../native/parsercraft-native))
+The optional native engine ([`crates/parsercraft-core`](../crates/parsercraft-core))
 ports the same packrat algorithm to Rust and is behind a PyO3 extension:
 
 ```bash
 scripts/build_native.sh                     # builds and installs the .so
 python benchmarks/parse_bench.py            # compare both engines
 parsercraft run prog.aur -c lang.yaml       # unchanged: Python by default
+cargo run -p parsercraft-cli -- parse g.peg prog.aur   # pure Rust, no Python
 ```
 
 ```python

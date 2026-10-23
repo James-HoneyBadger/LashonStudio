@@ -29,6 +29,12 @@ All notable changes to ParserCraft. This project follows
 
 ### Added
 
+- **Rust core crate** (`crates/parsercraft-core`): the PEG grammar model, PEG
+  text-notation parser, packrat engine, and AST JSON writer, plus PyO3
+  bindings behind an optional `python` feature.
+- **`parsercraft-rs` binary** (`crates/parsercraft-cli`): `validate`, `rules`,
+  `ast`, `parse`, and `version`, running with no Python installed. Built from
+  an enforced Cargo workspace (`cargo build --workspace --release`).
 - **Conformance corpus** (`tests/conformance/cases.json`) pinning grammars,
   programs, and exact ASTs/error positions, plus `benchmarks/parse_bench.py`.
 - **Optional native PEG engine** (`native/parsercraft-native`, Rust + PyO3),

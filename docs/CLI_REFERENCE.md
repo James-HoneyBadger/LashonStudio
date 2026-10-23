@@ -594,6 +594,29 @@ directly; see [PACKAGING.md](PACKAGING.md).
 
 ---
 
+## Rust front end (`parsercraft-rs`)
+
+A second, dependency-free binary built from `crates/parsercraft-cli`. It runs
+with no Python installed and covers the commands that only need the grammar
+engine:
+
+```bash
+cargo build --workspace --release      # or: cargo install --path crates/parsercraft-cli
+
+parsercraft-rs validate grammar.peg     # rules, start rule, undefined-rule warnings
+parsercraft-rs rules grammar.peg        # one rule name per line
+parsercraft-rs ast grammar.peg prog.aur # pretty JSON AST
+parsercraft-rs parse grammar.peg prog.aur  # exit 0/1, prints the first error
+parsercraft-rs version
+```
+
+`validate` exits 1 when the grammar cannot be parsed; `parse` exits 1 on a
+syntax error and prints the same message shape as the Python engine
+(`Parse error at line N, column M (in rule 'x'): ...`). Commands that need the
+transpiler or a backend (`run`, `codegen-*`) are still Python-only.
+
+---
+
 ## Examples by task
 
 | Task | Command |

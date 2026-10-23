@@ -8,12 +8,12 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-crate="$root/native/parsercraft-native"
+crate="$root/crates/parsercraft-core"
 target="$root/src/parsercraft/parser"
 
-cargo build --release --manifest-path "$crate/Cargo.toml"
+cargo build --release --manifest-path "$crate/Cargo.toml" --features python
 
-so="$(find "$crate/target/release" -maxdepth 1 -name 'libparsercraft_native*.so' | head -1)"
+so="$(find "$root/target/release" "$crate/target/release" -maxdepth 1 -name 'libparsercraft_core*.so' 2>/dev/null | head -1)"
 if [[ -z "$so" ]]; then
   echo "error: build produced no shared library" >&2
   exit 1

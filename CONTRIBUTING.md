@@ -14,7 +14,7 @@ git clone https://github.com/James-HoneyBadger/ParserCraft.git
 cd ParserCraft
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
-python -m pytest -q          # 335 passing
+python -m pytest -q          # 430+ passing
 python -m pytest -q --cov --cov-fail-under=43
 ruff check src tests
 ```
@@ -78,6 +78,33 @@ python -m pytest tests/ --cov=src/parsercraft --cov-report=term-missing
 - Preview the site with `pip install -e ".[docs]" && mkdocs serve`.
 - CLI changes require an update to
   [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md) and its maturity table.
+
+---
+
+## Branch protection and CI gates
+
+`main` is protected. Ten status checks are required (`lint`, `native`,
+`package`, `test (3.10)` … `test (3.14)`, both `cross-platform` jobs),
+force pushes and branch deletion are blocked, and unresolved review threads
+block a merge. Auto-merge is enabled on the repository.
+
+Maintainers may push directly; contributors should open a pull request:
+
+```bash
+git switch -c feat/my-change
+# ... commits ...
+gh pr create --fill
+gh pr merge --auto --squash      # lands once every required check is green
+```
+
+The Rust workspace is part of CI (`cargo test --workspace`), so a change to
+`crates/` must compile before it can land:
+
+```bash
+cargo build --workspace --release
+cargo test --workspace
+scripts/build_native.sh          # rebuild the Python extension after core changes
+```
 
 ---
 

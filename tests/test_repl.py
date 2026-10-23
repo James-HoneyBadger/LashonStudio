@@ -114,3 +114,35 @@ class TestREPLCommands:
         repl._handle_command(":foobar")
         captured = capsys.readouterr()
         assert "Unknown command" in captured.out
+
+
+class TestREPLCommandExtras:
+    """REPL meta-commands and niceties."""
+
+    def test_time_toggle(self):
+        repl = REPL()
+        assert repl.timing is False
+        repl.eval_line(":time")
+        assert repl.timing is True
+        repl.eval_line(":time")
+        assert repl.timing is False
+
+    def test_doc_lists_rule(self):
+        repl = REPL()
+        output = repl.eval_line(":doc expr")
+        assert "expr" in output
+
+    def test_backends_requires_ast(self):
+        repl = REPL()
+        assert "No AST" in repl.eval_line(":backends")
+        repl.eval_line("value = 3 ;")
+        assert "WASM" in repl.eval_line(":backends")
+
+    def test_save_writes_last_input(self, tmp_path):
+        repl = REPL()
+        assert "Nothing to save" in repl.eval_line(":save " + str(tmp_path / "x"))
+
+        repl.eval_line("value = 5 ;")
+        target = tmp_path / "saved.aur"
+        assert "Saved" in repl.eval_line(f":save {target}")
+        assert target.read_text(encoding="utf-8").strip() == "value = 5 ;"

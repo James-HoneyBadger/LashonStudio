@@ -87,3 +87,53 @@ def test_switching_to_fibonacci_sample_runs(app):
     app._run_program()
     app.update()
     assert "3628800" in app.console.get("1.0", "end")
+
+
+def test_parse_failure_fills_problems_panel(app):
+    app.source_editor.set_text("x = 1 ;\ny = ;\n")
+    app._parse_source()
+    app.update()
+
+    problems = app.problems_tree.get_children()
+    assert problems
+    severity, location, message = app.problems_tree.item(problems[0])["values"]
+    assert severity == "ERROR"
+    assert location == "2:1"
+    assert "line 2" in str(message)
+
+    assert app.source_editor.text.tag_ranges("error")
+
+
+def test_problem_selection_jumps_to_source(app):
+    app.source_editor.set_text("x = 1 ;\ny = ;\n")
+    app._parse_source()
+    app.update()
+
+    app.problems_tree.selection_set(app.problems_tree.get_children()[0])
+    app._select_problem()
+    app.update()
+    assert app.source_editor.text.index("insert").startswith("2.")
+
+
+def test_command_palette_lists_commands(app):
+    app._show_palette()
+    app.update()
+    toplevels = [
+        child for child in app.winfo_children()
+        if child.winfo_class() == "Toplevel"
+    ]
+    assert toplevels, "palette window should open"
+    assert toplevels[0].title() == "Command Palette"
+    toplevels[0].destroy()
+
+
+def test_quick_open_lists_project_files(app):
+    app._quick_open()
+    app.update()
+    toplevels = [
+        child for child in app.winfo_children()
+        if child.winfo_class() == "Toplevel"
+    ]
+    assert toplevels, "quick open should open"
+    assert toplevels[0].title() == "Quick Open"
+    toplevels[0].destroy()

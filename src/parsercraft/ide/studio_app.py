@@ -10,6 +10,7 @@ module only wires it to Tkinter widgets.
 
 from __future__ import annotations
 
+import re
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
@@ -51,6 +52,17 @@ BACKEND_TITLES = {
     "wasm": "WASM",
     "llvm": "LLVM IR",
 }
+
+
+_POSITION_RE = re.compile(r"line (\d+), column (\d+)", re.IGNORECASE)
+
+
+def _error_position(message: str) -> tuple[Optional[int], Optional[int]]:
+    """Extract a 1-based (line, column) pair from a diagnostic message."""
+    match = _POSITION_RE.search(message)
+    if match is None:
+        return None, None
+    return int(match.group(1)), int(match.group(2))
 
 
 class ParserCraftIDE(tk.Tk):
@@ -322,6 +334,28 @@ class ParserCraftIDE(tk.Tk):
                 BACKEND_TITLES[backend]
             )
 
+        problems_frame = tk.Frame(self.output_tabs, bg=BG)
+        self.problems_frame = problems_frame
+        self.output_tabs.add(problems_frame, text="Problems")
+        self.problems_tree = ttk.Treeview(
+            problems_frame,
+            columns=("severity", "location", "message"),
+            show="headings",
+        )
+        self.problems_tree.heading("severity", text="")
+        self.problems_tree.heading("location", text="Location")
+        self.problems_tree.heading("message", text="Problem")
+        self.problems_tree.column("severity", width=40, anchor="center")
+        self.problems_tree.column("location", width=120, anchor="w")
+        self.problems_tree.column("message", width=680, anchor="w")
+        self.problems_tree.tag_configure("error", foreground=RED)
+        self.problems_tree.tag_configure("warning", foreground=YELLOW)
+        self.problems_tree.bind(
+            "<<TreeviewSelect>>", self._select_problem
+        )
+        self.problems_tree.pack(fill="both", expand=True)
+        self._problem_targets: Dict[str, str] = {}
+
         ast_frame = tk.Frame(self.output_tabs, bg=BG)
         self.output_tabs.add(ast_frame, text="AST")
         self.ast_tree = ttk.Treeview(ast_frame, show="tree")
@@ -361,6 +395,10 @@ class ParserCraftIDE(tk.Tk):
         self.detail_label.pack(side="right")
 
     def _bind_shortcuts(self) -> None:
+        self.bind("<Control-Shift-P>", lambda _e: self._show_palette())
+        self.bind("<Control-Shift-p>", lambda _e: self._show_palette())
+        self.bind("<Control-p>", lambda _e: self._quick_open())
+        self.bind("<F1>", lambda _e: self._show_shortcuts())
         self.bind("<Control-n>", lambda _e: self._new_project())
         self.bind("<Control-o>", lambda _e: self._open_project())
         self.bind("<Control-s>", lambda _e: self._save_project())
@@ -574,11 +612,35 @@ class ParserCraftIDE(tk.Tk):
             return
         result = self.studio.validate_grammar(self.grammar_editor.get_text())
         if result.ok:
+            self._clear_problems()
+            self.grammar_editor.clear_errors()
             self.source_editor.set_keywords(self.studio.highlight_keywords())
             self._set_status("Grammar OK", "success")
             self._update_project_info()
         else:
+            self._show_grammar_problems(result)
             self._set_status("Grammar error", "error")
+
+    def _show_grammar_problems(self, result: StudioResult) -> None:
+        """Surface grammar problems with markers in the grammar editor."""
+        self._clear_problems()
+        self.grammar_editor.clear_errors()
+        messages = [result.error] if result.error else []
+        messages.extend(
+            diagnostic.message for diagnostic in result.diagnostics
+            if diagnostic.message != result.error
+        )
+        for message in messages:
+            line, column = _error_position(message)
+            if line is not None:
+                self.grammar_editor.mark_error(line, column, 1)
+                self._add_problem(
+                    "error", line, column, message, "grammar"
+                )
+            else:
+                self._add_problem("error", None, None, message, "grammar")
+        if messages:
+            self.output_tabs.select(self.problems_frame)
 
     # ------------------------------------------------------------------
     # Actions
@@ -646,8 +708,11 @@ class ParserCraftIDE(tk.Tk):
             if log_success:
                 self._log(result.text, "success")
             return True
+        self._show_grammar_problems(result)
         for diagnostic in result.diagnostics:
             self._log(diagnostic.message, "error")
+        if result.error:
+            self._log(result.error, "error")
         self._set_status("Grammar invalid", "error")
         return False
 
@@ -722,11 +787,71 @@ class ParserCraftIDE(tk.Tk):
 
     def _report_failure(self, result: StudioResult, context: str) -> None:
         self._log(f"{context}: {result.error}", "error")
+        self._clear_problems()
+        self.source_editor.clear_errors()
+
+        messages = [result.error] if result.error else []
         for diagnostic in result.diagnostics:
             if diagnostic.message != result.error:
-                for line in diagnostic.message.splitlines():
-                    self._log(line, "error")
+                messages.append(diagnostic.message)
+
+        for message in messages:
+            line, column = _error_position(message)
+            if line is not None:
+                self.source_editor.mark_error(line, column, 1)
+                self._add_problem("error", line, column, message, "source")
+            else:
+                self._add_problem("error", None, None, message, "source")
+        self.output_tabs.select(self.problems_frame)
         self._set_status(context, "error")
+
+    # ------------------------------------------------------------------
+    # Problems
+    # ------------------------------------------------------------------
+
+    def _clear_problems(self) -> None:
+        self.problems_tree.delete(*self.problems_tree.get_children())
+        self._problem_targets.clear()
+
+    def _add_problem(
+        self,
+        severity: str,
+        line: Optional[int],
+        column: Optional[int],
+        message: str,
+        target: str,
+    ) -> str:
+        """Add a row to the Problems list and remember where it belongs."""
+        location = f"line {line}" if line else ""
+        if line and column:
+            location = f"{line}:{column}"
+        first_line = message.splitlines()[0]
+        item = self.problems_tree.insert(
+            "",
+            "end",
+            values=(severity.upper(), location, first_line),
+            tags=(severity,),
+        )
+        encoded = f"{target}|{line or 1}|{column or 1}"
+        self._problem_targets[item] = encoded
+        return item
+
+    def _select_problem(self, _event: Any = None) -> None:
+        selection = self.problems_tree.selection()
+        if not selection:
+            return
+        target, line, column = self._problem_targets[selection[0]].split("|")
+        editor = (
+            self.grammar_editor if target == "grammar" else self.source_editor
+        )
+        self.editor_tabs.select(editor.master)
+        self._goto(editor, int(line), int(column))
+
+    def _goto(self, editor: CodeEditor, line: int, column: int = 1) -> None:
+        index = f"{max(line, 1)}.{max(column - 1, 0)}"
+        editor.text.mark_set("insert", index)
+        editor.text.see(index)
+        editor.text.focus_set()
 
     # ------------------------------------------------------------------
     # Output helpers
@@ -790,6 +915,126 @@ class ParserCraftIDE(tk.Tk):
         widget = self.focus_get()
         if isinstance(widget, tk.Text):
             widget.event_generate(event)
+
+    # ------------------------------------------------------------------
+    # Command palette / quick open
+    # ------------------------------------------------------------------
+
+    def _commands(self) -> list[tuple[str, str, Any]]:
+        """Return the commands offered by the palette."""
+        return [
+            ("New Project…", "Ctrl+N", self._new_project),
+            ("Open Project…", "Ctrl+O", self._open_project),
+            ("Save Project", "Ctrl+S", self._save_project),
+            ("Validate Grammar", "Ctrl+Shift+V", self._validate_grammar),
+            ("Parse Source", "F6", self._parse_source),
+            ("Run Program", "F5", self._run_program),
+            ("Generate All Backends", "F7", self._generate_all),
+            ("Open Aurora Reference Project", "",
+             self._load_sample_project),
+            ("Open Language Config…", "", self._open_config),
+            ("Show Keyboard Shortcuts", "F1", self._show_shortcuts),
+        ]
+
+    def _show_palette(self) -> None:
+        def run(label: str) -> None:
+            for name, _accelerator, callback in self._commands():
+                if name == label:
+                    callback()
+                    return
+
+        self._show_picker(
+            title="Command Palette",
+            items=[f"{name}  ({accel})" if accel else name
+                   for name, accel, _cb in self._commands()],
+            on_accept=lambda label: run(label.split("  (")[0]),
+        )
+
+    def _quick_open(self) -> None:
+        paths = sorted(
+            (value[1] for value in self._tree_paths.values()
+             if value[1] is not None),
+            key=lambda path: path.name,
+        )
+        if not paths:
+            self._set_status("No files in this project")
+            return
+
+        def accept(name: str) -> None:
+            for path in paths:
+                if path.name == name:
+                    self._load_source_file(path)
+                    return
+
+        self._show_picker(
+            title="Quick Open",
+            items=[path.name for path in paths],
+            on_accept=accept,
+        )
+
+    def _show_picker(
+        self, title: str, items: list[str], on_accept: Any
+    ) -> None:
+        window = tk.Toplevel(self)
+        window.title(title)
+        window.configure(bg=PANEL)
+        window.transient(self)
+        window.geometry("520x320")
+
+        entry = tk.Entry(
+            window, bg=PANEL_ALT, fg=FG, insertbackground=FG,
+            font=UI_FONT, relief="flat",
+        )
+        entry.pack(fill="x", padx=10, pady=10)
+        entry.focus_set()
+
+        listing = tk.Listbox(
+            window, bg=PANEL, fg=FG, font=UI_FONT, relief="flat",
+            selectbackground="#1f6feb", highlightthickness=0,
+        )
+        listing.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+
+        shown: list[str] = []
+
+        def refresh(_event: Any = None) -> None:
+            query = entry.get().lower()
+            shown.clear()
+            listing.delete(0, "end")
+            for item in items:
+                if query in item.lower():
+                    shown.append(item)
+                    listing.insert("end", item)
+            if shown:
+                listing.selection_set(0)
+
+        def accept(_event: Any = None) -> None:
+            selection = listing.curselection()
+            choice = shown[selection[0]] if selection else None
+            window.destroy()
+            if choice:
+                on_accept(choice)
+
+        entry.bind("<KeyRelease>", refresh)
+        entry.bind("<Return>", accept)
+        listing.bind("<Double-Button-1>", accept)
+        window.bind("<Escape>", lambda _e: window.destroy())
+        refresh()
+
+    def _show_shortcuts(self) -> None:
+        messagebox.showinfo(
+            "Keyboard shortcuts",
+            "Ctrl+N  New project\n"
+            "Ctrl+O  Open project\n"
+            "Ctrl+S  Save project\n"
+            "Ctrl+P  Quick open file\n"
+            "Ctrl+Shift+P  Command palette\n"
+            "Ctrl+Shift+V  Validate grammar\n"
+            "F5  Run program\n"
+            "F6  Parse source\n"
+            "F7  Generate all backends\n"
+            "F1  This help",
+            parent=self,
+        )
 
     def _show_about(self) -> None:
         messagebox.showinfo(

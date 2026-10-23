@@ -191,3 +191,84 @@ def test_unknown_request_returns_error(dap):
         and m.get("command") == "workspace/nonesuch"
     )
     assert response["success"] is False
+
+
+def test_conditional_breakpoint_skips_until_true(dap):
+    dap.initialize()
+    dap.send("launch", {
+        "program": str(dap.program),
+        "config": str(dap.config),
+    })
+    dap.wait_for(lambda m: m.get("type") == "response")
+    dap.send("setBreakpoints", {
+        "source": {"path": str(dap.program)},
+        "breakpoints": [{"line": 4, "condition": "i == 1"}],
+    })
+    dap.wait_for(
+        lambda m: m.get("type") == "response"
+        and m.get("command") == "setBreakpoints"
+    )
+    dap.send("configurationDone")
+    dap.wait_for(
+        lambda m: m.get("type") == "response"
+        and m.get("command") == "configurationDone"
+    )
+
+    dap.wait_for(lambda m: m.get("event") == "stopped", timeout=10)
+    variables = dap.request("variables", {"variablesReference": 1})
+    values = {v["name"]: v["value"] for v in variables["body"]["variables"]}
+    assert values["i"] == "1"
+
+    dap.request("disconnect", {})
+
+
+def test_hit_condition_breaks_after_n_hits(dap):
+    dap.initialize()
+    dap.send("launch", {
+        "program": str(dap.program),
+        "config": str(dap.config),
+    })
+    dap.wait_for(lambda m: m.get("type") == "response")
+    dap.send("setBreakpoints", {
+        "source": {"path": str(dap.program)},
+        "breakpoints": [{"line": 4, "hitCondition": "2"}],
+    })
+    dap.wait_for(
+        lambda m: m.get("type") == "response"
+        and m.get("command") == "setBreakpoints"
+    )
+    dap.send("configurationDone")
+    dap.wait_for(lambda m: m.get("event") == "stopped", timeout=10)
+
+    # The trace fires before the body runs, so the second hit sees i == 1.
+    variables = dap.request("variables", {"variablesReference": 1})
+    values = {v["name"]: v["value"] for v in variables["body"]["variables"]}
+    assert values["i"] == "1"
+    dap.request("disconnect", {})
+
+
+def test_watch_scope_and_container_expansion(dap):
+    dap.initialize()
+    dap.launch([2])  # stops on "x = 2 ;"
+
+    dap.wait_for(lambda m: m.get("event") == "stopped")
+    dap.request("evaluate", {
+        "expression": "i + 10",
+        "context": "watch",
+        "frameId": 0,
+    })
+
+    watches = dap.request("variables", {"variablesReference": 2})
+    entries = {v["name"]: v["value"] for v in watches["body"]["variables"]}
+    assert entries == {"i + 10": "10"}
+
+    dap.request("continue", {"threadId": 1})
+    dap.request("disconnect", {})
+
+
+def test_initialize_advertises_conditional_breakpoints(dap):
+    dap.send("initialize", {"adapterID": "parsercraft"})
+    response = dap.wait_for(lambda m: m.get("type") == "response")
+    capabilities = response["body"]
+    assert capabilities["supportsConditionalBreakpoints"] is True
+    assert capabilities["supportsHitConditionalBreakpoints"] is True

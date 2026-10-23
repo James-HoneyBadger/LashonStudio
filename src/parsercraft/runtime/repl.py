@@ -13,8 +13,10 @@ from __future__ import annotations
 
 import io
 import sys
+import time
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
 from typing import Any, Optional
 
 from parsercraft.codegen.python_transpiler import PythonTranspiler, TranspileOptions
@@ -52,6 +54,10 @@ class REPL:
         ":grammar": "Show current grammar rules",
         ":vars": "Show all defined variables",
         ":load <file>": "Load and execute a source file",
+        ":save <file>": "Save the last input to a file",
+        ":doc <rule>": "Show a grammar rule",
+        ":backends": "Generate C, WASM, and LLVM IR for the last AST",
+        ":time": "Toggle timing information",
     }
 
     def __init__(
@@ -72,6 +78,8 @@ class REPL:
         self._last_source: str = ""
         self._last_ast: Optional[SourceAST] = None
         self._last_python: str = ""
+        self.timing = False
+        self.history_file = Path.home() / ".parsercraft_history"
 
     @staticmethod
     def _default_grammar() -> Grammar:
@@ -141,12 +149,14 @@ class REPL:
     def run(self) -> None:
         """Start the interactive REPL loop."""
         print(self.BANNER)
+        self._configure_readline()
 
         while True:
             try:
                 source = self._read_input()
             except (EOFError, KeyboardInterrupt):
                 print("\nBye!")
+                self._save_history()
                 break
 
             source = source.strip()
@@ -155,10 +165,10 @@ class REPL:
 
             # Handle special commands
             if source.startswith(":"):
-                if self._handle_command(source):
-                    continue
                 if source == ":quit":
+                    self._save_history()
                     break
+                self._handle_command(source)
                 continue
 
             self.history.append(source)
@@ -178,7 +188,11 @@ class REPL:
         stderr = io.StringIO()
 
         with redirect_stdout(stdout), redirect_stderr(stderr):
-            self._eval(source)
+            if source.startswith(":"):
+                self._handle_command(source)
+            else:
+                self._last_source = source
+                self._eval(source)
 
         result = stdout.getvalue()
         errors = stderr.getvalue()
@@ -206,12 +220,52 @@ class REPL:
 
         return "\n".join(lines)
 
+    def _configure_readline(self) -> None:
+        """Enable history and tab completion when readline is available."""
+        try:
+            import readline
+        except ImportError:  # pragma: no cover - platform dependent
+            return
+
+        try:
+            if self.history_file.exists():
+                readline.read_history_file(str(self.history_file))
+        except OSError:
+            pass
+
+        candidates = set(self.COMMANDS)
+        candidates.update(self.grammar.rules)
+        candidates.update({
+            "print", "range", "len", "str", "int", "float",
+        })
+
+        def completer(text: str, state: int) -> Optional[str]:
+            options = sorted(
+                word for word in candidates if word.startswith(text)
+            )
+            return options[state] if state < len(options) else None
+
+        readline.set_completer(completer)
+        readline.set_completer_delims(" \t\n()[]{};,=+")
+        readline.parse_and_bind("tab: complete")
+
+    def _save_history(self) -> None:
+        try:
+            import readline
+        except ImportError:  # pragma: no cover - platform dependent
+            return
+        try:
+            readline.write_history_file(str(self.history_file))
+        except OSError:
+            pass
+
     def _eval(self, source: str) -> None:
         """Parse, transpile, and execute source code."""
         # Auto-add semicolon if missing (convenience)
         if not source.endswith(";"):
             source = source + " ;"
 
+        started = time.perf_counter()
         try:
             ast = self.interpreter.parse(source)
             self._last_ast = ast
@@ -234,6 +288,10 @@ class REPL:
         except Exception as e:
             print(f"Runtime error: {e}", file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
+        finally:
+            if self.timing:
+                elapsed = (time.perf_counter() - started) * 1000
+                print(f"[time] {elapsed:.2f} ms", file=sys.stderr)
 
     def _handle_command(self, cmd: str) -> bool:
         """Handle a REPL special command. Returns True if handled."""
@@ -299,6 +357,58 @@ class REPL:
                 print(f"File not found: {filepath}")
             except Exception as e:
                 print(f"Error loading {filepath}: {e}")
+            return True
+
+        if command == ":time":
+            self.timing = not self.timing
+            print(f"Timing {'on' if self.timing else 'off'}")
+            return True
+
+        if command == ":save" and len(parts) > 1:
+            if not self._last_source:
+                print("Nothing to save yet.")
+                return True
+            Path(parts[1].strip()).write_text(
+                self._last_source + "\n", encoding="utf-8"
+            )
+            print(f"Saved: {parts[1].strip()}")
+            return True
+
+        if command == ":doc" and len(parts) > 1:
+            name = parts[1].strip()
+            rule = self.grammar.rules.get(name)
+            if rule is None:
+                print(f"No rule named '{name}'")
+                return True
+            print(f"{name} <- {rule.pattern}")
+            if rule.description:
+                print(f"  {rule.description}")
+            return True
+
+        if command == ":backends":
+            if self._last_ast is None:
+                print("No AST available. Enter an expression first.")
+                return True
+            from parsercraft.codegen import (
+                CCodeGenerator,
+                LLVMIRGenerator,
+                WasmGenerator,
+            )
+
+            try:
+                c_code = CCodeGenerator().translate_source_ast(self._last_ast)
+                wat = (
+                    WasmGenerator()
+                    .translate_source_ast(self._last_ast)
+                    .to_wat()
+                )
+                ir = LLVMIRGenerator().translate_source_ast(self._last_ast)
+            except Exception as error:  # pylint: disable=broad-exception-caught
+                print(f"Generation failed: {error}")
+                return True
+            print(f"C:    {len(c_code.splitlines())} lines")
+            print(f"WASM: {len(wat.splitlines())} lines")
+            print(f"LLVM: {len(ir.splitlines())} lines")
             return True
 
         print(f"Unknown command: {cmd}. Type :help for available commands.")

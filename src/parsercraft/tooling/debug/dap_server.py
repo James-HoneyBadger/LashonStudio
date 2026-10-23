@@ -67,6 +67,12 @@ class DAPServer:
         self._config: Optional[str] = None
         self._grammar: Optional[str] = None
         self._breakpoints: set[int] = set()
+        self._conditions: dict[int, str] = {}
+        self._hit_conditions: dict[int, int] = {}
+        self._hit_counts: dict[int, int] = {}
+        self._watches: list[str] = []
+        self._variables_cache: dict[int, list[dict]] = {}
+        self._next_variable_reference = 100
         self._line_map: dict[int, int] = {}
         self._source_text = ""
         self._source_path = ""
@@ -213,6 +219,9 @@ class DAPServer:
                     "supportsConfigurationDoneRequest": True,
                     "supportsEvaluateForHovers": True,
                     "supportsStepBack": False,
+                    "supportsConditionalBreakpoints": True,
+                    "supportsHitConditionalBreakpoints": True,
+                    "supportsTerminateRequest": True,
                 },
             )
             self.send_event("initialized")
@@ -224,11 +233,28 @@ class DAPServer:
             self._respond(request)
 
         elif command == "setBreakpoints":
-            lines = {
-                int(item["line"])
-                for item in arguments.get("breakpoints", [])
+            breakpoints = [
+                item for item in arguments.get("breakpoints", [])
                 if "line" in item
-            }
+            ]
+            lines = {int(item["line"]) for item in breakpoints}
+            for item in breakpoints:
+                line = int(item["line"])
+                condition = (item.get("condition") or "").strip()
+                if condition:
+                    self._conditions[line] = condition
+                else:
+                    self._conditions.pop(line, None)
+                hit_condition = str(item.get("hitCondition") or "").strip()
+                if hit_condition.isdigit():
+                    self._hit_conditions[line] = int(hit_condition)
+                else:
+                    self._hit_conditions.pop(line, None)
+            removed = self._breakpoints - (lines | self.initial_breakpoints)
+            for line in removed:
+                self._conditions.pop(line, None)
+                self._hit_conditions.pop(line, None)
+                self._hit_counts.pop(line, None)
             self._breakpoints = lines | self.initial_breakpoints
             self._respond(
                 request,
@@ -262,19 +288,36 @@ class DAPServer:
                             "name": "Locals",
                             "variablesReference": 1,
                             "expensive": False,
-                        }
+                        },
+                        {
+                            "name": "Watch",
+                            "variablesReference": 2,
+                            "expensive": False,
+                        },
                     ]
                 },
             )
 
         elif command == "variables":
-            self._respond(request, {"variables": self._variables()})
+            reference = int(arguments.get("variablesReference", 1))
+            self._respond(
+                request, {"variables": self._variables(reference)}
+            )
 
         elif command == "evaluate":
+            expression = arguments.get("expression", "")
+            if arguments.get("context") == "watch" and expression.strip():
+                if expression not in self._watches:
+                    self._watches.append(expression)
             self._respond(
                 request,
-                {"result": self._evaluate(arguments.get("expression", ""))},
+                {"result": self._evaluate(expression)},
             )
+
+        elif command == "terminate":
+            self._respond(request)
+            self._shutdown.set()
+            self._resume.set()
 
         elif command in ("continue", "next", "stepIn", "stepOut"):
             if command == "continue":
@@ -390,7 +433,7 @@ class DAPServer:
         reason = "breakpoint"
 
         if source_line in self._breakpoints:
-            should_stop = True
+            should_stop = self._should_stop_at(source_line, frame)
         elif self._pause_requested:
             should_stop = True
             reason = "pause"
@@ -426,6 +469,23 @@ class DAPServer:
         self._stopped_line = None
         return self._trace
 
+    def _should_stop_at(self, source_line: int, frame) -> bool:
+        """Apply hit counts and conditions for a breakpoint line."""
+        self._hit_counts[source_line] = self._hit_counts.get(source_line, 0) + 1
+        required = self._hit_conditions.get(source_line)
+        if required is not None and self._hit_counts[source_line] < required:
+            return False
+        condition = self._conditions.get(source_line)
+        if condition:
+            try:
+                if not eval(  # noqa: S307 - user-provided breakpoint condition
+                    condition, frame.f_globals, frame.f_locals
+                ):
+                    return False
+            except Exception:  # pylint: disable=broad-exception-caught
+                return False
+        return True
+
     @staticmethod
     def _depth(frame) -> int:
         depth = 0
@@ -460,22 +520,61 @@ class DAPServer:
             index += 1
         return {"stackFrames": frames, "totalFrames": len(frames)}
 
-    def _variables(self) -> list[dict]:
+    def _variables(self, reference: int = 1) -> list[dict]:
+        if reference == 2:
+            return [
+                {
+                    "name": expression,
+                    "value": self._evaluate(expression),
+                    "type": "",
+                    "variablesReference": 0,
+                }
+                for expression in self._watches
+            ]
+        if reference != 1:
+            return self._variables_cache.get(reference, [])
         if self._frame is None:
             return []
+
+        self._variables_cache.clear()
         variables = []
         for name, value in self._frame.f_locals.items():
             if name.startswith("__"):
                 continue
-            variables.append(
-                {
-                    "name": name,
-                    "value": repr(value),
-                    "type": type(value).__name__,
-                    "variablesReference": 0,
-                }
-            )
+            variables.append(self._describe(name, value))
         return variables
+
+    def _describe(self, name: str, value: Any) -> dict:
+        """Describe a value, expanding containers one level."""
+        entry = {
+            "name": name,
+            "value": repr(value),
+            "type": type(value).__name__,
+            "variablesReference": 0,
+        }
+        children: list[dict] = []
+        if isinstance(value, dict):
+            children = [
+                self._describe(str(key), item) for key, item in value.items()
+            ]
+        elif isinstance(value, (list, tuple, set)):
+            children = [
+                self._describe(str(index), item)
+                for index, item in enumerate(value)
+            ]
+        elif hasattr(value, "__dict__") and not callable(value):
+            children = [
+                self._describe(attribute, item)
+                for attribute, item in vars(value).items()
+                if not attribute.startswith("__")
+            ]
+
+        if children:
+            reference = self._next_variable_reference
+            self._next_variable_reference += 1
+            entry["variablesReference"] = reference
+            self._variables_cache[reference] = children[:100]
+        return entry
 
     def _evaluate(self, expression: str) -> str:
         if self._frame is None or not expression.strip():

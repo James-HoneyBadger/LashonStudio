@@ -7,6 +7,7 @@ import contextlib
 import io
 import json
 import re
+import time
 import traceback
 from math import e, pi
 from pathlib import Path
@@ -168,13 +169,38 @@ def _run_test_case(
 
     return passed, details
 
+def _configure_repl_readline(history_file: Path) -> None:
+    """Enable persistent history in the config REPL when readline exists."""
+    if readline is None:  # pragma: no cover - platform dependent
+        return
+    try:
+        if history_file.exists():
+            readline.read_history_file(str(history_file))
+        readline.set_history_length(500)
+    except OSError:  # pragma: no cover - platform dependent
+        pass
+
+
+def _save_repl_history(history_file: Path) -> None:
+    if readline is None:  # pragma: no cover - platform dependent
+        return
+    try:
+        history_file.parent.mkdir(parents=True, exist_ok=True)
+        readline.write_history_file(str(history_file))
+    except OSError:  # pragma: no cover - platform dependent
+        pass
+
+
 def _handle_repl_command(
     command: str,
     config: LanguageConfig,
     variables: dict[str, Any],
     debug: bool,
+    session: Optional[dict[str, Any]] = None,
 ) -> tuple[bool, bool]:
     """Handle REPL meta-commands. Returns (should_continue, debug)."""
+    if session is None:
+        session = {}
     if command in {"exit", "quit"}:
         print("Goodbye!")
         return False, debug
@@ -239,6 +265,29 @@ def _handle_repl_command(
         new_debug = not debug
         print(f"Debug mode: {'ON' if new_debug else 'OFF'}\n")
         return True, new_debug
+
+    if command.startswith("time"):
+        session["timing"] = not session.get("timing", False)
+        state = "ON" if session["timing"] else "OFF"
+        print(f"Timing: {state}\n")
+        return True, debug
+
+    if command.startswith("save"):
+        target = command[len("save"):].strip()
+        if not target:
+            print("Usage: .save <file>\n")
+            return True, debug
+        last_line = session.get("last_line")
+        if not last_line:
+            print("Nothing to save yet\n")
+            return True, debug
+        try:
+            Path(target).write_text(last_line + "\n", encoding="utf-8")
+        except OSError as error:
+            print(f"Could not write {target}: {error}\n")
+            return True, debug
+        print(f"Saved: {target}\n")
+        return True, debug
 
     print(f"Unknown command: .{command}")
     print("Type .help for available commands\n")
@@ -316,8 +365,14 @@ def _run_repl_session(config: LanguageConfig, debug: bool) -> int:
     print("  .vars       - Show current variables")
     print("  .clear      - Clear all variables")
     print("  .debug      - Toggle debug mode")
+    print("  .time       - Toggle timing of each line")
+    print("  .save FILE  - Save the last input line")
     print("  .exit       - Exit REPL")
     print("\nEnter code to execute:\n")
+
+    session: dict[str, Any] = {"timing": False}
+    history_file = Path.home() / ".parsercraft_repl_history"
+    _configure_repl_readline(history_file)
 
     while True:
         try:
@@ -329,15 +384,20 @@ def _run_repl_session(config: LanguageConfig, debug: bool) -> int:
 
             if line.startswith("."):
                 continue_loop, debug = _handle_repl_command(
-                    line[1:].lower(), config, variables, debug
+                    line[1:].lower(), config, variables, debug, session
                 )
                 if not continue_loop:
                     break
                 continue
 
+            session["last_line"] = line
+            started = time.perf_counter()
             _execute_repl_line(
                 line, variables, keyword_prefixes, custom_keywords, debug
             )
+            if session.get("timing"):
+                elapsed = (time.perf_counter() - started) * 1000
+                print(f"[time] {elapsed:.2f} ms")
 
         except EOFError:
             print("\nGoodbye!")
@@ -346,6 +406,7 @@ def _run_repl_session(config: LanguageConfig, debug: bool) -> int:
             print("\n(Use .exit to quit)")
             continue
 
+    _save_repl_history(history_file)
     return 0
 
 def _resolve_repl_config(file_arg: Optional[str]) -> Optional[LanguageConfig]:

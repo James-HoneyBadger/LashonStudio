@@ -104,3 +104,14 @@ class TestGeneratedAssets:
         assert (output / "language-configuration.json").exists()
         grammars = list((output / "syntaxes").glob("*.tmLanguage.json"))
         assert grammars
+
+        assert package_json["scripts"]["compile"] == "tsc -p ./"
+        assert "vscode-languageclient" in package_json["devDependencies"]
+        tsconfig = json.loads(
+            (output / "tsconfig.json").read_text(encoding="utf-8")
+        )
+        assert tsconfig["compilerOptions"]["outDir"] == "out"
+        assert (output / "language.yaml").is_file()
+        extension = (output / "extension.ts").read_text(encoding="utf-8")
+        assert "TransportKind.stdio" in extension
+        assert "parsercraft" in extension

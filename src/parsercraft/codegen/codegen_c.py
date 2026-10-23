@@ -98,8 +98,16 @@ class CFunction:
 class CCodeGenerator:
     """Generates C code from custom language AST."""
 
-    def __init__(self, config: Any = None):
+    def __init__(
+        self,
+        config: Any = None,
+        source_map: bool = False,
+        source_file: str = "<source>",
+    ):
         self.config = config
+        self.source_map = source_map
+        self.source_file = source_file
+        self._last_source_line = 0
         self.functions: List[CFunction] = []
         self.globals: List[CVariable] = []
         self.includes: Set[str] = {"<stdio.h>", "<stdlib.h>", "<string.h>"}
@@ -286,6 +294,7 @@ class CCodeGenerator:
         self.includes = {"<stdio.h>", "<stdlib.h>", "<string.h>"}
         self._body_lines = []
         self._declared = set()
+        self._last_source_line = 0
         self.indent_level = 1  # Inside main()
 
         self._visit_source_node(ast)
@@ -306,9 +315,33 @@ class CCodeGenerator:
         parts.append("}")
         return "\n".join(parts)
 
+    _SOURCE_MAP_NODES = frozenset({
+        "statement",
+        "Statement",
+        "assignment",
+        "Assignment",
+        "print_stmt",
+        "return_stmt",
+        "if_stmt",
+        "while_stmt",
+        "expr_stmt",
+    })
+
+    def _maybe_source_map(self, node: Any) -> None:
+        """Emit a ``#line`` directive when the source line changes."""
+        if not self.source_map:
+            return
+        line = getattr(node, "line", 0)
+        if not line or line == self._last_source_line:
+            return
+        self._last_source_line = line
+        self._body_lines.append(f'#line {line} "{self.source_file}"')
+
     def _visit_source_node(self, node: Any) -> None:
         """Visit a SourceAST node and generate C statements."""
         nt = node.node_type
+        if nt in self._SOURCE_MAP_NODES:
+            self._maybe_source_map(node)
 
         if nt in ("program", "Program", "Module"):
             for child in node.children:

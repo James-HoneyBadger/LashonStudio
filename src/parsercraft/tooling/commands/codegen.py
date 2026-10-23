@@ -32,7 +32,11 @@ def cmd_codegen_c(args):
     try:
         source_path = Path(args.file)
         ast = _parse_source_file(source_path, args.config)
-        c_code = CCodeGenerator().translate_source_ast(ast)
+        generator = CCodeGenerator(
+            source_map=getattr(args, "source_map", False),
+            source_file=source_path.name,
+        )
+        c_code = generator.translate_source_ast(ast)
 
         output_file = (
             Path(args.output) if args.output else source_path.with_suffix(".c")

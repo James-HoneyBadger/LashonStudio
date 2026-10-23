@@ -294,3 +294,59 @@ class TestWasmFunctionCodegen:
 
         with pytest.raises(ValueError, match="cannot resolve function"):
             WasmGenerator().translate_source_ast(ast)
+
+
+class TestCSourceMaps:
+    """``CCodeGenerator(source_map=True)`` emits ``#line`` directives."""
+
+    GRAMMAR = (
+        "program <- statement+\n"
+        "statement <- print_stmt / assignment\n"
+        "print_stmt <- 'print' expr ';'\n"
+        "assignment <- IDENT '=' expr ';'\n"
+        "expr <- term (('+' / '-') term)*\n"
+        "term <- NUMBER / IDENT\n"
+    )
+
+    def _code(self, source: str) -> str:
+        grammar = GrammarParser().parse(self.GRAMMAR)
+        ast = PEGInterpreter(grammar).parse(source)
+        return CCodeGenerator(
+            source_map=True, source_file="demo.aur"
+        ).translate_source_ast(ast)
+
+    def test_line_directives_track_source(self):
+        code = self._code("x = 1 ;\nprint x ;\nprint x + 1 ;\n")
+        assert '#line 1 "demo.aur"' in code
+        assert '#line 2 "demo.aur"' in code
+        assert '#line 3 "demo.aur"' in code
+
+    def test_no_directives_by_default(self):
+        grammar = GrammarParser().parse(self.GRAMMAR)
+        ast = PEGInterpreter(grammar).parse("x = 1 ;\n")
+        assert "#line" not in CCodeGenerator().translate_source_ast(ast)
+
+    def test_code_still_compiles_and_runs(self, tmp_path):
+        import shutil
+        import subprocess
+        import sys
+
+        compiler = shutil.which("gcc") or shutil.which("clang") or shutil.which("cc")
+        if compiler is None or sys.platform == "win32":
+            pytest.skip("no C compiler available")
+
+        source = tmp_path / "demo.c"
+        source.write_text(
+            self._code("x = 1 ;\nprint x ;\nprint x + 1 ;\n"),
+            encoding="utf-8",
+        )
+        binary = tmp_path / "demo"
+        subprocess.run(
+            [compiler, "-o", str(binary), str(source)],
+            check=True,
+            capture_output=True,
+        )
+        completed = subprocess.run(
+            [str(binary)], check=True, capture_output=True, text=True
+        )
+        assert completed.stdout.split() == ["1", "2"]

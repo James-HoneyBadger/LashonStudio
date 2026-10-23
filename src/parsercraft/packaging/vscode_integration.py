@@ -55,6 +55,17 @@ def generate_vscode_extension(
             "onCommand:parsercraft.start",
         ],
         "main": "./out/extension.js",
+        "scripts": {
+            "vscode:prepublish": "npm run compile",
+            "compile": "tsc -p ./",
+            "watch": "tsc -watch -p ./",
+        },
+        "devDependencies": {
+            "@types/node": "^20.0.0",
+            "@types/vscode": "^1.75.0",
+            "typescript": "^5.4.0",
+            "vscode-languageclient": "^9.0.1",
+        },
         "contributes": {
             "languages": [
                 {
@@ -129,6 +140,41 @@ def generate_vscode_extension(
     with open(output_path / "extension.ts", "w") as f:
         f.write(extension_ts)
 
+    # TypeScript build configuration for the generated extension
+    with open(output_path / "tsconfig.json", "w") as f:
+        json.dump(
+            {
+                "compilerOptions": {
+                    "module": "commonjs",
+                    "target": "ES2020",
+                    "outDir": "out",
+                    "lib": ["ES2020"],
+                    "sourceMap": True,
+                    "rootDir": ".",
+                    "strict": True,
+                },
+                "include": ["extension.ts"],
+                "exclude": ["node_modules"],
+            },
+            f,
+            indent=2,
+        )
+
+    # Ship the language definition with the extension so the server can run
+    try:
+        import yaml
+
+        with open(output_path / "language.yaml", "w") as f:
+            yaml.safe_dump(config.to_dict(), f, sort_keys=False)
+    except (ImportError, AttributeError):  # pragma: no cover - optional
+        pass
+
+    with open(output_path / ".vscodeignore", "w") as f:
+        f.write(
+            "extension.ts\ntsconfig.json\nnode_modules/**\n"
+            ".vscode-test/**\n**/*.map\n"
+        )
+
     # Generate .gitignore
     with open(output_path / ".gitignore", "w") as f:
         f.write("node_modules/\nout/\n.vscode-test/\n")
@@ -139,7 +185,7 @@ def generate_vscode_extension(
         f.write(readme)
 
     print(f"✓ Generated VS Code extension in {output_path}")
-    print(f"  To install locally: code --install-extension {output_path}")
+    print(f"  Package it with: (cd {output_path} && npm install && npx vsce package)")
 
 
 def _generate_textmate_grammar(config: LanguageConfig) -> dict:
@@ -240,12 +286,20 @@ let client: LanguageClient;
 export function activate(context: vscode.ExtensionContext) {{
     console.log('{config.name} language extension activated');
 
-    const serverModule = context.asAbsolutePath('out/server.js');
-    const debugOptions = {{ execArgv: ['--nolazy', '--inspect=6009'] }};
-
+    // The ParserCraft CLI hosts the language server; the extension just
+    // launches it over stdio so no Node runtime shim is required.
+    const configPath = context.asAbsolutePath('language.yaml');
     const serverOptions: ServerOptions = {{
-        run: {{ module: serverModule, transport: TransportKind.ipc }},
-        debug: {{ module: serverModule, transport: TransportKind.ipc, options: debugOptions }}
+        run: {{
+            command: 'parsercraft',
+            args: ['lsp', '--config', configPath, '--stdio'],
+            transport: TransportKind.stdio,
+        }},
+        debug: {{
+            command: 'parsercraft',
+            args: ['lsp', '--config', configPath, '--stdio'],
+            transport: TransportKind.stdio,
+        }},
     }};
 
     const clientOptions: LanguageClientOptions = {{

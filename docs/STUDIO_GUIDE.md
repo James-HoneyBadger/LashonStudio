@@ -29,7 +29,8 @@ the `LanguageStudio` API or the CLI instead.
 │  ▸ samples   ├──────────────────────────────────────────────────────┤
 │   • hello    │  Console │ Variables │ Python │ C │ WASM │ LLVM │ AST │
 │   • fibonacci│                                                      │
-│   • fizzbuzz │        output / tree views                           │
+│   • fizzbuzz │  Console │ Variables │ … │ Problems │ AST            │
+│              │        output / tree views / problem list            │
 ├──────────────┴──────────────────────────────────────────────────────┤
 │ Grammar OK — 3.2 ms               rules 18 · samples 3 · Ln 4, Col 9│
 └─────────────────────────────────────────────────────────────────────┘
@@ -44,7 +45,13 @@ the `LanguageStudio` API or the CLI instead.
 | **Console** | Timestamped output, timings, errors, backend summaries |
 | **Variables** | Namespace after a run |
 | **Python / C / WASM / LLVM IR** | Generated output |
+| **Problems** | Errors and warnings; double-click a row to jump to the code |
 | **AST** | Expandable syntax tree |
+
+Failed parses and grammar validation open the **Problems** tab automatically.
+The offending line is underlined in the editor with a red squiggle, and
+selecting a problem moves the caret to its position in the right editor
+(source or grammar).
 
 ---
 
@@ -84,6 +91,13 @@ namespace; the AST tab is populated.
 | Generate all backends | `F7` |
 | Undo / redo | `Ctrl+Z` / `Ctrl+Y` |
 | Cut / copy / paste | `Ctrl+X` / `Ctrl+C` / `Ctrl+V` |
+| Command palette | `Ctrl+Shift+P` |
+| Quick open (project files) | `Ctrl+P` |
+| Shortcut cheat sheet | `F1` |
+
+The command palette lists every action with its accelerator and filters as you
+type — press `Enter` to run the highlighted entry, `Esc` to dismiss. Quick open
+filters the project's files the same way and loads the chosen sample.
 
 ---
 

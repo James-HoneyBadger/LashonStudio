@@ -4,7 +4,7 @@ ParserCraft is a Python framework for defining languages with PEG grammars,
 parsing source into an AST, and generating output for several targets. This
 page describes how the pieces fit together so you can extend them safely.
 
-Version 4.0.0, ~20,800 lines of library code, 335 tests.
+Version 4.0.0, ~20,800 lines of library code, 371 tests.
 
 ---
 
@@ -70,7 +70,10 @@ the PEG path.
 | `tooling/commands/run.py`, `init.py`, `generics.py`, `typecheck.py` | one-shot execution, scaffolding, generic and type checks |
 | `tooling/commands/modules.py`, `tooling.py` | module graph commands; LSP/extension/format/debug/package commands |
 | `tooling/commands/common.py` | config/grammar loading helpers |
-| `tooling/lsp/lsp_server.py` | `LSPServer`, `DocumentManager`, stdio loop |
+| `tooling/commands/doctor.py`, `lint.py`, `demo.py`, `playground.py` | environment checks, CI lint, guided tour, browser playground |
+| `tooling/commands/config_tools.py` | `config get/set` dotted-key access |
+| `tooling/lsp/lsp_server.py` | `LSPServer`, `DocumentManager`, stdio loop, grammar-aware diagnostics |
+| `tooling/lsp/grammar_index.py` | PEG rule index: hover, definition, references, rename, symbols |
 | `tooling/lsp/lsp_advanced.py` | refactoring, formatting, semantic highlighting |
 | `tooling/lsp/lsp_integration.py` | feature integration layer |
 | `tooling/debug/debug_adapter.py` | `Debugger`, `DebugAdapter`, safe expression evaluator |

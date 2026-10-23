@@ -27,8 +27,8 @@ explicit.
 
 | Status | Commands |
 |---|---|
-| **Stable** | `init`, `create`, `edit`, `validate`, `info`, `export`, `import`, `convert`, `diff`, `update`, `delete`, `list-presets`, `run`, `repl`, `batch`, `translate`, `extension`, `codegen-c`, `codegen-wasm`, `codegen-llvm`, `module-info`, `module-deps`, `module-cycles`, `generics`, `test-run`, `refactor-rename`, `format` |
-| **Functional, heuristic** | `type-check` (pattern-based), `lsp` (stdio protocol), `test` (config-driven harness), `debug-launch` (DAP subset) |
+| **Stable** | `init`, `create`, `edit`, `validate`, `config`, `lint`, `doctor`, `demo`, `play`, `info`, `export`, `import`, `convert`, `diff`, `update`, `delete`, `list-presets`, `run`, `repl`, `batch`, `translate`, `extension`, `codegen-c`, `codegen-wasm`, `codegen-llvm`, `module-info`, `module-deps`, `module-cycles`, `generics`, `test-run`, `refactor-rename`, `format` |
+| **Functional, heuristic** | `type-check` (pattern-based), `lsp` (stdio protocol with real grammar diagnostics), `test` (config-driven harness), `debug-launch` (DAP: breakpoints, conditions, stepping, watches) |
 | **Not implemented (exit 2)** | `check-protocol`, `package-search`, `package-install` |
 
 Placeholders print a clear message and exit 0; they do not silently corrupt
@@ -55,6 +55,8 @@ Many commands accept `--debug` (`-d`) to print tracebacks.
 
 ```bash
 parsercraft init NAME [--directory DIR] [--force]
+                     [--template aurora|calculator|minimal]
+                     [--with-vscode] [--with-ci]
 ```
 
 Scaffolds a runnable language project:
@@ -63,13 +65,25 @@ Scaffolds a runnable language project:
 <slug>/
 ├── language.yaml     # metadata, keywords, grammar.rules
 ├── grammar.peg       # editable PEG grammar
-├── samples/hello.aur # first program
+├── samples/*.aur     # runnable examples
 ├── README.md
 └── tests/test_<slug>.py
 ```
 
-`--force` replaces a non-empty target directory (default is to refuse).
-`--directory` selects the parent (default: current directory).
+| Option | Meaning |
+|---|---|
+| `--directory`, `-d` | parent directory (default: current directory) |
+| `--force` | replace a non-empty target directory |
+| `--template`, `-t` | starting grammar: `aurora` (default, full language), `calculator` (arithmetic), `minimal` (assignments + print) |
+| `--with-vscode` | add `.vscode/launch.json` and `settings.json` |
+| `--with-ci` | add a GitHub Actions workflow that lints, validates, and runs the sample |
+
+```bash
+parsercraft init "Pocket Calc" -t calculator --with-vscode --with-ci
+```
+
+The generated test file validates the grammar, runs the sample, and generates
+every backend, so `python -m pytest tests -q` is the first thing to run.
 
 ```bash
 parsercraft init "Tiny Lang" --directory ./languages
@@ -104,11 +118,60 @@ Opens the config in `$EDITOR`/platform default.
 ### `validate`
 
 ```bash
-parsercraft validate FILE
+parsercraft validate FILE [--grammar] [--json]
 ```
 
 Loads the config, runs `LanguageConfig.validate()`, prints errors and alias
-warnings, and exits non-zero on hard errors.
+warnings, and exits non-zero on hard errors. `--grammar` also parses the PEG
+rules. `--json` emits a machine-readable report for CI:
+
+```bash
+parsercraft validate language.yaml --grammar --json | jq .ok
+```
+
+### `lint`
+
+```bash
+parsercraft lint FILE [--source FILE] [--json]
+```
+
+One command for CI: validates the config, parses every grammar rule, and
+optionally type-checks a source file. Exits 1 when anything fails.
+
+### `config`
+
+```bash
+parsercraft config get FILE KEY [--output FILE]
+parsercraft config set FILE KEY VALUE [--output FILE]
+```
+
+Reads or changes a single dotted key without hand-editing YAML. Values are
+parsed as JSON when possible, otherwise stored as strings.
+
+```bash
+parsercraft config get language.yaml grammar.start
+parsercraft config set language.yaml syntax_options.require_semicolons false
+```
+
+### `doctor`
+
+```bash
+parsercraft doctor [--json] [--strict]
+```
+
+Checks the environment: Python version, PyYAML, console entry points,
+Tkinter/display availability, `gcc`/`clang`, `wasmtime`, and writable config
+directories. Each failure comes with an actionable fix. `--strict` makes
+warnings fail the command, which is useful in CI.
+
+### `demo`
+
+```bash
+parsercraft demo [--no-backends]
+```
+
+Runs a guided tour on a built-in grammar: parse → AST → Python → C → WASM →
+LLVM IR → execution. Ideal for a first look without creating files.
 
 ```bash
 parsercraft validate projects/aurora/language.yaml
@@ -155,10 +218,11 @@ parsercraft convert my_lang.yaml --to json
 ### `diff`
 
 ```bash
-parsercraft diff FILE1 FILE2
+parsercraft diff FILE1 FILE2 [--exit-code]
 ```
 
-Reports added/removed/changed keys and mappings.
+`--exit-code` exits 1 when the two configurations differ, so the command can
+gate a pipeline. Output lists added, removed, and changed keys and mappings.
 
 ### `update`
 
@@ -195,11 +259,22 @@ Current presets:
 
 ## Execution
 
+### `play`
+
+```bash
+parsercraft play [PROJECT] [--port 8000] [--host 127.0.0.1] [--open]
+```
+
+Serves a browser playground for a project: edit source on the left, press
+Run, and inspect program output plus the generated Python, C, WASM, and LLVM
+IR. The page talks to `POST /api/run`; `GET /api/health` is available for
+readiness checks.
+
 ### `run`
 
 ```bash
 parsercraft run FILE [--config CONFIG | --grammar GRAMMAR]
-                     [--json] [--show-python]
+                     [--json] [--show-python] [--watch]
 ```
 
 Parses `FILE` with the supplied grammar and executes the transpiled Python.
@@ -212,6 +287,7 @@ Parses `FILE` with the supplied grammar and executes the transpiled Python.
 | `--show-python` | print generated Python to stderr before running |
 | `--sandbox` | run in an isolated subprocess with CPU/memory/file limits (POSIX) |
 | `--sandbox-timeout` | wall-clock timeout for sandbox mode (default 10s) |
+| `--watch` | re-run whenever the program, config, or grammar changes |
 
 A grammar is required; without `--config`/`--grammar` the command exits 1.
 Exit code is 1 for parse, IO, and runtime errors.
@@ -225,6 +301,9 @@ parsercraft run program.aur --grammar grammar.peg --json
 
 parsercraft run program.aur --config lang.yaml --sandbox
 ```
+
+`--watch` polls file modification times every 0.5 s and re-runs on change;
+press Ctrl+C to stop.
 
 `--sandbox` launches a child `python -I` process in a temporary directory with
 `RLIMIT_CPU` (5s), `RLIMIT_AS` (512 MB), `RLIMIT_NOFILE`, and `RLIMIT_FSIZE`.
@@ -246,9 +325,14 @@ parsercraft repl [FILE] [--grammar GRAMMAR] [--debug]
 Command sets differ:
 
 - **Config-driven REPL:** `.help`, `.info`, `.keywords`, `.functions`, `.vars`,
-  `.clear`, `.debug`, `.exit`.
+  `.clear`, `.debug`, `.time`, `.save FILE`, `.exit`.
 - **Grammar REPL (`--grammar`):** `:help`, `:ast`, `:py`, `:vars`, `:grammar`,
-  `:load`, `:reset`, `:quit`.
+  `:load`, `:save`, `:doc RULE`, `:backends`, `:time`, `:reset`, `:quit`.
+
+Both REPLs persist history (`~/.parsercraft_repl_history`,
+`~/.parsercraft_history`). The grammar REPL also offers tab completion for
+commands, rule names, and common builtins. `:backends` prints C, WASM, and
+LLVM IR for the last successful parse.
 
 ```bash
 parsercraft repl --grammar mini.peg
@@ -391,18 +475,27 @@ model. Use `ProtocolChecker` directly.
 ### `lsp`
 
 ```bash
-parsercraft lsp --config CONFIG [--port PORT] [--stdio]
+parsercraft lsp --config CONFIG [--grammar GRAMMAR] [--port PORT] [--stdio]
 ```
 
 Starts the LSP server. `--stdio` is the supported transport; socket mode exits
 with code 2. The stdio loop serves `initialize`, `initialized`, `shutdown`,
 `exit`, `textDocument/didOpen|didChange|didClose` (publishing diagnostics),
-`textDocument/completion|hover|documentSymbol|formatting|signatureHelp`, and
-answers unknown requests with JSON-RPC `-32601`. See
+`textDocument/completion|hover|definition|references|rename|documentSymbol|formatting|signatureHelp`,
+and answers unknown requests with JSON-RPC `-32601`. See
 [LSP_AND_DEBUGGING.md](LSP_AND_DEBUGGING.md).
+
+`--grammar` (default: `grammar.peg` next to the config) enables real syntax
+diagnostics: every `didOpen`/`didChange` parses the document with the PEG
+grammar and publishes the exact error position. When the open document *is*
+the grammar file, the server switches to grammar intelligence — rule hover,
+go-to-definition, references, rename, rule completion, and undefined-rule
+warnings.
 
 ```bash
 parsercraft lsp --config my_lang.yaml --stdio
+parsercraft lsp --config projects/aurora/language.yaml \
+  --grammar projects/aurora/grammar.peg --stdio
 ```
 
 ### `extension`
@@ -412,8 +505,18 @@ parsercraft extension --config CONFIG [--output DIR]
                      [--publisher NAME] [--version VERSION]
 ```
 
-Generates a VS Code extension (`package.json`, TextMate grammar,
-`language-configuration.json`, README).
+Generates a buildable VS Code extension: `package.json` (with
+`compile`/`watch` scripts and `vscode-languageclient`), `tsconfig.json`,
+`extension.ts`, the TextMate grammar, `language-configuration.json`,
+`language.yaml` (shipped so the server can start), README, and
+`.vscodeignore`.
+
+The generated client launches `parsercraft lsp --config language.yaml --stdio`,
+so install ParserCraft wherever the extension runs. Build it with:
+
+```bash
+cd <output> && npm install && npm run compile && npx vsce package
+```
 
 ```bash
 parsercraft extension --config projects/aurora/language.yaml \
@@ -432,11 +535,12 @@ Renames identifiers using the refactoring engine; writes in place unless
 ### `format`
 
 ```bash
-parsercraft format FILE [--output FILE] [--tab-size N] [--in-place]
+parsercraft format FILE [--output FILE] [--tab-size N] [--in-place] [--check]
 ```
 
 Minimal formatter (indentation/whitespace). Without `--output` or `--in-place`,
-prints to stdout.
+prints to stdout. `--check` writes nothing and exits 1 when the file would
+change, which makes it usable as a CI gate.
 
 ### `debug-launch`
 
@@ -446,7 +550,8 @@ parsercraft debug-launch FILE [--port PORT] [-b/--breakpoint LINE]...
 ```
 
 Starts a DAP server over TCP (default port 5678) that compiles the program,
-runs it, and honors line breakpoints, stepping, variables, and evaluation.
+runs it, and honors line breakpoints, conditional and hit-count breakpoints,
+stepping, expandable variables, watch expressions, and evaluation.
 `--breakpoint` seeds breakpoints before a client connects. See
 [LSP_AND_DEBUGGING.md](LSP_AND_DEBUGGING.md#debug-adapter-dap).
 
@@ -496,6 +601,11 @@ directly; see [PACKAGING.md](PACKAGING.md).
 | Scaffold a language project | `parsercraft init "My Lang"` |
 | Create a Spanish Python | `parsercraft create --preset python_like` then `rename_keyword` in Python or edit YAML |
 | Check a config | `parsercraft validate my_lang.yaml` |
+| Lint config + grammar + source | `parsercraft lint lang.yaml --source prog.aur` |
+| Diagnose the environment | `parsercraft doctor` |
+| See the whole pipeline | `parsercraft demo` |
+| Open a browser playground | `parsercraft play . --open` |
+| Change one setting | `parsercraft config set lang.yaml grammar.start program` |
 | Explore presets | `parsercraft list-presets` |
 | Run a program | `parsercraft run program.aur -g grammar.peg` |
 | Run a grammar REPL | `parsercraft repl --grammar my.peg` |

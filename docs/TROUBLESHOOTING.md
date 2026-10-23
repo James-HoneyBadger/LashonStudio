@@ -450,7 +450,7 @@ semantics beyond what the AST encodes — your grammar decides what exists.
 calls native code. See
 [RUNTIME_GUIDE.md](RUNTIME_GUIDE.md#security-model).
 
-**Why 335 tests?** The suite covers each layer plus regressions for issues found
+**Why 371 tests?** The suite covers each layer plus regressions for issues found
 during review. Run `python -m pytest -q`; all should pass.
 
 **Where do I report bugs?** Open an issue at

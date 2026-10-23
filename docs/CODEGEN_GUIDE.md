@@ -201,7 +201,8 @@ Aurora FizzBuzz compiles and runs:
 
 ```console
 $ parsercraft codegen-c projects/aurora/samples/fizzbuzz.aur \
-    --config projects/aurora/language.yaml --output fizzbuzz.c
+    --config projects/aurora/language.yaml --output fizzbuzz.c \
+    --source-map
 $ gcc -std=c99 fizzbuzz.c -o fizzbuzz && ./fizzbuzz
 1
 2
@@ -209,6 +210,11 @@ Fizz
 ...
 FizzBuzz
 ```
+
+`--source-map` emits `#line N "<file>"` directives before each statement, so
+compiler diagnostics (and debuggers) point at your language's source lines
+instead of the generated C. The `CCodeGenerator(source_map=True,
+source_file="prog.aur")` API does the same from Python.
 
 ### Limitations
 

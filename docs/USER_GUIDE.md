@@ -47,7 +47,7 @@ python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 
 parsercraft --version          # parsercraft 4.0.0
-python -m pytest -q            # 335 passed
+python -m pytest -q            # 368 passed
 ```
 
 Platform notes live in [INSTALL.md](INSTALL.md).
@@ -284,7 +284,19 @@ hola
 >>> .exit
 ```
 
-Command sets differ (`:` for grammar, `.` for config). Programmatic use:
+Command sets differ (`:` for grammar, `.` for config):
+
+| Grammar REPL | Config REPL | Effect |
+|---|---|---|
+| `:ast` / `:py` | — | show the AST or generated Python |
+| `:doc RULE` | — | print a rule's pattern |
+| `:backends` | — | C / WASM / LLVM line counts for the last AST |
+| `:load FILE` / `:save FILE` | `.save FILE` | read or write a source file |
+| `:time` | `.time` | toggle per-line timing |
+| `:vars` / `:reset` | `.vars` / `.clear` | inspect or clear the namespace |
+
+Both REPLs keep history between sessions, and the grammar REPL completes
+commands, rule names, and common builtins with `Tab`. Programmatic use:
 
 ```python
 from parsercraft.runtime import REPL
@@ -417,5 +429,11 @@ Packaging details, including what the extension generator does *not* produce:
 | LSP | `parsercraft lsp -c lang.yaml --stdio` |
 | Extension | `parsercraft extension -c lang.yaml -o ./ext` |
 | Studio | `parsercraft-ide projects/aurora` |
+| Browser playground | `parsercraft play projects/aurora --open` |
+| Guided demo | `parsercraft demo` |
+| Environment check | `parsercraft doctor` |
+| CI lint | `parsercraft lint lang.yaml --source prog.src` |
+| Change one setting | `parsercraft config set lang.yaml grammar.start program` |
+| Re-run on save | `parsercraft run prog.src -c lang.yaml --watch` |
 
 Every command and flag: [CLI_REFERENCE.md](CLI_REFERENCE.md).

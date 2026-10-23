@@ -12,12 +12,13 @@ does, including the gaps.
 ### Starting it
 
 ```bash
-parsercraft lsp --config my_lang.yaml --stdio
+parsercraft lsp --config my_lang.yaml [--grammar grammar.peg] --stdio
 ```
 
 | Flag | Meaning |
 |---|---|
 | `--config`, `-c` | language config file (required) |
+| `--grammar` | PEG grammar for syntax diagnostics (default: `grammar.peg` beside the config) |
 | `--port`, `-p` | socket port (default 8080) |
 | `--stdio` | use stdin/stdout JSON-RPC |
 
@@ -32,12 +33,43 @@ without serving.
 - `initialize`, `initialized`, `shutdown`, `exit`
 - `textDocument/didOpen`, `didChange`, `didClose` (each publishes
   `textDocument/publishDiagnostics`)
-- `textDocument/completion`, `hover`, `documentSymbol`, `formatting`,
-  `signatureHelp`
+- `textDocument/completion`, `hover`, `definition`, `references`, `rename`,
+  `documentSymbol`, `formatting`, `signatureHelp`
 
 Unknown requests receive a JSON-RPC `-32601` error; unknown notifications are
 ignored. The analysis functions below are also callable directly, which is how
 the Studio and tests use them.
+
+### Real syntax diagnostics
+
+With a grammar available, every `didOpen`/`didChange` parses the document with
+`PEGInterpreter`. A failure becomes an LSP diagnostic at the *actual* error
+position, e.g. `y = ;` on line 2 produces:
+
+```json
+{"range": {"start": {"line": 1, "character": 0},
+           "end":   {"line": 1, "character": 1}},
+ "message": "Unexpected input at line 2, column 1: 'y = ;'",
+ "severity": 1, "code": "parse-error", "source": "ParserCraft"}
+```
+
+The rendered source snippet is stripped from the message so editors show a
+clean squiggle.
+
+### Grammar intelligence
+
+When the open document is the grammar file itself, the server uses
+`GrammarIndex` instead of the lexical analyzer:
+
+| Feature | Behaviour |
+|---|---|
+| hover | shows the rule pattern and definition line |
+| definition | jumps to the rule definition |
+| references | every occurrence of the rule name |
+| rename | workspace edit replacing all occurrences |
+| completion | rule names and built-in tokens (`IDENT`, `NUMBER`, `STRING`, `NEWLINE`, `EOF`) |
+| document symbols | one symbol per rule |
+| diagnostics | warnings for references to undefined rules |
 
 | Capability | API | Status |
 |---|---|---|
@@ -51,6 +83,9 @@ the Studio and tests use them.
 | document symbols | `document_symbols(uri)` | ✅ |
 | formatting | `format_document(uri)` → `list[dict]` | ✅ |
 | diagnostics | `diagnostics(uri)` + publish notifications | ✅ |
+| definition | `definition(uri, position)` (grammar documents) | ✅ |
+| references | `references(uri, position)` (grammar documents) | ✅ |
+| rename | `rename(uri, position, new_name)` (grammar documents) | ✅ |
 | rename/extract/inline | `RefactoringEngine` (not wired to stdio) | programmatic only |
 | semantic highlighting | `SemanticHighlighter` | programmatic only |
 
@@ -153,7 +188,20 @@ VS Code `launch.json`:
 
 `initialize`, `launch`, `setBreakpoints`, `configurationDone`, `threads`,
 `stackTrace`, `scopes`, `variables`, `evaluate`, `continue`, `next`, `stepIn`,
-`stepOut`, `pause`, `disconnect`, `setExceptionBreakpoints`.
+`stepOut`, `pause`, `terminate`, `disconnect`, `setExceptionBreakpoints`.
+
+Breakpoint objects support `condition` (evaluated in the paused frame) and
+`hitCondition` (stop only after N hits):
+
+```json
+{"line": 12, "condition": "i == 3"}
+{"line": 12, "hitCondition": "5"}
+```
+
+`evaluate` with `"context": "watch"` registers the expression, after which the
+`Watch` scope (variablesReference `2`) lists it with its current value.
+Containers (lists, tuples, sets, dicts, and objects with `__dict__`) get a
+`variablesReference` so clients can expand them.
 
 Events: `initialized`, `stopped` (breakpoint/step/pause), `output`,
 `terminated`, `exited`.
@@ -173,12 +221,12 @@ Events: `initialized`, `stopped` (breakpoint/step/pause), `output`,
 ### Limits
 
 - One debug session and one client connection per server.
-- Breakpoints are line-based; column, conditional, hit-count, and logpoint
-  breakpoints are not implemented.
+- Breakpoints are line-based; column and logpoint breakpoints are not
+  implemented.
 - `evaluate` uses the paused frame's globals/locals with full Python semantics;
   debug only trusted programs.
-- Variable trees are flat (`variablesReference` is always 0), and only
-  `Locals` is exposed (no globals/watch scopes).
+- Variable trees expand one level per request and stop at 100 children;
+  `Locals` and `Watch` scopes are exposed (no globals scope).
 - The program is transpiled to Python; native C/WASM/LLVM execution is not
   debugged.
 - `Debugger`/`DebugAdapter` remain available as a lower-level controller for

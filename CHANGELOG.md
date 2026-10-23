@@ -7,6 +7,37 @@ All notable changes to ParserCraft. This project follows
 
 ### Added
 
+- **`parsercraft doctor`** — environment diagnostics (Python, PyYAML, entry
+  points, Tk/display, gcc/clang, wasmtime, writable directories) with `--json`
+  and `--strict`.
+- **`parsercraft lint`** — config + grammar + optional source validation in one
+  CI-friendly command with `--json` output.
+- **`parsercraft demo`** — guided grammar → AST → Python/C/WASM/LLVM →
+  execution tour.
+- **`parsercraft play`** — local browser playground (`POST /api/run`,
+  `GET /api/health`) showing program output and every backend.
+- **`config get|set`** — read and change dotted config keys from the CLI.
+- **`validate --json`**, **`diff --exit-code`**, **`format --check`**, and
+  **`run --watch`** for scripting and CI pipelines.
+- **`init` templates** — `--template aurora|calculator|minimal`, plus
+  `--with-vscode` (launch/settings) and `--with-ci` (GitHub Actions workflow).
+- **Real parser error positions** — failures report the furthest reached
+  position with a source snippet, including trailing-input errors after
+  whitespace and comments.
+- **LSP grammar diagnostics** — `--grammar` parses documents on
+  open/change and publishes exact syntax errors; grammar files get hover,
+  definition, references, rename, rule completion, and undefined-rule warnings.
+- **Studio UX** — Problems panel with click-to-jump and inline squiggles,
+  command palette (`Ctrl+Shift+P`), quick open (`Ctrl+P`), and an `F1`
+  shortcut cheat sheet.
+- **REPL upgrades** — persisted history for both REPLs, tab completion in the
+  grammar REPL, `:doc`, `:backends`, `:save`, and timing toggles.
+- **DAP extras** — conditional and hit-count breakpoints, `Watch` scope,
+  expandable variables, and `terminate`.
+- **Distribution** — PyPI trusted-publishing release workflow, devcontainer,
+  and a buildable generated VS Code extension (`tsconfig`, npm scripts,
+  bundled `language.yaml`).
+
 - **Documentation site**: MkDocs Material configuration, a landing page, and a
   GitHub Pages workflow (`docs.yml`).
 - **`parsercraft init`** — scaffold a runnable language project (config, PEG

@@ -1,6 +1,6 @@
-//! Code generators. Currently C; the Python backends remain authoritative for
-//! WASM and LLVM until they are ported.
+//! Code generators: C, Python, WebAssembly, and LLVM IR.
 
 pub mod c;
 pub mod python;
 pub mod wasm;
+pub mod llvm;

@@ -187,3 +187,37 @@ def test_wasm_backend_runs_like_the_python_backend(sample, tmp_path):
     reference = execute(WasmGenerator().translate_source_ast(ast).to_wat())
 
     assert execute(output.read_text(encoding="utf-8")) == reference
+
+
+@pytest.mark.parametrize("sample", ["hello.aur", "fibonacci.aur", "fizzbuzz.aur"])
+def test_llvm_backend_matches_python_backend(sample, tmp_path):
+    compiler = shutil.which("clang")
+    if compiler is None:
+        pytest.skip("no clang available")
+
+    source = SAMPLES / sample
+    rust_ir = tmp_path / "rust.ll"
+    completed = run("codegen-llvm", str(GRAMMAR), str(source), "-o", str(rust_ir))
+    assert completed.returncode == 0, completed.stderr
+
+    from parsercraft.codegen.llvm_ir import LLVMIRGenerator
+    from parsercraft.parser import GrammarParser, PEGInterpreter
+
+    grammar = GrammarParser().parse(GRAMMAR.read_text(encoding="utf-8"))
+    ast = PEGInterpreter(grammar).parse(source.read_text(encoding="utf-8"))
+    python_ir = tmp_path / "python.ll"
+    python_ir.write_text(
+        LLVMIRGenerator().translate_source_ast(ast), encoding="utf-8"
+    )
+
+    def compile_and_run(path: Path) -> str:
+        binary = path.with_suffix(".out")
+        subprocess.run(
+            [compiler, "-O1", "-o", str(binary), str(path)],
+            check=True, capture_output=True,
+        )
+        return subprocess.run(
+            [str(binary)], check=True, capture_output=True, text=True
+        ).stdout
+
+    assert compile_and_run(rust_ir) == compile_and_run(python_ir)

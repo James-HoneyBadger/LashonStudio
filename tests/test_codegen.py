@@ -2,10 +2,10 @@
 
 import pytest
 
-from parsercraft.parser.grammar import GrammarParser, PEGInterpreter
 from parsercraft.codegen.codegen_c import CCodeGenerator
 from parsercraft.codegen.codegen_wasm import WasmGenerator
 from parsercraft.codegen.llvm_ir import LLVMIRGenerator
+from parsercraft.parser.grammar import GrammarParser, PEGInterpreter
 
 
 @pytest.fixture
@@ -124,3 +124,77 @@ class TestLLVMIRGenerator:
         ir = gen.translate_source_ast(ast)
         # SSA form uses numbered registers
         assert "%1" in ir or "%0" in ir or "%" in ir
+
+
+class TestBackendControlFlow:
+    """Regression tests for functions, branches, loops, and calls."""
+
+    GRAMMAR = (
+        'program <- statement+\n'
+        'statement <- function_def / if_stmt / while_stmt / return_stmt / '
+        'print_stmt / assignment / expr_stmt\n'
+        'function_def <- "fn" IDENT "(" param_list? ")" block\n'
+        'block <- "{" statement* "}"\n'
+        'param_list <- IDENT ("," IDENT)*\n'
+        'if_stmt <- "if" comparison block ("else" block)?\n'
+        'while_stmt <- "while" comparison block\n'
+        'return_stmt <- "return" expr ";"\n'
+        'print_stmt <- "print" expr ";"\n'
+        'assignment <- IDENT "=" expr ";"\n'
+        'expr_stmt <- call ";"\n'
+        'comparison <- expr (("==" / "!=" / "<=" / ">=" / "<" / ">") expr)\n'
+        'expr <- term (("+" / "-") term)*\n'
+        'term <- factor (("*" / "/") factor)*\n'
+        'factor <- call / NUMBER / STRING / IDENT / "(" expr ")"\n'
+        'call <- IDENT "(" arg_list? ")"\n'
+        'arg_list <- expr ("," expr)*'
+    )
+
+    PROGRAM = (
+        'fn fib(n) {\n'
+        '  if n <= 1 { return n ; } else { return fib(n - 1) + fib(n - 2) ; }\n'
+        '}\n'
+        'print "fib" ;\n'
+        'print fib(6) ;\n'
+        'fn count(limit) {\n'
+        '  i = 1 ;\n'
+        '  while i <= limit { print i ; i = i + 1 ; }\n'
+        '}\n'
+        'count(3) ;\n'
+    )
+
+    @pytest.fixture
+    def ast(self):
+        grammar = GrammarParser().parse(self.GRAMMAR)
+        return PEGInterpreter(grammar).parse(self.PROGRAM)
+
+    def test_c_emits_string_literals_with_string_format(self, ast):
+        c_code = CCodeGenerator().translate_source_ast(ast)
+        assert 'printf("%s\\n", "fib");' in c_code
+        assert 'printf("%d\\n", fib(6));' in c_code
+
+    def test_c_emits_loop_bodies_and_no_redeclaration(self, ast):
+        c_code = CCodeGenerator().translate_source_ast(ast)
+        assert "while (i <= limit)" in c_code
+        assert "int i = 1;" in c_code
+        assert "i = i + 1;" in c_code
+        assert "int i = i + 1;" not in c_code
+
+    def test_c_emits_else_branch(self, ast):
+        c_code = CCodeGenerator().translate_source_ast(ast)
+        assert "} else {" in c_code
+
+    def test_llvm_emits_calls_and_no_undefined_warnings(self, ast):
+        ir = LLVMIRGenerator().translate_source_ast(ast)
+        assert "call i32 @fib(" in ir
+        assert "undefined variable" not in ir
+
+    def test_llvm_emits_printf_calls(self, ast):
+        ir = LLVMIRGenerator().translate_source_ast(ast)
+        assert "call i32 (ptr, ...) @printf" in ir
+        assert '@.fmt.0 = private unnamed_addr constant' in ir
+
+    def test_llvm_uses_i1_for_comparisons(self, ast):
+        ir = LLVMIRGenerator().translate_source_ast(ast)
+        assert "icmp sle i32" in ir
+        assert "icmp ne i32 %" not in ir

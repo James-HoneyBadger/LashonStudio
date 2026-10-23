@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 import tkinter as tk
 from tkinter import font as tkfont
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional
 
 
 class LineNumbers(tk.Canvas):
@@ -149,8 +149,8 @@ class CodeEditor(tk.Frame):
         if line_num > 1:
             prev_line = self.text.get(f"{line_num - 1}.0", f"{line_num - 1}.end")
             indent = len(prev_line) - len(prev_line.lstrip())
-            # Increase indent after ':'
-            if prev_line.rstrip().endswith(":"):
+            # Increase indent after block/collection openers
+            if prev_line.rstrip().endswith((":", "{", "[", "(")):
                 indent += 4
             if indent > 0:
                 self.text.insert("insert", " " * indent)
@@ -189,6 +189,12 @@ class CodeEditor(tk.Frame):
         if not content.strip():
             return
 
+        # Operators (applied first so comments/strings can override)
+        for match in re.finditer(r'[+\-*/%<>=!&|^~?:]+', content):
+            start = f"1.0+{match.start()}c"
+            end = f"1.0+{match.end()}c"
+            self.text.tag_add("operator", start, end)
+
         # Comments (line comments)
         for match in re.finditer(r'(#|//).*$', content, re.MULTILINE):
             start = f"1.0+{match.start()}c"
@@ -208,11 +214,14 @@ class CodeEditor(tk.Frame):
             self.text.tag_add("number", start, end)
 
         # Keywords
-        kw_pattern = r'\b(' + '|'.join(re.escape(k) for k in self.keywords) + r')\b'
-        for match in re.finditer(kw_pattern, content):
-            start = f"1.0+{match.start()}c"
-            end = f"1.0+{match.end()}c"
-            self.text.tag_add("keyword", start, end)
+        if self.keywords:
+            kw_pattern = r'\b(' + '|'.join(
+                re.escape(k) for k in self.keywords
+            ) + r')\b'
+            for match in re.finditer(kw_pattern, content):
+                start = f"1.0+{match.start()}c"
+                end = f"1.0+{match.end()}c"
+                self.text.tag_add("keyword", start, end)
 
         # Function names (word before parenthesis)
         for match in re.finditer(r'\b(\w+)\s*\(', content):

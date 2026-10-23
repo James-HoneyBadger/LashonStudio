@@ -4,7 +4,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-113%20passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-322%20passing-brightgreen.svg)](tests/)
 [![Version](https://img.shields.io/badge/version-4.0.0-informational.svg)](pyproject.toml)
 
 ParserCraft is a full-stack programming language construction framework. Define a PEG grammar — either in text notation or via a fluent Python API — and immediately get a working parser, an abstract syntax tree, and code generators targeting Python, C, WebAssembly, and LLVM IR. Add a config-driven REPL, a Language Server Protocol implementation, a DAP debugger, and a Tkinter IDE, and you have everything needed to design, implement, and ship a custom language from a single Python package.
@@ -18,6 +18,8 @@ ParserCraft is a full-stack programming language construction framework. Define 
 - [Quick Start](#quick-start)
 - [Language Presets](#language-presets)
 - [Code Generation Backends](#code-generation-backends)
+- [ParserCraft Studio](#parsercraft-studio)
+- [Sample Language Project](#sample-language-project)
 - [CLI Reference](#cli-reference)
 - [REPL](#repl)
 - [Standard Library &amp; FFI](#standard-library--ffi)
@@ -67,7 +69,7 @@ Start with a grammar. Get a working language. Ship it anywhere.
 | **Types** | Generic type parameters, protocol-based structural typing |
 | **LSP** | Language Server Protocol server for IDE syntax highlighting and completion |
 | **DAP** | Debug Adapter Protocol for step-through debugging |
-| **IDE** | Tkinter IDE with grammar editor, source pane, and console |
+| **Studio** | Tabbed language workbench: project tree, source/grammar/config editors, AST inspector, console, variables, and four backend panes |
 | **VS Code** | Generates a publishable VS Code extension for any language config |
 | **CLI** | 30+ subcommands covering the full language lifecycle |
 
@@ -165,8 +167,8 @@ Load a ready-made language archetype with a single call:
 ```python
 from parsercraft.config import LanguageConfig
 
-config = LanguageConfig.from_preset("pascal_like")
-config.rename_keyword("begin", "inicio")   # localise a keyword
+config = LanguageConfig.from_preset("python_like")
+config.rename_keyword("if", "si")         # localise a keyword
 config.save("my_lang.yaml")               # persist
 ```
 
@@ -181,7 +183,7 @@ config.save("my_lang.yaml")               # persist
 | `functional` | Lambda/`let-in`/`where` functional style |
 | `lisp_like` | S-expression syntax |
 | `basic_like` | Line-numbered BASIC style |
-| `pascal_like` | `:=` assignment, `BEGIN`…`END` blocks |
+| `minimal` | Small teaching subset |
 
 ---
 
@@ -198,6 +200,69 @@ All backends share the same `translate_source_ast(ast) -> str` contract. Adding 
 
 ---
 
+## ParserCraft Studio
+
+`parsercraft-ide` opens a complete language-design workbench rather than a
+single text pane.
+
+```bash
+parsercraft-ide                     # opens the Aurora reference project
+parsercraft-ide projects/aurora     # open a project directory or config
+```
+
+**Layout**
+
+| Pane | What it does |
+|---|---|
+| Project tree | Language config, grammar, and sample programs |
+| Source editor | Syntax-highlighted programs in your language |
+| Grammar editor | Editable PEG grammar with debounced validation |
+| Language editor | Metadata, keywords, operators, and syntax options (YAML) |
+| Console | Run output, timings, and diagnostics |
+| Variables | Live namespace after a run |
+| Python / C / WASM / LLVM IR | Generated output for the current program |
+| AST | Expandable syntax tree |
+
+**Workflow**
+
+1. Pick a sample or start a new project.
+2. Edit `grammar.peg`; validation runs automatically as you type.
+3. Write a program in the source pane.
+4. Press **F5** to parse, transpile, and execute it.
+5. Press **F6** to inspect the AST, **F7** to emit all four backends.
+6. **Ctrl+S** syncs the grammar back into `language.yaml` and saves.
+
+The Studio is a thin Tkinter shell over the headless
+[`LanguageStudio`](src/parsercraft/ide/studio.py) controller, so the whole
+pipeline is testable without a display.
+
+---
+
+## Sample Language Project
+
+[`projects/aurora`](projects/aurora) is a complete reference language:
+
+| File | Purpose |
+|---|---|
+| [`language.yaml`](projects/aurora/language.yaml) | Metadata, keywords, syntax options, and 18 PEG rules |
+| [`grammar.peg`](projects/aurora/grammar.peg) | Canonical editable grammar |
+| [`samples/hello.aur`](projects/aurora/samples/hello.aur) | Strings and printing |
+| [`samples/fibonacci.aur`](projects/aurora/samples/fibonacci.aur) | Functions, recursion, conditionals |
+| [`samples/fizzbuzz.aur`](projects/aurora/samples/fizzbuzz.aur) | Loops and nested conditionals |
+
+```
+fn fib(n) {
+  if n <= 1 { return n ; }
+  return fib(n - 1) + fib(n - 2) ;
+}
+print fib(10) ;        // 55
+```
+
+A copy ships inside the package (`parsercraft.ide.samples.aurora`) so the
+sample is available after a wheel install too.
+
+---
+
 ## CLI Reference
 
 ```
@@ -206,6 +271,8 @@ parsercraft <command> [options]
 
 | Command | Purpose |
 |---|---|
+| `init <name>` | Scaffold a runnable language project (config, grammar, sample, tests) |
+| `run <src>` | Parse and execute a program |
 | `create` | Interactive language creation wizard |
 | `edit <file>` | Open a language config in the visual editor |
 | `validate <file>` | Validate a YAML/JSON language config |
@@ -217,23 +284,33 @@ parsercraft <command> [options]
 | `update <file>` | Apply structured updates to a config |
 | `list-presets` | List all built-in language presets |
 | `repl [config]` | Launch an interactive REPL |
-| `batch <dir>` | Batch-process a directory of source files |
-| `test <file>` | Run the built-in test harness |
-| `translate <src>` | Translate source between configs |
+| `batch <config> [--input-dir DIR]` | Batch-process a directory of source files |
+| `test --config <cfg> --tests <file>` | Run the built-in test harness |
+| `translate --input <src> --config <cfg>` | Translate source using a config |
 | `delete <file>` | Remove a language config safely |
-| `lsp` | Start the Language Server Protocol server |
-| `extension` | Generate a VS Code extension |
-| `type-check <src>` | Run the type checker on source |
-| `module-info` | Display module dependency information |
-| `module-deps` | List all module dependencies |
-| `module-cycles` | Detect circular dependencies |
-| `codegen-c <src>` | Emit C code from source |
-| `codegen-wasm <src>` | Emit WAT from source |
-| `codegen-llvm <src>` | Emit LLVM IR from source |
-| `refactor-rename` | Rename a symbol across source files |
+| `lsp --config <cfg> [--stdio]` | Start the Language Server Protocol server |
+| `extension --config <cfg>` | Generate a VS Code extension |
+| `type-check --config <cfg> --input <src>` | Run the type checker on source |
+| `module-info <module>` | Display module dependency information |
+| `module-deps <module>` | List all module dependencies |
+| `module-cycles [--module-dir DIR]` | Detect circular dependencies |
+| `codegen-c <src> [--config <cfg>]` | Emit C code from source |
+| `codegen-wasm <src> [--config <cfg>]` | Emit WAT from source |
+| `codegen-llvm <src> [--config <cfg>]` | Emit LLVM IR from source |
+| `refactor-rename <src> <old> <new>` | Rename a symbol across source files |
 | `format <src>` | Auto-format a source file |
-| `debug-launch` | Launch the DAP debug adapter |
-| `test-run` | Execute a language test suite |
+| `debug-launch <src>` | Not implemented (exit 2); use the `Debugger` API |
+| `test-run [path]` | Run a project's pytest suite (optional coverage) |
+| `generics <src>` | Check generic declarations and instantiations |
+| `check-protocol <src>` | Not implemented (exit 2); use `ProtocolChecker` |
+| `package-search <query>` | Not implemented (exit 2) |
+| `package-install <pkg>` | Not implemented (exit 2) |
+
+```bash
+parsercraft init "My Lang" --directory ./languages
+parsercraft run languages/my-lang/samples/hello.aur \
+  --config languages/my-lang/language.yaml
+```
 
 ```bash
 parsercraft-ide    # Open the Tkinter IDE
@@ -320,12 +397,25 @@ See [docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md) for the full API 
 
 ## Documentation
 
+Start at [docs/README.md](docs/README.md) for learning paths and the full index.
+
 | Document | Description |
 |---|---|
-| [docs/INSTALL.md](docs/INSTALL.md) | Installation, virtual environments, platform notes |
-| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | End-user guide — CLI, REPL, configs, IDE |
-| [docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md) | Full API reference for all public classes |
-| [docs/TUTORIAL.md](docs/TUTORIAL.md) | Step-by-step: build your first language in 15 minutes |
+| [docs/QUICKSTART.md](docs/QUICKSTART.md) | Grammar → parse → run in ten minutes |
+| [docs/TUTORIAL.md](docs/TUTORIAL.md) | Eight progressive tutorials, from first language to packaging |
+| [docs/LANGUAGE_DEVELOPMENT.md](docs/LANGUAGE_DEVELOPMENT.md) | Designing and evolving a real language |
+| [docs/GRAMMAR_REFERENCE.md](docs/GRAMMAR_REFERENCE.md) | PEG notation, semantics, and AST production rules |
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Task-oriented guide — configs, parsing, execution, Studio |
+| [docs/STUDIO_GUIDE.md](docs/STUDIO_GUIDE.md) | ParserCraft Studio manual |
+| [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md) | Every command and flag, including placeholders |
+| [docs/CODEGEN_GUIDE.md](docs/CODEGEN_GUIDE.md) | Python/C/WASM/LLVM backends, fidelity, custom backends |
+| [docs/RUNTIME_GUIDE.md](docs/RUNTIME_GUIDE.md) | REPL, stdlib, FFI, language runtime, modules |
+| [docs/TYPE_SYSTEM.md](docs/TYPE_SYSTEM.md) | Types, checker, generics, protocols, narrowing |
+| [docs/LSP_AND_DEBUGGING.md](docs/LSP_AND_DEBUGGING.md) | Language server, debug adapter, error localization |
+| [docs/PACKAGING.md](docs/PACKAGING.md) | Wheels, VS Code extension, package registry |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Internals: parser, AST, backends, Studio split |
+| [docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md) | API reference for every public class |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Symptom → cause → fix, plus FAQ |
 | [configs/examples/README.md](configs/examples/README.md) | Config file gallery and format reference |
 
 ---
@@ -334,9 +424,13 @@ See [docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md) for the full API 
 
 ```bash
 python -m pytest tests/ -v
+python -m pytest -q --cov --cov-fail-under=45
 ```
 
-113 tests covering grammar parsing, all four code-generation backends, REPL, stdlib, FFI, error localization, incremental parsing, and full end-to-end pipeline integration.
+322 tests covering grammar parsing, all four code-generation backends (with
+compile-and-run checks for C and LLVM), REPL, stdlib, FFI, error localization,
+incremental parsing, types, modules, LSP, packaging, the debug adapter, and the
+Studio controller/GUI.
 
 ---
 
@@ -345,7 +439,7 @@ python -m pytest tests/ -v
 - **Python 3.10+**
 - **PyYAML 6.0+** (runtime dependency)
 - `tkinter` — bundled with most Python distributions (required for the IDE)
-- `pytest` — development only
+- `pytest` and `ruff` — development only
 
 ---
 

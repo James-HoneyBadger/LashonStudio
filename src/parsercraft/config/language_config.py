@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from typing import Any, Optional, Union
 
@@ -56,7 +56,7 @@ class FunctionConfig:
     """Configuration for a built-in function."""
 
     name: str
-    arity: int  # Number of arguments (-1 for variadic)
+    arity: int = -1  # Number of arguments (-1 for variadic)
     implementation: Optional[str] = None  # Python code as string, or reference
     description: str = ""
     enabled: bool = True
@@ -70,7 +70,7 @@ class OperatorConfig:
     """Configuration for operators."""
 
     symbol: str
-    precedence: int
+    precedence: int = 0
     associativity: str = "left"  # left, right, none
     enabled: bool = True
 
@@ -607,16 +607,13 @@ class LanguageConfig:
     # === Validation ===
 
     def validate(self) -> list[str]:
-        """Validate configuration for consistency."""
-        errs: list[str] = []
+        """Validate configuration for consistency.
 
-        # Check for duplicate custom names
-        custom_names = [m.custom for m in self.keyword_mappings.values()]
-        duplicates = [
-            name for name in custom_names if custom_names.count(name) > 1
-        ]
-        if duplicates:
-            errs.append(f"Duplicate keyword names: {set(duplicates)}")
+        Only hard errors are returned.  Multiple originals mapping to the
+        same custom keyword are treated as aliases and reported by
+        :meth:`validation_warnings` instead.
+        """
+        errs: list[str] = []
 
         # Check function arities
         for name, func in self.builtin_functions.items():
@@ -637,6 +634,21 @@ class LanguageConfig:
                 )
 
         return errs
+
+    def validation_warnings(self) -> list[str]:
+        """Return non-fatal consistency warnings (e.g. keyword aliases)."""
+        warnings: list[str] = []
+        counts: dict[str, int] = {}
+        for mapping in self.keyword_mappings.values():
+            counts[mapping.custom] = counts.get(mapping.custom, 0) + 1
+        aliases = sorted(name for name, count in counts.items() if count > 1)
+        if aliases:
+            warnings.append(
+                "Duplicate keyword aliases: "
+                + ", ".join(aliases)
+                + " (multiple originals map to the same custom keyword)"
+            )
+        return warnings
 
     # === Serialization ===
 
@@ -668,44 +680,98 @@ class LanguageConfig:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> LanguageConfig:
-        """Create configuration from dictionary."""
+        """Create configuration from a dictionary.
+
+        Accepts both the canonical schema emitted by :meth:`to_dict` and the
+        shorthand schema used by the bundled example configs: string keyword
+        values, ``builtin_functions`` as an alias for ``functions``, operators
+        as a list of ``symbol``/``precedence`` mappings, and runtime flags at
+        the top level.
+        """
         cfg = cls()
 
-        if "metadata" in data:
-            cfg.name = data["metadata"].get("name", cfg.name)
-            cfg.version = data["metadata"].get("version", cfg.version)
-            cfg.description = data["metadata"].get(
-                "description", cfg.description
+        metadata = data.get("metadata")
+        if not isinstance(metadata, dict):
+            metadata = data
+        cfg.name = metadata.get("name", cfg.name)
+        cfg.version = metadata.get("version", cfg.version)
+        cfg.description = metadata.get("description", cfg.description)
+        cfg.author = metadata.get("author", cfg.author)
+        cfg.target_interpreter = metadata.get(
+            "target_interpreter", cfg.target_interpreter
+        )
+
+        keywords = data.get("keywords")
+        if isinstance(keywords, dict):
+            mappings: dict[str, KeywordMapping] = {}
+            for raw_key, value in keywords.items():
+                key = _string_key(raw_key)
+                if isinstance(value, str):
+                    mappings[key] = KeywordMapping(original=key, custom=value)
+                elif isinstance(value, dict):
+                    payload = dict(value)
+                    payload.setdefault("original", key)
+                    mappings[key] = KeywordMapping(
+                        **_matching_fields(KeywordMapping, payload)
+                    )
+            cfg.keyword_mappings = mappings
+
+        functions = data.get("functions", data.get("builtin_functions"))
+        if isinstance(functions, dict):
+            parsed_functions: dict[str, FunctionConfig] = {}
+            for key, value in functions.items():
+                if not isinstance(value, dict):
+                    continue
+                kwargs = _matching_fields(FunctionConfig, value)
+                kwargs.setdefault("name", key)
+                kwargs.setdefault("arity", -1)
+                parsed_functions[key] = FunctionConfig(**kwargs)
+            cfg.builtin_functions = parsed_functions
+
+        operators = data.get("operators")
+        if isinstance(operators, dict):
+            parsed_operators: dict[str, OperatorConfig] = {}
+            for key, value in operators.items():
+                if not isinstance(value, dict):
+                    continue
+                kwargs = _matching_fields(OperatorConfig, value)
+                kwargs.setdefault("symbol", key)
+                kwargs.setdefault("precedence", 0)
+                parsed_operators[key] = OperatorConfig(**kwargs)
+            cfg.operators = parsed_operators
+        elif isinstance(operators, list):
+            parsed_operators = {}
+            for value in operators:
+                if not isinstance(value, dict):
+                    continue
+                kwargs = _matching_fields(OperatorConfig, value)
+                symbol = kwargs.get("symbol")
+                if not symbol:
+                    continue
+                kwargs.setdefault("precedence", 0)
+                parsed_operators[symbol] = OperatorConfig(**kwargs)
+            if parsed_operators:
+                cfg.operators = parsed_operators
+
+        if isinstance(data.get("syntax_options"), dict):
+            cfg.syntax_options = SyntaxOptions(
+                **_matching_fields(SyntaxOptions, data["syntax_options"])
             )
-            cfg.author = data["metadata"].get("author", cfg.author)
 
-        if "keywords" in data:
-            cfg.keyword_mappings = {
-                k: KeywordMapping(**v) for k, v in data["keywords"].items()
-            }
-
-        if "functions" in data:
-            cfg.builtin_functions = {
-                k: FunctionConfig(**v) for k, v in data["functions"].items()
-            }
-
-        if "operators" in data:
-            cfg.operators = {
-                k: OperatorConfig(**v) for k, v in data["operators"].items()
-            }
-
-        if "syntax_options" in data:
-            cfg.syntax_options = SyntaxOptions(**data["syntax_options"])
-
-        if "parsing_config" in data:
-            cfg.parsing_config = ParsingConfig(**data["parsing_config"])
-
-        if "runtime" in data:
-            cfg.debug_mode = data["runtime"].get("debug_mode", False)
-            cfg.strict_mode = data["runtime"].get("strict_mode", False)
-            cfg.compatibility_mode = data["runtime"].get(
-                "compatibility_mode", "standard"
+        if isinstance(data.get("parsing_config"), dict):
+            cfg.parsing_config = ParsingConfig(
+                **_matching_fields(ParsingConfig, data["parsing_config"])
             )
+
+        runtime = data.get("runtime")
+        if not isinstance(runtime, dict):
+            runtime = data
+        if "debug_mode" in runtime:
+            cfg.debug_mode = bool(runtime["debug_mode"])
+        if "strict_mode" in runtime:
+            cfg.strict_mode = bool(runtime["strict_mode"])
+        if "compatibility_mode" in runtime:
+            cfg.compatibility_mode = runtime["compatibility_mode"]
 
         return cfg
 
@@ -796,14 +862,31 @@ class LanguageConfig:
 
         if "keywords" in updates:
             if merge:
-                for key, value in updates["keywords"].items():
-                    if isinstance(value, dict):
-                        self.keyword_mappings[key] = KeywordMapping(**value)
+                for raw_key, value in updates["keywords"].items():
+                    key = _string_key(raw_key)
+                    if isinstance(value, str):
+                        self.keyword_mappings[key] = KeywordMapping(
+                            original=key, custom=value
+                        )
+                    elif isinstance(value, dict):
+                        payload = dict(value)
+                        payload.setdefault("original", key)
+                        self.keyword_mappings[key] = KeywordMapping(
+                            **_matching_fields(KeywordMapping, payload)
+                        )
             else:
                 self.keyword_mappings = {
-                        k: KeywordMapping(**v)
-                        for k, v in updates["keywords"].items()
-                    }
+                    k: KeywordMapping(
+                        **_matching_fields(
+                            KeywordMapping,
+                            {"original": k, "custom": v}
+                            if isinstance(v, str)
+                            else {"original": k, **v},
+                        )
+                    )
+                    for k, v in updates["keywords"].items()
+                    if isinstance(v, (str, dict))
+                }
 
         if "syntax_options" in updates:
             if merge:
@@ -812,7 +895,7 @@ class LanguageConfig:
                         setattr(self.syntax_options, key, value)
             else:
                 self.syntax_options = SyntaxOptions(
-                    **updates["syntax_options"]
+                    **_matching_fields(SyntaxOptions, updates["syntax_options"])
                 )
 
     def delete_keyword(self, keyword: str) -> bool:
@@ -915,6 +998,19 @@ class LanguageConfig:
 # === Helper Functions ===
 
 
+def _string_key(key: Any) -> str:
+    """Normalize mapping keys (YAML turns bare true/false into booleans)."""
+    if isinstance(key, bool):
+        return str(key).lower()
+    return str(key)
+
+
+def _matching_fields(cls: type, values: dict[str, Any]) -> dict[str, Any]:
+    """Return only the entries whose keys are dataclass fields of ``cls``."""
+    allowed = {f.name for f in fields(cls)}
+    return {key: value for key, value in values.items() if key in allowed}
+
+
 def list_presets() -> list[str]:
     """Get list of available presets."""
     return [
@@ -925,6 +1021,9 @@ def list_presets() -> list[str]:
         "golang_like",
         "rust_like",
         "clike",
+        "functional",
+        "lisp_like",
+        "basic_like",
     ]
 
 

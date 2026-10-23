@@ -27,7 +27,16 @@ LLVM IR overview:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
+from parsercraft.codegen.common import (
+    COMPARISON_OPERATORS,
+    inline_assignment,
+    meaningful_children,
+    split_chain,
+)
+
+_COMPARISON_OPS = frozenset({"==", "!=", "<", ">", "<=", ">="})
 
 
 @dataclass
@@ -98,6 +107,7 @@ class LLVMIRGenerator:
         self.string_constants: Dict[str, str] = {}  # value -> @name
         self._reg_counter = 0
         self._str_counter = 0
+        self._fmt_counter = 0
         self._label_counter = 0
         self._current_func: Optional[IRFunction] = None
         self._current_block: Optional[BasicBlock] = None
@@ -111,6 +121,7 @@ class LLVMIRGenerator:
         self.string_constants = {}
         self._reg_counter = 0
         self._str_counter = 0
+        self._fmt_counter = 0
         self._label_counter = 0
         self._variables = {}
 
@@ -181,6 +192,14 @@ class LLVMIRGenerator:
             return self._visit_if(node)
         if nt in ("while_stmt", "WhileStmt"):
             return self._visit_while(node)
+        if nt in ("block", "Block"):
+            for child in node.children:
+                self._visit(child)
+            return None
+        if nt in ("call", "Call", "FunctionCall"):
+            return self._visit_call(node)
+        if nt in ("print_stmt", "PrintStmt"):
+            return self._visit_print_stmt(node)
 
         # Fallback: visit children
         return self._visit_transparent(node)
@@ -194,30 +213,26 @@ class LLVMIRGenerator:
 
         For statement nodes, detect inline assignment patterns.
         """
-        if node.node_type in ("statement", "Statement"):
-            ops = [c for c in node.children if c.node_type == "Operator"]
-            if any(o.value == "=" for o in ops):
-                # Inline assignment: IDENT '=' expr ';'
-                meaningful = [c for c in node.children
-                              if not (c.node_type == "Operator" and c.value in ("=", ";"))]
-                if len(meaningful) >= 2:
-                    name = self._node_name(meaningful[0])
-                    val = self._visit(meaningful[1])
-                    if val is not None:
-                        if name not in self._variables:
-                            ptr = self._next_reg()
-                            self._emit(f"{ptr} = alloca {val.ir_type}")
-                            self._variables[name] = IRValue(ptr, "ptr")
-                        self._emit(f"store {val.typed()}, ptr {self._variables[name].name}")
-                    return None
+        pair = inline_assignment(node)
+        if pair is not None:
+            target, value_node = pair
+            name = self._node_name(target)
+            val = self._visit(value_node)
+            if val is not None:
+                if name not in self._variables:
+                    ptr = self._next_reg()
+                    self._emit(f"{ptr} = alloca {val.ir_type}")
+                    self._variables[name] = IRValue(ptr, "ptr")
+                self._emit(f"store {val.typed()}, ptr {self._variables[name].name}")
+            return None
+
         meaningful = [c for c in node.children if c.node_type != "Operator"]
         if meaningful:
             return self._visit(meaningful[0])
         return None
 
     def _visit_assignment(self, node: Any) -> None:
-        meaningful = [c for c in node.children
-                      if not (c.node_type == "Operator" and c.value in ("=", ";"))]
+        meaningful = meaningful_children(node)
         if len(meaningful) < 2:
             return
 
@@ -230,7 +245,7 @@ class LLVMIRGenerator:
         if name not in self._variables:
             ptr = self._next_reg()
             self._emit(f"{ptr} = alloca {val.ir_type}")
-            self._variables[name] = IRValue(ptr, f"ptr")
+            self._variables[name] = IRValue(ptr, "ptr")
 
         # Store
         self._emit(f"store {val.typed()}, ptr {self._variables[name].name}")
@@ -268,16 +283,7 @@ class LLVMIRGenerator:
 
     def _visit_binary_chain(self, node: Any) -> Optional[IRValue]:
         """Handle binary operator chains: operand (op operand)*"""
-        structural = {"=", ";", ":", ",", "(", ")", "{", "}", "[", "]"}
-        children = [c for c in node.children
-                    if not (c.node_type == "Operator" and c.value in structural)]
-
-        if not children:
-            return None
-
-        operands = [c for c in children if c.node_type != "Operator"]
-        operators = [c for c in children if c.node_type == "Operator"]
-
+        operands, operators = split_chain(node)
         if not operands:
             return None
 
@@ -303,7 +309,7 @@ class LLVMIRGenerator:
 
             if inst:
                 self._emit(inst)
-                result = IRValue(reg, ir_type)
+                result = IRValue(reg, "i1" if op in COMPARISON_OPERATORS else ir_type)
 
         return result
 
@@ -377,6 +383,10 @@ class LLVMIRGenerator:
         if meaningful:
             val = self._visit(meaningful[0])
             if val:
+                if val.ir_type == "i1":
+                    widened = self._next_reg()
+                    self._emit(f"{widened} = zext i1 {val.name} to i32")
+                    val = IRValue(widened, "i32")
                 self._current_block.terminate(f"ret {val.typed()}")
             else:
                 self._current_block.terminate("ret i32 0")
@@ -392,9 +402,7 @@ class LLVMIRGenerator:
         if cond is None:
             return
 
-        # Convert to i1
-        cond_bool = self._next_reg()
-        self._emit(f"{cond_bool} = icmp ne {cond.typed()}, 0")
+        cond_bool = self._as_condition(cond)
 
         then_label = self._next_label("then")
         else_label = self._next_label("else")
@@ -407,12 +415,15 @@ class LLVMIRGenerator:
         self._current_func.blocks.append(then_block)
         self._current_block = then_block
 
-        if len(children) > 1:
-            for child in children[1:]:
-                if child.node_type in ("block", "Block"):
-                    for stmt in child.children:
-                        self._visit(stmt)
-                    break
+        blocks = [
+            c for c in children[1:]
+            if c.node_type in ("block", "Block")
+        ]
+        then_nodes = blocks[0].children if blocks else children[1:]
+        else_nodes = blocks[1].children if len(blocks) > 1 else []
+
+        for stmt in then_nodes:
+            self._visit(stmt)
 
         if not self._current_block.terminated:
             self._current_block.terminate(f"br label %{end_label}")
@@ -421,6 +432,8 @@ class LLVMIRGenerator:
         else_block = BasicBlock(label=else_label)
         self._current_func.blocks.append(else_block)
         self._current_block = else_block
+        for stmt in else_nodes:
+            self._visit(stmt)
         self._current_block.terminate(f"br label %{end_label}")
 
         # End block
@@ -446,8 +459,7 @@ class LLVMIRGenerator:
 
         cond = self._visit(children[0])
         if cond:
-            cond_bool = self._next_reg()
-            self._emit(f"{cond_bool} = icmp ne {cond.typed()}, 0")
+            cond_bool = self._as_condition(cond)
             self._current_block.terminate(f"br i1 {cond_bool}, label %{body_label}, label %{end_label}")
         else:
             self._current_block.terminate(f"br label %{end_label}")
@@ -472,6 +484,70 @@ class LLVMIRGenerator:
     # -------------------------------------------------------------------
     # Helpers
     # -------------------------------------------------------------------
+
+    def _as_condition(self, value: IRValue) -> str:
+        """Return an i1 register usable in a conditional branch."""
+        if value.ir_type == "i1":
+            return value.name
+        reg = self._next_reg()
+        self._emit(f"{reg} = icmp ne {value.typed()}, 0")
+        return reg
+
+    def _visit_call(self, node: Any) -> Optional[IRValue]:
+        """Translate a function call, emitting a ``call`` instruction."""
+        structural = {"(", ")", ",", ";"}
+        meaningful = [
+            c for c in node.children
+            if not (c.node_type == "Operator" and c.value in structural)
+        ]
+        if not meaningful:
+            return None
+
+        name = self._node_name(meaningful[0])
+        args: List[IRValue] = []
+        for child in meaningful[1:]:
+            value = self._visit(child)
+            if value is not None:
+                args.append(value)
+
+        arg_list = ", ".join(arg.typed() for arg in args)
+        reg = self._next_reg()
+        self._emit(f"{reg} = call i32 @{name}({arg_list})")
+        return IRValue(reg, "i32")
+
+    def _visit_print_stmt(self, node: Any) -> None:
+        """Translate a print statement into a printf call per argument."""
+        args = [c for c in node.children if c.node_type != "Operator"]
+        for child in args:
+            value = self._visit(child)
+            if value is None:
+                continue
+            fmt = self._format_global(value.ir_type)
+            reg = self._next_reg()
+            self._emit(
+                f"{reg} = call i32 (ptr, ...) @printf(ptr {fmt}, {value.typed()})"
+            )
+
+    def _format_global(self, ir_type: str) -> str:
+        """Return (creating on demand) a printf format string for a type."""
+        specifier = {
+            "double": "%f",
+            "ptr": "%s",
+            "i64": "%ld",
+        }.get(ir_type, "%d")
+        if specifier in self.string_constants:
+            return self.string_constants[specifier]
+
+        name = f"@.fmt.{self._fmt_counter}"
+        self._fmt_counter += 1
+        raw = specifier + "\n"
+        escaped = raw.replace("\\", "\\5C").replace('"', '\\22').replace("\n", "\\0A")
+        self.globals.append(
+            f'{name} = private unnamed_addr constant [{len(raw) + 1} x i8] '
+            f'c"{escaped}\\00"'
+        )
+        self.string_constants[specifier] = name
+        return name
 
     def _int_op(self, op: str, lhs: IRValue, rhs: IRValue, reg: str) -> str:
         op_map = {

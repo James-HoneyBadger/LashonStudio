@@ -33,11 +33,14 @@ Usage:
 
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from parsercraft.parser.grammar import Grammar, PEGInterpreter, SourceAST
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -162,9 +165,9 @@ class IncrementalParser:
             try:
                 self._ast = self._interpreter.parse(self._source)
                 self._build_regions(self._ast)
-            except SyntaxError:
-                # Keep old AST on parse error (user is mid-edit)
-                pass
+            except SyntaxError as error:
+                # Keep the old AST on parse errors (the user is mid-edit).
+                logger.debug("Full reparse failed; keeping previous AST: %s", error)
 
         return self._ast
 
@@ -230,10 +233,18 @@ class IncrementalParser:
         edit_end = edit.offset + edit.old_len
 
         # Find all regions that overlap with the edit
-        overlapping = [
-            r for r in self._regions
-            if r.overlaps(edit_start, edit_end)
-        ]
+        if edit.old_len == 0:
+            # An insertion is a point: require a region that strictly
+            # contains the offset, otherwise fall back to a full reparse.
+            overlapping = [
+                r for r in self._regions
+                if r.start < edit_start < r.end
+            ]
+        else:
+            overlapping = [
+                r for r in self._regions
+                if r.overlaps(edit_start, edit_end)
+            ]
 
         if not overlapping:
             return None
@@ -274,7 +285,6 @@ class IncrementalParser:
         # Build regions from top-level statement children
         # This is a heuristic — for more precise incremental parsing,
         # the grammar engine should track source positions
-        source_lines = self._source.split("\n")
         offset = 0
 
         for child in ast.children:

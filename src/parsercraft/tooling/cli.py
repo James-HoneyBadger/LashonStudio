@@ -6,6 +6,7 @@ Command-line interface for creating, editing, running, and managing custom
 programming language configurations and programs.
 
 Language Configuration Commands:
+    parsercraft init NAME [--directory DIR] [--force]
     parsercraft create [--preset PRESET] [--output FILE]
     parsercraft edit FILE
     parsercraft validate FILE
@@ -20,14 +21,16 @@ Language Configuration Commands:
     parsercraft translate FILE [--config CONFIG]
 
 Execution Commands:
+    parsercraft run FILE [--config CONFIG | --grammar GRAMMAR] [--json]
     parsercraft repl [FILE] [--debug]
     parsercraft batch FILE [--script SCRIPT]
     parsercraft test FILE [--cases FILE]
     parsercraft test-run FILE
 
 Code Generation Commands:
-    parsercraft codegen-c FILE [--output FILE]
-    parsercraft codegen-wasm FILE [--output FILE]
+    parsercraft codegen-c FILE [--config CONFIG] [--output FILE]
+    parsercraft codegen-wasm FILE [--config CONFIG] [--output FILE]
+    parsercraft codegen-llvm FILE [--config CONFIG] [--output FILE]
 
 Type System Commands:
     parsercraft type-check FILE [--config CONFIG]
@@ -50,8 +53,10 @@ Tooling Commands:
 
 Presets:
     - python_like    : Python-style syntax
-    - javascript_like: JavaScript-style syntax
+    - js_like        : JavaScript-style syntax
     - lisp_like      : Lisp-style syntax
+    - functional     : Functional (ML-style) syntax
+    - basic_like     : BASIC-style syntax
     - minimal        : Minimal functional language
 
 Examples:
@@ -95,12 +100,22 @@ try:
 except ImportError:  # pragma: no cover - platform dependent
     readline = None  # type: ignore[assignment]
 
+from parsercraft import __version__
 from parsercraft.config.language_config import (
     LanguageConfig,
     create_custom_config_interactive,
     list_presets,
 )
 from parsercraft.runtime.language_runtime import LanguageRuntime
+from parsercraft.tooling.commands import (
+    cmd_codegen_c,
+    cmd_codegen_llvm,
+    cmd_codegen_wasm,
+    cmd_generics,
+    cmd_init,
+    cmd_run,
+    cmd_type_check,
+)
 
 # YAML support (optional)
 try:
@@ -657,6 +672,7 @@ def cmd_validate(args):
     try:
         config = LanguageConfig.load(filepath)
         errors = config.validate()
+        warnings = config.validation_warnings()
 
         if errors:
             print(f"❌ Validation failed for: {filepath}")
@@ -664,15 +680,19 @@ def cmd_validate(args):
             for error in errors:
                 print(f"  • {error}")
             return 1
-        else:
-            print("✓ Configuration is valid")
-            print("\nSummary:")
-            print(f"  Name: {config.name}")
-            print(f"  Version: {config.version}")
-            print(f"  Keywords: {len(config.keyword_mappings)}")
-            print(f"  Functions: {len(config.builtin_functions)}")
-            print(f"  Operators: {len(config.operators)}")
-            return 0
+
+        print("✓ Configuration is valid")
+        print("\nSummary:")
+        print(f"  Name: {config.name}")
+        print(f"  Version: {config.version}")
+        print(f"  Keywords: {len(config.keyword_mappings)}")
+        print(f"  Functions: {len(config.builtin_functions)}")
+        print(f"  Operators: {len(config.operators)}")
+        if warnings:
+            print("\nWarnings:")
+            for warning in warnings:
+                print(f"  • {warning}")
+        return 0
     except CONFIG_LOAD_ERRORS as error:
         print(f"❌ Error loading config: {error}")
         return 1
@@ -1064,6 +1084,24 @@ def cmd_repl(args):
     if readline is None:
         print("Warning: readline support unavailable; history disabled")
 
+    if args.grammar:
+        from parsercraft.parser.grammar import GrammarParser
+        from parsercraft.runtime.repl import REPL
+
+        grammar_path = Path(args.grammar)
+        if not grammar_path.exists():
+            print(f"Error: Grammar file not found: {grammar_path}")
+            return 1
+        try:
+            grammar = GrammarParser().parse(
+                grammar_path.read_text(encoding="utf-8")
+            )
+        except ValueError as error:
+            print(f"Error parsing grammar: {error}")
+            return 1
+        REPL(grammar=grammar).run()
+        return 0
+
     config = _resolve_repl_config(args.file)
     if config is None:
         return 1
@@ -1302,9 +1340,7 @@ def cmd_lsp(args):
 
 def cmd_extension(args):
     """Generate VS Code extension."""
-    from parsercraft.packaging.vscode_integration import (
-        generate_vscode_extension
-    )
+    from parsercraft.packaging.vscode_integration import generate_vscode_extension
 
     config_path = Path(args.config)
     if not config_path.exists():
@@ -1328,75 +1364,6 @@ def cmd_extension(args):
         return 0
     except CONFIG_LOAD_ERRORS as error:
         print(f"Error loading config: {error}")
-        return 1
-
-
-def cmd_type_check(args):
-    """Perform static type analysis on source file."""
-    from parsercraft.types.type_system import TypeChecker, AnalysisLevel
-
-    config_path = Path(args.config)
-    if not config_path.exists():
-        print(f"Error: Configuration file not found: {config_path}")
-        return 1
-
-    source_path = Path(args.input)
-    if not source_path.exists():
-        print(f"Error: Source file not found: {source_path}")
-        return 1
-
-    try:
-        config = LanguageConfig.load(config_path)
-    except CONFIG_LOAD_ERRORS as error:
-        print(f"Error loading config: {error}")
-        return 1
-
-    try:
-        source_path.read_text(encoding="utf-8")
-    except OSError as error:
-        print(f"Error reading source file: {error}")
-        return 1
-
-    # Parse analysis level
-    level_map = {
-        "lenient": AnalysisLevel.LENIENT,
-        "moderate": AnalysisLevel.MODERATE,
-        "strict": AnalysisLevel.STRICT,
-        "very-strict": AnalysisLevel.VERY_STRICT,
-    }
-    analysis_level = level_map.get(args.level, AnalysisLevel.MODERATE)
-
-    # Create type checker
-    checker = TypeChecker(config, level=analysis_level)
-
-    # Check the file
-    print(f"Type checking: {source_path}")
-    print(f"Analysis level: {args.level}")
-    print("=" * 70)
-
-    try:
-        errors = checker.check_file(str(source_path))
-
-        if not errors:
-            print("✓ No type errors found")
-            return 0
-
-        # Display errors
-        print(f"Found {len(errors)} error(s):\n")
-        for err in errors:
-            print(f"[{err.kind}] {err.message}")
-            if err.location:
-                print(f"  Location: {err.location}")
-            if err.suggestion:
-                print(f"  Suggestion: {err.suggestion}")
-            print()
-
-        return 1 if not args.warnings_as_errors else 1
-
-    except Exception as error:  # pylint: disable=broad-exception-caught
-        print(f"Error during type checking: {error}")
-        if args.debug:
-            traceback.print_exc()
         return 1
 
 
@@ -1485,9 +1452,7 @@ def cmd_module_deps(args):
 
 def cmd_module_cycles(args):
     """Detect circular dependencies."""
-    from parsercraft.runtime.module_system import (
-        ModuleManager, CircularDependencyError
-    )
+    from parsercraft.runtime.module_system import CircularDependencyError, ModuleManager
 
     module_dir = Path(args.module_dir) if args.module_dir else Path.cwd()
 
@@ -1522,155 +1487,49 @@ def cmd_module_cycles(args):
         return 1
 
 
-def cmd_generics(args):
-    """Check generic type constraints."""
-    # from .generics import GenericChecker
-
-    try:
-        with open(args.file, encoding="utf-8") as f:
-            source = f.read()
-
-        # checker = GenericChecker()
-
-        if args.infer:
-            print("Type Inference Results:")
-            print("=" * 70)
-        else:
-            print("Generic Type Checking:")
-            print("=" * 70)
-
-        print(f"File: {args.file}")
-        print(f"Lines: {len(source.split(chr(10)))}")
-        print()
-
-        print("✓ Generic type checking complete")
-        return 0
-
-    except Exception as error:  # pylint: disable=broad-exception-caught
-        print(f"Error: {error}")
-        return 1
-
-
 def cmd_check_protocol(args):
-    """Check protocol conformance."""
-    # from .protocols import ProtocolChecker
-
-    try:
-        # with open(args.file) as f:
-        #     pass
-        #     # source = f.read()
-
-        # checker = ProtocolChecker()
-
-        if args.list_protocols:
-            print("Protocols found in file:")
-            print("=" * 70)
-            # Would list protocols from AST here
-            print("(No protocols found)")
-        else:
-            print("Protocol Conformance Check:")
-            print("=" * 70)
-            print(f"File: {args.file}")
-
-        print("✓ Protocol checking complete")
-        return 0
-
-    except Exception as error:  # pylint: disable=broad-exception-caught
-        print(f"Error: {error}")
-        return 1
-
-
-def cmd_codegen_c(args):
-    """Generate C code from source."""
-    from parsercraft.codegen.codegen_c import CCodeGenerator
-
-    try:
-        generator = CCodeGenerator()
-        c_code = (
-            generator.generate_header()
-            + "\n"
-            + generator.generate_implementations()
-        )
-
-        output_file = args.output or args.file.replace(".lang", ".c")
-
-        with open(output_file, "w", encoding="utf-8") as f:
-            f.write(c_code)
-
-        print(f"✓ Generated C code: {output_file}")
-        print(f"  Lines: {len(c_code.split(chr(10)))}")
-
-        return 0
-
-    except Exception as error:  # pylint: disable=broad-exception-caught
-        print(f"Error: {error}")
-        return 1
-
-
-def cmd_codegen_wasm(args):
-    """Generate WebAssembly from source."""
-    from parsercraft.codegen.codegen_wasm import WasmGenerator
-
-    try:
-        generator = WasmGenerator()
-        module = generator.generate_from_ast(None)
-
-        output_file = args.output or args.file.replace(".lang", ".wat")
-
-        wat_text = module.to_wat()
-        with open(output_file, "w", encoding="utf-8") as f:
-            f.write(wat_text)
-
-        print(f"✓ Generated WebAssembly: {output_file}")
-        print(f"  Format: {args.format}")
-        print(f"  Lines: {len(wat_text.split(chr(10)))}")
-
-        return 0
-
-    except Exception as error:  # pylint: disable=broad-exception-caught
-        print(f"Error: {error}")
-        return 1
+    """Explain how to check protocol conformance (CLI not implemented)."""
+    print(
+        "check-protocol is not implemented: protocol conformance needs a "
+        "language-specific type model.",
+        file=sys.stderr,
+    )
+    print(
+        "Use parsercraft.types.ProtocolChecker "
+        "(register_protocol, conforms_to_protocol) directly.",
+        file=sys.stderr,
+    )
+    return 2
 
 
 def cmd_package_search(args):
-    """Search for packages."""
-    # from .package_registry import PackageRegistry
-
-    try:
-        # registry = PackageRegistry()
-
-        print(f"Searching for: {args.query}")
-        print("=" * 70)
-        print("(Package search requires remote registry implementation)")
-
-        return 0
-
-    except Exception as error:  # pylint: disable=broad-exception-caught
-        print(f"Error: {error}")
-        return 1
+    """Explain that remote package search is unavailable."""
+    print(
+        "package-search is not implemented: there is no remote registry "
+        "backend.",
+        file=sys.stderr,
+    )
+    print(
+        "Use parsercraft.packaging.PackageRegistry with locally registered "
+        "packages.",
+        file=sys.stderr,
+    )
+    return 2
 
 
 def cmd_package_install(args):
-    """Install package."""
-    # from .package_registry import PackageRegistry, Version
-
-    try:
-        # registry = PackageRegistry()
-
-        # Parse package@version
-        parts = args.package.split("@")
-        pkg_name = parts[0]
-        version_str = parts[1] if len(parts) > 1 else "*"
-
-        print(f"Installing: {pkg_name}@{version_str}")
-        print("=" * 70)
-        print("(Package installation requires remote registry backend)")
-
-        return 0
-
-    except Exception as error:  # pylint: disable=broad-exception-caught
-        print(f"Error: {error}")
-        return 1
+    """Explain that remote package installation is unavailable."""
+    print(
+        "package-install is not implemented: packages are resolved from a "
+        "local PackageRegistry only.",
+        file=sys.stderr,
+    )
+    print(
+        "Register packages with PackageRegistry.register_package and resolve "
+        "them from Python.",
+        file=sys.stderr,
+    )
+    return 2
 
 
 def cmd_refactor_rename(args):
@@ -1747,57 +1606,50 @@ def cmd_format(args):
 
 
 def cmd_test_run(args):
-    """Run tests."""
-    from parsercraft.tooling.test_framework import LanguageTestRunner
+    """Run a project's pytest suite."""
+    import pytest
 
-    try:
-        config = LanguageConfig()
-        runner = LanguageTestRunner(config=config)
-
-        print(f"Running tests (verbose={args.verbose})...")
-        print("=" * 70)
-
-        results = runner.run_all_tests()
-
-        passed = sum(1 for r in results if r.passed)
-        failed = len(results) - passed
-        print()
-        print(f"Results: {passed} passed, {failed} failed")
-
-        return 0 if failed == 0 else 1
-
-    except Exception as error:  # pylint: disable=broad-exception-caught
-        print(f"Error: {error}")
+    target = Path(args.path) if args.path else Path("tests")
+    if not target.exists():
+        print(f"Error: Test path not found: {target}")
         return 1
+
+    pytest_args = [str(target), "-q"]
+    if args.verbose:
+        pytest_args.append("-v")
+    if args.coverage:
+        try:
+            import pytest_cov  # noqa: F401
+        except ImportError:
+            print(
+                "Error: --coverage requires pytest-cov "
+                "(pip install pytest-cov)"
+            )
+            return 1
+        pytest_args.extend(["--cov", "--cov-report=term-missing"])
+
+    print(f"Running pytest on {target}")
+    return int(pytest.main(pytest_args))
 
 
 def cmd_debug_launch(args):
-    """Launch debugger."""
-    from parsercraft.tooling.debug.debug_adapter import Debugger
+    """Explain how to drive the debugger (no DAP transport yet)."""
+    from pathlib import Path
 
-    try:
-        debugger = Debugger(args.file)
-
-        print(f"Launching debugger for: {args.file}")
-        print(f"Listen on port: {args.port}")
-        print("=" * 70)
-
-        # Set breakpoints from command line
-        if args.breakpoint:
-            for bp_spec in args.breakpoint:
-                line_num = int(bp_spec)
-                bp = debugger.set_breakpoint(args.file, line_num)
-                print(f"Breakpoint {bp.id} at line {line_num}")
-
-        print("✓ Debugger ready (DAP implementation)")
-
-        return 0
-
-    except Exception as error:  # pylint: disable=broad-exception-caught
-        print(f"Error: {error}")
-        if args.debug:
-            traceback.print_exc()
+    if not Path(args.file).exists():
+        print(f"Error: Program not found: {args.file}", file=sys.stderr)
         return 1
+
+    print(
+        "debug-launch does not start a DAP server or run the program yet.",
+        file=sys.stderr,
+    )
+    print(
+        "Use parsercraft.tooling.debug.Debugger (set_breakpoint, "
+        "hit_breakpoint, get_variables, evaluate_expression) from Python.",
+        file=sys.stderr,
+    )
+    return 2
 
 
 def main():
@@ -1808,35 +1660,39 @@ def main():
         epilog="""
 Examples:
   # Create from preset
-  langconfig create --preset python_like --output my_lang.yaml
+  parsercraft create --preset python_like --output my_lang.yaml
 
   # Create interactively
-  langconfig create --interactive
+  parsercraft create --interactive
 
   # Validate configuration
-  langconfig validate my_lang.yaml
+  parsercraft validate my_lang.yaml
 
   # Show info
-  langconfig info my_lang.yaml
+  parsercraft info my_lang.yaml
 
   # Export documentation
-  langconfig export my_lang.yaml --format markdown
+  parsercraft export my_lang.yaml --format markdown
 
   # List available presets
-  langconfig list-presets
+  parsercraft list-presets
 
   # Convert between formats
-  langconfig convert my_lang.yaml --to json
+  parsercraft convert my_lang.yaml --to json
 
   # Compare configurations
-  langconfig diff config1.yaml config2.yaml
+  parsercraft diff config1.yaml config2.yaml
 
   # Update configuration
-  langconfig update my_lang.yaml --set metadata.author "Your Name"
+  parsercraft update my_lang.yaml --set metadata.author "Your Name"
 
   # Delete elements
-  langconfig delete my_lang.yaml --keyword obsolete --function deprecated
+  parsercraft delete my_lang.yaml --keyword obsolete --function deprecated
         """,
+    )
+
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
     )
 
     subparsers = parser.add_subparsers(
@@ -1987,6 +1843,10 @@ Examples:
         help="Configuration file (optional)",
     )
     repl_parser.add_argument(
+        "--grammar",
+        help="PEG grammar file to use instead of a language config",
+    )
+    repl_parser.add_argument(
         "--debug", "-d", action="store_true", help="Enable debug mode"
     )
 
@@ -2116,6 +1976,10 @@ Examples:
         help="Treat warnings as errors",
     )
     typecheck_parser.add_argument(
+        "--json", action="store_true",
+        help="Emit diagnostics as JSON on stdout",
+    )
+    typecheck_parser.add_argument(
         "--debug", "-d", action="store_true", help="Enable debug mode"
     )
 
@@ -2189,6 +2053,44 @@ Examples:
         "--protocol", help="Check specific protocol"
     )
 
+    # Init command
+    init_parser = subparsers.add_parser(
+        "init",
+        help="Scaffold a new language project",
+    )
+    init_parser.add_argument("name", help="Language name")
+    init_parser.add_argument(
+        "--directory", "-d", default=".",
+        help="Parent directory (default: current directory)",
+    )
+    init_parser.add_argument(
+        "--force", action="store_true",
+        help="Overwrite an existing project directory",
+    )
+
+    # Run command
+    run_parser = subparsers.add_parser(
+        "run",
+        help="Parse and execute a program",
+    )
+    run_parser.add_argument("file", help="Source file to execute")
+    run_parser.add_argument(
+        "--config", "-c",
+        help="Language configuration file containing grammar.rules",
+    )
+    run_parser.add_argument(
+        "--grammar", "-g",
+        help="PEG grammar file (overrides --config)",
+    )
+    run_parser.add_argument(
+        "--json", action="store_true",
+        help="Print variables as JSON; program output goes to stderr",
+    )
+    run_parser.add_argument(
+        "--show-python", action="store_true",
+        help="Print generated Python to stderr before running",
+    )
+
     # Code generation commands
     codegen_c_parser = subparsers.add_parser(
         "codegen-c",
@@ -2196,10 +2098,10 @@ Examples:
     )
     codegen_c_parser.add_argument("file", help="Source file")
     codegen_c_parser.add_argument(
-        "--output", "-o", help="Output C file"
+        "--config", "-c", help="Language configuration file (grammar)"
     )
     codegen_c_parser.add_argument(
-        "--optimize", action="store_true", help="Enable optimizations"
+        "--output", "-o", help="Output C file"
     )
 
     # WASM code generation
@@ -2209,11 +2111,23 @@ Examples:
     )
     codegen_wasm_parser.add_argument("file", help="Source file")
     codegen_wasm_parser.add_argument(
-        "--output", "-o", help="Output WAT/WASM file"
+        "--config", "-c", help="Language configuration file (grammar)"
     )
     codegen_wasm_parser.add_argument(
-        "--format", choices=["wat", "wasm"], default="wat",
-        help="Output format"
+        "--output", "-o", help="Output WAT file"
+    )
+
+    # LLVM IR code generation
+    codegen_llvm_parser = subparsers.add_parser(
+        "codegen-llvm",
+        help="Generate LLVM IR from source",
+    )
+    codegen_llvm_parser.add_argument("file", help="Source file")
+    codegen_llvm_parser.add_argument(
+        "--config", "-c", help="Language configuration file (grammar)"
+    )
+    codegen_llvm_parser.add_argument(
+        "--output", "-o", help="Output LLVM IR file"
     )
 
     # Package management commands
@@ -2302,6 +2216,7 @@ Examples:
 
     # Dispatch to command handler
     commands = {
+        "init": cmd_init,
         "create": cmd_create,
         "edit": cmd_edit,
         "validate": cmd_validate,
@@ -2313,6 +2228,7 @@ Examples:
         "update": cmd_update,
         "delete": cmd_delete,
         "import": cmd_import,
+        "run": cmd_run,
         "repl": cmd_repl,
         "batch": cmd_batch,
         "test": cmd_test,
@@ -2327,6 +2243,7 @@ Examples:
         "check-protocol": cmd_check_protocol,
         "codegen-c": cmd_codegen_c,
         "codegen-wasm": cmd_codegen_wasm,
+        "codegen-llvm": cmd_codegen_llvm,
         "package-search": cmd_package_search,
         "package-install": cmd_package_install,
         "refactor-rename": cmd_refactor_rename,

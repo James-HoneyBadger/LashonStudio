@@ -43,11 +43,11 @@ ModuleManager
     before executing any code if a cycle is found.
 """
 
+from .ffi import FFIBinding, FFIBridge
 from .language_runtime import LanguageRuntime
-from .module_system import ModuleManager, ModuleLoader
+from .module_system import ModuleLoader, ModuleManager
 from .repl import REPL
-from .stdlib import StdLib, StdModule, StdFunction, StdConstant
-from .ffi import FFIBridge, FFIBinding
+from .stdlib import StdConstant, StdFunction, StdLib, StdModule
 
 __all__ = [
     "LanguageRuntime",

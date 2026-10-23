@@ -24,10 +24,10 @@ Usage:
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
-import re
 
 
 class TokenType(Enum):
@@ -166,9 +166,6 @@ class RefactoringEngine:
         var_name: str,
     ) -> List[TextEdit]:
         """Extract selected code into a variable."""
-        lines = source.split("\n")
-        # selected = "\\n".join(lines[start_line:end_line + 1])
-
         edits = []
 
         # Insert variable declaration before selection

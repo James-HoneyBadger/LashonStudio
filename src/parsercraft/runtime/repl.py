@@ -14,18 +14,17 @@ from __future__ import annotations
 import io
 import sys
 import traceback
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from typing import Any, Optional
 
+from parsercraft.codegen.python_transpiler import PythonTranspiler, TranspileOptions
 from parsercraft.parser.grammar import (
     Grammar,
     GrammarBuilder,
-    GrammarParser,
     PEGInterpreter,
     SourceAST,
     grammar_from_config,
 )
-from parsercraft.codegen.python_transpiler import PythonTranspiler, TranspileOptions
 
 
 class REPL:
@@ -118,6 +117,7 @@ class REPL:
     def from_config_file(cls, config_path: str, **kwargs) -> "REPL":
         """Create a REPL from a YAML/JSON config file."""
         import json
+
         import yaml
 
         with open(config_path) as f:

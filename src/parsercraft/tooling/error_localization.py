@@ -18,8 +18,7 @@ Usage:
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 
@@ -177,10 +176,10 @@ class ErrorLocalizer:
             if 0 < line <= len(src_lines):
                 src_line = src_lines[line - 1]
                 gutter = f"{line:>4} | "
-                lines.append(f"     |")
+                lines.append("     |")
                 lines.append(f"{gutter}{src_line}")
                 pointer = " " * (len(gutter) + max(0, col - 1)) + "^"
-                lines.append(f"     |{' ' * max(0, col)}^ here")
+                lines.append(f"{pointer} here")
 
         return "\n".join(lines)
 

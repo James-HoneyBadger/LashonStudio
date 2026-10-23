@@ -114,7 +114,7 @@ class InterpreterPackage:
         warnings.warn(
             "pickle deserialization is unsafe for untrusted data. "
             "Use from_json() instead.",
-            SecurityWarning,
+            RuntimeWarning,
             stacklevel=2,
         )
         data_dict = json.loads(data.decode("utf-8"))

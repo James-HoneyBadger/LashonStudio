@@ -27,10 +27,11 @@ LLVMIRGenerator
 
 Convenience functions
 ---------------------
-transpile_and_exec(ast, options=None, namespace=None)
-    Transpile and immediately execute; returns the variable namespace dict.
+transpile_and_exec(ast, keyword_map=None, function_map=None, globals_dict=None)
+    Transpile and immediately execute; returns the program namespace
+    (dunder keys such as ``__builtins__`` are omitted).
 
-transpile_to_python(ast, indent="    ", keyword_map=None, function_map=None)
+transpile_to_python(ast, keyword_map=None, function_map=None, wrap_main=False)
     Transpile to a Python source string without executing.
 
 Custom backends
@@ -43,14 +44,14 @@ See docs/TUTORIAL.md — Tutorial 5 for a full worked example.
 """
 
 from .codegen_c import CCodeGenerator, CType
-from .codegen_wasm import WasmGenerator, WasmModule, WasmType, WasmOp
+from .codegen_wasm import WasmGenerator, WasmModule, WasmOp, WasmType
+from .llvm_ir import LLVMIRGenerator
 from .python_transpiler import (
     PythonTranspiler,
     TranspileOptions,
-    transpile_to_python,
     transpile_and_exec,
+    transpile_to_python,
 )
-from .llvm_ir import LLVMIRGenerator
 
 __all__ = [
     "CCodeGenerator",

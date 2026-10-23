@@ -1,12 +1,11 @@
 """Integration tests — end-to-end pipelines."""
 
 import json
-import pytest
 
-from parsercraft.parser.grammar import GrammarParser, PEGInterpreter, grammar_from_config
-from parsercraft.codegen.python_transpiler import PythonTranspiler, transpile_and_exec
 from parsercraft.codegen.codegen_c import CCodeGenerator
 from parsercraft.codegen.llvm_ir import LLVMIRGenerator
+from parsercraft.codegen.python_transpiler import PythonTranspiler, transpile_and_exec
+from parsercraft.parser.grammar import GrammarParser, PEGInterpreter, grammar_from_config
 from parsercraft.runtime.repl import REPL
 from parsercraft.runtime.stdlib import StdLib
 

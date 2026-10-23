@@ -26,9 +26,11 @@ Protocol:
 
 from __future__ import annotations
 
+import ast
+import operator
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 
 class StopReason(Enum):
@@ -264,16 +266,129 @@ class Debugger:
 
         self.variables[frame_id].append(var)
 
+    _BINARY_OPERATORS = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.FloorDiv: operator.floordiv,
+        ast.Mod: operator.mod,
+        ast.Pow: operator.pow,
+    }
+    _COMPARE_OPERATORS = {
+        ast.Eq: operator.eq,
+        ast.NotEq: operator.ne,
+        ast.Lt: operator.lt,
+        ast.LtE: operator.le,
+        ast.Gt: operator.gt,
+        ast.GtE: operator.ge,
+        ast.In: lambda left, right: left in right,
+        ast.NotIn: lambda left, right: left not in right,
+        ast.Is: operator.is_,
+        ast.IsNot: operator.is_not,
+    }
+
+    def _frame_values(self, frame_id: int) -> Dict[str, Any]:
+        """Return the variables of a frame as a name → value mapping."""
+        return {var.name: var.value for var in self.get_variables(frame_id)}
+
+    def _evaluate_ast(self, node: ast.AST, values: Dict[str, Any]) -> Any:
+        """Evaluate a whitelisted expression node without executing code."""
+        if isinstance(node, ast.Constant):
+            return node.value
+
+        if isinstance(node, ast.Name):
+            if node.id in values:
+                return values[node.id]
+            raise ValueError(f"Unknown variable '{node.id}'")
+
+        if isinstance(node, ast.UnaryOp):
+            operand = self._evaluate_ast(node.operand, values)
+            if isinstance(node.op, ast.Not):
+                return not operand
+            if isinstance(node.op, ast.USub):
+                return -operand
+            if isinstance(node.op, ast.UAdd):
+                return +operand
+            raise ValueError(f"Unsupported unary operator: {type(node.op).__name__}")
+
+        if isinstance(node, ast.BoolOp):
+            if isinstance(node.op, ast.And):
+                result: Any = True
+                for value_node in node.values:
+                    result = self._evaluate_ast(value_node, values)
+                    if not result:
+                        return result
+                return result
+            if isinstance(node.op, ast.Or):
+                for value_node in node.values:
+                    result = self._evaluate_ast(value_node, values)
+                    if result:
+                        return result
+                return result
+            raise ValueError(f"Unsupported boolean operator: {type(node.op).__name__}")
+
+        if isinstance(node, ast.BinOp):
+            func = self._BINARY_OPERATORS.get(type(node.op))
+            if func is None:
+                raise ValueError(f"Unsupported binary operator: {type(node.op).__name__}")
+            return func(
+                self._evaluate_ast(node.left, values),
+                self._evaluate_ast(node.right, values),
+            )
+
+        if isinstance(node, ast.Compare):
+            left = self._evaluate_ast(node.left, values)
+            for op, comparator in zip(node.ops, node.comparators):
+                func = self._COMPARE_OPERATORS.get(type(op))
+                if func is None:
+                    raise ValueError(f"Unsupported comparison: {type(op).__name__}")
+                right = self._evaluate_ast(comparator, values)
+                if not func(left, right):
+                    return False
+                left = right
+            return True
+
+        if isinstance(node, ast.List):
+            return [self._evaluate_ast(item, values) for item in node.elts]
+        if isinstance(node, ast.Tuple):
+            return tuple(self._evaluate_ast(item, values) for item in node.elts)
+        if isinstance(node, ast.Set):
+            return {self._evaluate_ast(item, values) for item in node.elts}
+        if isinstance(node, ast.Dict):
+            return {
+                self._evaluate_ast(key, values): self._evaluate_ast(value, values)
+                for key, value in zip(node.keys, node.values)
+            }
+        if isinstance(node, ast.Subscript):
+            return self._evaluate_ast(node.value, values)[
+                self._evaluate_ast(node.slice, values)
+            ]
+
+        raise ValueError(f"Unsupported expression: {type(node).__name__}")
+
+    def _evaluate_condition(self, condition: str, frame_id: int) -> bool:
+        """Evaluate a breakpoint condition safely.
+
+        Only literals, frame variables, arithmetic, boolean and comparison
+        operators, collection literals, and subscripts are allowed.
+        """
+        tree = ast.parse(condition, mode="eval")
+        return bool(self._evaluate_ast(tree.body, self._frame_values(frame_id)))
+
     def evaluate_expression(self, expression: str, frame_id: int) -> Optional[str]:
         """Evaluate expression in context of frame.
 
-        Only allows safe literal expressions (numbers, strings, lists, etc.).
+        Only allows safe expressions (literals, variables, arithmetic,
+        boolean/comparison operators, collection literals, subscripts).
+        Returns ``None`` when the expression is invalid.
         """
-        import ast as _ast
         try:
-            result = _ast.literal_eval(expression)
+            tree = ast.parse(expression, mode="eval")
+            result = self._evaluate_ast(tree.body, self._frame_values(frame_id))
             return str(result)
-        except (ValueError, SyntaxError):
+        except (ValueError, SyntaxError, TypeError, ZeroDivisionError,
+                KeyError, IndexError, AttributeError):
             return None
 
     def hit_breakpoint(self, source_path: str, line: int) -> Optional[Breakpoint]:
@@ -282,10 +397,16 @@ class Debugger:
 
         for bp in bps:
             if bp.line == line:
-                # Check condition if present
                 if bp.condition:
-                    # Would evaluate condition here
-                    pass
+                    try:
+                        if not self._evaluate_condition(
+                                bp.condition, self.current_frame):
+                            continue
+                    except (ValueError, SyntaxError, TypeError,
+                            ZeroDivisionError, KeyError, IndexError) as error:
+                        bp.verified = False
+                        bp.message = f"Invalid condition: {error}"
+                        continue
                 return bp
 
         return None

@@ -8,12 +8,15 @@ managing files, and coordinating between editor and runtime.
 from __future__ import annotations
 
 import json
+import logging
 import os
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -245,5 +248,5 @@ class ProjectManager:
         try:
             with open(recent_file, "w") as f:
                 json.dump(self.recent_projects, f)
-        except OSError:
-            pass
+        except OSError as error:
+            logger.warning("Could not save recent projects to %s: %s", recent_file, error)

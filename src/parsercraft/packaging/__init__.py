@@ -1,7 +1,7 @@
 """Packaging — docs, registry, VS Code extension, distribution."""
 
-from .package_registry import PackageRegistry, Package
 from .documentation_generator import DocumentationGenerator
+from .package_registry import Package, PackageRegistry
 
 __all__ = [
     "PackageRegistry",

@@ -24,13 +24,13 @@ Usage:
 
 from __future__ import annotations
 
+import json
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
-import json
-import re
 
 
 class VersionOp(Enum):
@@ -63,12 +63,27 @@ class Version:
             version += f"+{self.metadata}"
         return version
 
+    def _release(self) -> tuple[int, int, int]:
+        return (self.major, self.minor, self.patch)
+
+    @staticmethod
+    def _prerelease_key(prerelease: str) -> tuple:
+        key = []
+        for part in prerelease.split("."):
+            key.append((0, int(part)) if part.isdigit() else (1, part))
+        return tuple(key)
+
     def __lt__(self, other: Version) -> bool:
-        if self.major != other.major:
-            return self.major < other.major
-        if self.minor != other.minor:
-            return self.minor < other.minor
-        return self.patch < other.patch
+        if self._release() != other._release():
+            return self._release() < other._release()
+        # A release outranks any prerelease of the same version.
+        if self.prerelease is None:
+            return False
+        if other.prerelease is None:
+            return True
+        return self._prerelease_key(self.prerelease) < self._prerelease_key(
+            other.prerelease
+        )
 
     def __le__(self, other: Version) -> bool:
         return self == other or self < other
@@ -77,13 +92,15 @@ class Version:
         if not isinstance(other, Version):
             return False
         return (
-            self.major == other.major
-            and self.minor == other.minor
-            and self.patch == other.patch
+            self._release() == other._release()
+            and self.prerelease == other.prerelease
         )
 
+    def __hash__(self) -> int:
+        return hash((*self._release(), self.prerelease))
+
     def __gt__(self, other: Version) -> bool:
-        return not (self <= other)
+        return other < self
 
     def __ge__(self, other: Version) -> bool:
         return not (self < other)

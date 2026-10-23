@@ -20,7 +20,7 @@ LanguageConfig
 
     Supported preset names:  python_like · js_like · ruby_like ·
     golang_like · rust_like · clike · functional · lisp_like ·
-    basic_like · pascal_like
+    basic_like · minimal
 
 LanguageValidator
     Validate a LanguageConfig against the schema.  Returns a list of
@@ -33,16 +33,17 @@ IdentifierValidator
 See docs/USER_GUIDE.md for comprehensive usage examples.
 """
 
+from .identifier_validator import IdentifierValidator
 from .language_config import (
-    LanguageConfig,
-    KeywordMapping,
     FunctionConfig,
+    KeywordMapping,
+    LanguageConfig,
     OperatorConfig,
     ParsingConfig,
     SyntaxOptions,
+    list_presets,
 )
 from .language_validator import LanguageValidator
-from .identifier_validator import IdentifierValidator
 
 __all__ = [
     "LanguageConfig",
@@ -53,4 +54,5 @@ __all__ = [
     "SyntaxOptions",
     "LanguageValidator",
     "IdentifierValidator",
+    "list_presets",
 ]

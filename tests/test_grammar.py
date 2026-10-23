@@ -6,7 +6,6 @@ from parsercraft.parser.grammar import (
     Grammar,
     GrammarBuilder,
     GrammarParser,
-    GrammarRule,
     PEGInterpreter,
     PEGNode,
     PEGNodeType,
@@ -69,6 +68,23 @@ class TestGrammarParser:
         errors = grammar.validate()
         assert errors == []
 
+    def test_trailing_text_is_rejected(self):
+        with pytest.raises(ValueError, match="unexpected"):
+            GrammarParser().parse('program <- NUMBER )')
+
+    def test_unterminated_literal_is_rejected(self):
+        with pytest.raises(ValueError, match="Unterminated string literal"):
+            GrammarParser().parse('program <- "abc')
+
+    def test_unclosed_group_is_rejected(self):
+        with pytest.raises(ValueError, match="Unclosed group"):
+            GrammarParser().parse('program <- (NUMBER')
+
+    def test_pipe_is_accepted_as_choice(self):
+        grammar = GrammarParser().parse('program <- NUMBER | IDENT')
+        pattern = grammar.rules["program"].pattern
+        assert pattern.node_type == PEGNodeType.ORDERED_CHOICE
+
 
 class TestPEGInterpreter:
     """Test parsing source code using a Grammar."""
@@ -130,6 +146,29 @@ class TestPEGInterpreter:
         pretty = ast.pretty()
         assert "program" in pretty
         assert "10" in pretty
+
+    def test_error_message_names_the_rule(self, arith_grammar):
+        interp = PEGInterpreter(arith_grammar)
+        with pytest.raises(SyntaxError, match="in rule 'program'"):
+            interp.parse("= = ;")
+
+    def test_zero_width_comment_pattern_terminates(self):
+        grammar = Grammar()
+        grammar.add_rule(
+            "program",
+            PEGNode(
+                PEGNodeType.ONE_OR_MORE,
+                children=[PEGNode(PEGNodeType.TOKEN_REF, "NUMBER")],
+            ),
+        )
+        grammar.comment_patterns = ["x*"]
+        ast = PEGInterpreter(grammar).parse("1 2")
+        assert ast.node_type == "program"
+
+    def test_unsupported_token_is_reported(self):
+        grammar = GrammarParser().parse("program <- INDENT")
+        errors = grammar.validate()
+        assert any("unsupported token 'INDENT'" in error for error in errors)
 
 
 class TestGrammarBuilder:

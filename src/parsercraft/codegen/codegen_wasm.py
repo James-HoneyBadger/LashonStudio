@@ -6,10 +6,17 @@ Translates a SourceAST (produced by the PEG grammar engine) into WebAssembly
 Text Format (WAT) for web deployment or WASM runtime execution.
 
 Features:
-    - SourceAST → WAT generation (assignments, control flow, functions)
+    - SourceAST → WAT generation for top-level assignments, expressions, and
+      calls inside the generated ``main`` function
     - WASM type mapping: i32, i64, f32, f64
-    - Function import/export declarations
+    - Module/function import/export registration
     - WasmModule builder with to_wat() serialisation
+
+Current limitation: user-defined function bodies (``fn``/``function_def``),
+branches, loops, and print statements are not translated into WAT yet, so
+output for such programs is incomplete. The class API (``generate_if``,
+``generate_loop``, ``generate_binary_op``) can be used to build instructions
+manually.
 
 Primary API:
     from parsercraft.codegen.codegen_wasm import WasmGenerator
@@ -433,8 +440,9 @@ class WasmGenerator:
     def translate_source_ast(self, ast: Any) -> WasmModule:
         """Translate a SourceAST tree into a WASM module.
 
-        Produces a WasmModule with a main function containing
-        the translated instructions.
+        Produces a WasmModule with a main function containing the
+        translated top-level instructions. Function definitions, branches,
+        loops, and prints are not emitted yet; see the module docstring.
         """
         self.module = WasmModule()
         self.module.set_memory_size(256)

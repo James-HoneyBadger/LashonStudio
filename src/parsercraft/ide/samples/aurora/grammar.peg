@@ -1,0 +1,21 @@
+// Aurora — canonical PEG grammar
+// Edit this file in ParserCraft Studio; it is synced into language.yaml on save.
+
+program       <- statement+
+statement     <- function_def / if_stmt / while_stmt / return_stmt / print_stmt / assignment / expr_stmt
+function_def  <- 'fn' IDENT '(' param_list? ')' block
+block         <- '{' statement* '}'
+param_list    <- IDENT (',' IDENT)*
+if_stmt       <- 'if' comparison block ('else' block)?
+while_stmt    <- 'while' comparison block
+return_stmt   <- 'return' expr ';'
+print_stmt    <- 'print' expr ';'
+assignment    <- IDENT '=' expr ';'
+expr_stmt     <- call ';'
+comparison    <- expr ('==' / '!=' / '<=' / '>=' / '<' / '>') expr
+expr          <- term (('+' / '-') term)*
+term          <- factor (('*' / '/' / '%') factor)*
+factor        <- call / NUMBER / STRING / boolean / IDENT / '(' expr ')'
+call          <- IDENT '(' arg_list? ')'
+arg_list      <- expr (',' expr)*
+boolean       <- 'true' / 'false'

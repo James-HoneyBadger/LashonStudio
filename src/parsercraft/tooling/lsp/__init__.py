@@ -1,5 +1,5 @@
 """LSP server and advanced features."""
 
-from .lsp_server import LSPServer, DocumentManager
+from .lsp_server import DocumentManager, LSPServer
 
 __all__ = ["LSPServer", "DocumentManager"]

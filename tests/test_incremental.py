@@ -2,7 +2,8 @@
 
 import pytest
 
-from parsercraft.parser.grammar import GrammarParser, PEGInterpreter
+from parsercraft.codegen import transpile_and_exec
+from parsercraft.parser.grammar import GrammarParser
 from parsercraft.parser.incremental import IncrementalParser, SourceEdit
 
 
@@ -109,3 +110,26 @@ class TestSourceEdit:
     def test_new_len(self):
         edit = SourceEdit(offset=0, old_len=0, new_text="test")
         assert edit.new_len == 4
+
+
+class TestIncrementalBehaviour:
+    """Verify that edits actually use the incremental path."""
+
+    def test_edit_reparses_only_the_affected_region(self, arith_grammar):
+        parser = IncrementalParser(arith_grammar)
+        parser.parse("x = 10 ; y = 20 ;")
+
+        parser.apply_edit(offset=4, old_len=2, new_text="99")
+
+        assert parser.stats["incremental"] == 1
+        assert parser.stats["full_reparse"] == 0
+        assert parser.source == "x = 99 ; y = 20 ;"
+
+    def test_edited_region_produces_correct_ast(self, arith_grammar):
+        parser = IncrementalParser(arith_grammar)
+        parser.parse("x = 10 ; y = 20 ;")
+
+        ast = parser.apply_edit(offset=4, old_len=2, new_text="99")
+        namespace = transpile_and_exec(ast)
+
+        assert namespace == {"x": 99, "y": 20}

@@ -29,23 +29,26 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import sys
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Optional
 
 from parsercraft.config.language_config import LanguageConfig
-from parsercraft.parser.parser_generator import Lexer, ASTNode, Token
 from parsercraft.config.language_validator import LanguageValidator
+from parsercraft.parser.parser_generator import Lexer, Token
 
+# Log to stderr only; set PARSERCRAFT_LSP_LOG to also write a file.
+_log_handlers: list[logging.Handler] = [logging.StreamHandler(sys.stderr)]
+if os.environ.get("PARSERCRAFT_LSP_LOG"):
+    _log_handlers.append(logging.FileHandler(os.environ["PARSERCRAFT_LSP_LOG"]))
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("lsp_server.log"), logging.StreamHandler(sys.stderr)],
+    handlers=_log_handlers,
 )
 logger = logging.getLogger("ParserCraft-LSP")
 
@@ -338,12 +341,16 @@ class LanguageServerAnalyzer:
         if position.character >= len(line):
             return None
 
-        # Extract word at position
-        word_match = re.search(r"\w+", line[max(0, position.character - 20) : position.character + 20])
-        if not word_match:
+        # Extract the identifier under the cursor
+        start = min(position.character, len(line))
+        while start > 0 and (line[start - 1].isalnum() or line[start - 1] == "_"):
+            start -= 1
+        end = min(position.character, len(line))
+        while end < len(line) and (line[end].isalnum() or line[end] == "_"):
+            end += 1
+        word = line[start:end]
+        if not word:
             return None
-
-        word = word_match.group()
 
         # Check if it's a keyword
         for keyword_map in self.config.keyword_mappings.values():
@@ -351,8 +358,8 @@ class LanguageServerAnalyzer:
                 return Hover(
                     contents=f"**{word}** (keyword)\n\n{keyword_map.description or 'Language keyword'}",
                     range=Range(
-                        start=Position(line=position.line, character=position.character - len(word)),
-                        end=Position(line=position.line, character=position.character),
+                        start=Position(line=position.line, character=start),
+                        end=Position(line=position.line, character=end),
                     ),
                 )
 
@@ -362,8 +369,8 @@ class LanguageServerAnalyzer:
                 return Hover(
                     contents=f"**{func_config.name}()** (function, arity: {func_config.arity})\n\n{func_config.description or 'Built-in function'}",
                     range=Range(
-                        start=Position(line=position.line, character=position.character - len(word)),
-                        end=Position(line=position.line, character=position.character),
+                        start=Position(line=position.line, character=start),
+                        end=Position(line=position.line, character=end),
                     ),
                 )
 
@@ -445,6 +452,7 @@ class LSPServer:
         self.document_manager = DocumentManager()
         self.analyzer = LanguageServerAnalyzer(config)
         self.server_capabilities = self._build_capabilities()
+        self.pending_notifications: list[dict] = []
 
     def _build_capabilities(self) -> dict:
         """Build server capabilities."""
@@ -497,11 +505,33 @@ class LSPServer:
         """Handle textDocument/didClose notification."""
         self.document_manager.close_document(uri)
 
-    def _publish_diagnostics(self, uri: str) -> None:
-        """Publish diagnostics for a document (would be sent to client)."""
+    def diagnostics(self, uri: str) -> list[dict]:
+        """Return analyzer diagnostics for a document as LSP dicts."""
         content = self.document_manager.get_document(uri)
-        diagnostics = self.analyzer.get_diagnostics(content)
-        logger.debug(f"Publishing {len(diagnostics)} diagnostics for {uri}")
+        if content is None:
+            return []
+        return [
+            diagnostic.to_dict()
+            for diagnostic in self.analyzer.get_diagnostics(content)
+        ]
+
+    def _publish_diagnostics(self, uri: str) -> None:
+        """Queue a textDocument/publishDiagnostics notification."""
+        diagnostics = self.diagnostics(uri)
+        self.pending_notifications.append(
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/publishDiagnostics",
+                "params": {"uri": uri, "diagnostics": diagnostics},
+            }
+        )
+        logger.debug(f"Queued {len(diagnostics)} diagnostics for {uri}")
+
+    def drain_notifications(self) -> list[dict]:
+        """Return and clear queued server-to-client notifications."""
+        notifications = self.pending_notifications
+        self.pending_notifications = []
+        return notifications
 
     def completions(self, uri: str, position: Position) -> list[dict]:
         """Handle textDocument/completion request."""
@@ -593,12 +623,11 @@ class LSPServer:
                     continue
                 
                 response = self._handle_request(request)
-                
+
+                for notification in self.drain_notifications():
+                    _write_message(notification)
                 if response:
-                    response_json = json.dumps(response)
-                    response_bytes = response_json.encode("utf-8")
-                    sys.stdout.write(f"Content-Length: {len(response_bytes)}\r\n\r\n{response_json}")
-                    sys.stdout.flush()
+                    _write_message(response)
                     
             except Exception as e:
                 logger.error(f"Error in main loop: {e}")
@@ -656,10 +685,90 @@ class LSPServer:
                 }
             }
 
+        elif method == "textDocument/didOpen":
+            text_doc = request.get("params", {}).get("textDocument", {})
+            self.handle_did_open(
+                text_doc.get("uri", ""),
+                text_doc.get("text", ""),
+            )
+            return None
+
+        elif method == "textDocument/didChange":
+            params = request.get("params", {})
+            text_doc = params.get("textDocument", {})
+            self.handle_did_change(
+                text_doc.get("uri", ""),
+                params.get("contentChanges", []),
+                text_doc.get("version", 0),
+            )
+            return None
+
+        elif method == "textDocument/didClose":
+            text_doc = request.get("params", {}).get("textDocument", {})
+            self.handle_did_close(text_doc.get("uri", ""))
+            return None
+
+        elif method == "textDocument/hover":
+            params = request.get("params", {})
+            uri = params.get("textDocument", {}).get("uri", "")
+            position = Position.from_dict(params.get("position", {"line": 0, "character": 0}))
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": self.hover(uri, position),
+            }
+
+        elif method == "textDocument/documentSymbol":
+            uri = request.get("params", {}).get("textDocument", {}).get("uri", "")
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": self.document_symbols(uri),
+            }
+
+        elif method == "textDocument/formatting":
+            uri = request.get("params", {}).get("textDocument", {}).get("uri", "")
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": self.format_document(uri),
+            }
+
+        elif method == "textDocument/signatureHelp":
+            params = request.get("params", {})
+            uri = params.get("textDocument", {}).get("uri", "")
+            position = Position.from_dict(params.get("position", {"line": 0, "character": 0}))
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": self.signature_help(uri, position),
+            }
+
+        elif method in ("initialized", "$/cancelRequest", "$/setTrace"):
+            return None
+
         elif method == "exit":
             sys.exit(0)
-            
+
+        if request_id is not None:
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "error": {
+                    "code": -32601,
+                    "message": f"Method not found: {method}",
+                },
+            }
         return None
+
+
+def _write_message(message: dict) -> None:
+    """Write one JSON-RPC message using the LSP framing."""
+    payload = json.dumps(message).encode("utf-8")
+    sys.stdout.buffer.write(
+        f"Content-Length: {len(payload)}\r\n\r\n".encode("ascii") + payload
+    )
+    sys.stdout.buffer.flush()
 
 
 def create_lsp_server(config_path: str) -> LSPServer:
@@ -678,6 +787,17 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    if not args.stdio:
+        print(
+            "Socket mode is not implemented; pass --stdio.",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
+
     server = create_lsp_server(args.config)
-    print(f"LSP Server ready for {server.config.name}")
-    print(f"Capabilities: {json.dumps(server.server_capabilities, indent=2)}")
+    # stdout carries the protocol: diagnostics go to stderr only.
+    print(
+        f"LSP server ready for {server.config.name} (stdio)",
+        file=sys.stderr,
+    )
+    server.run_stdio()

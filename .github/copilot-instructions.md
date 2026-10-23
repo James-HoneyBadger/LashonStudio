@@ -17,7 +17,7 @@ src/parsercraft/
 ├── codegen/      PythonTranspiler, CCodeGenerator, WasmGenerator, LLVMIRGenerator
 ├── runtime/      REPL, StdLib, FFIBridge, LanguageRuntime, ModuleManager
 ├── tooling/      CLI, ErrorLocalizer, LSP (lsp/), Debug (debug/)
-├── ide/          ParserCraftIDE, CodeEditor, ProjectManager
+├── ide/          Studio (LanguageStudio + ParserCraftIDE), CodeEditor, ProjectManager
 ├── types/        TypeChecker, generics, protocols
 └── packaging/    VS Code extension gen, package registry
 ```
@@ -40,6 +40,8 @@ src/parsercraft/
 | `ErrorLocalizer` | `parsercraft.tooling` | Localized error messages with context |
 | `LanguageConfig` | `parsercraft.config` | YAML/JSON language definitions |
 | `LanguageRuntime` | `parsercraft.runtime` | Config-driven keyword remapping |
+| `LanguageStudio` | `parsercraft.ide.studio` | Headless studio controller (project, grammar, run, generate) |
+| `ParserCraftIDE` | `parsercraft.ide.studio_app` | Tkinter language-design workbench |
 
 ### GrammarBuilder API
 
@@ -76,7 +78,7 @@ When a grammar defines `statement <- IDENT "=" expr ";"` without a separate `ass
 ## Testing
 
 ```bash
-python -m pytest tests/ -v   # 113 tests
+python -m pytest tests/ -v   # 322 tests
 ```
 
 Test files:
@@ -85,8 +87,18 @@ Test files:
 - `test_codegen.py` — C, WASM, LLVM IR generation
 - `test_repl.py` — REPL eval, commands, config loading
 - `test_stdlib_ffi_errors.py` — StdLib inject, FFI bindings, ErrorLocalizer
-- `test_incremental.py` — Incremental parsing, edits
+- `test_incremental.py` — Incremental parsing, edits, incremental reparse path
 - `test_integration.py` — Full pipeline, multi-backend
+- `test_config_loading.py` — All bundled configs load, schema shorthands
+- `test_cli_codegen.py` — codegen-c/wasm/llvm CLI commands
+- `test_type_system.py` — types, scopes, narrowing, generics/protocol bridges
+- `test_module_system.py` — module loading, exports, dependencies, cycles
+- `test_lsp.py` — LSP lifecycle, completions, hover, symbols, formatting
+- `test_packaging.py` — SemVer, registry, docs, VS Code extension generation
+- `test_ide_project.py` — project save/load and recent-projects history
+- `test_debug_adapter.py` — safe expression evaluation and breakpoint conditions
+- `test_studio.py` — studio controller, project lifecycle, grammar sync, backends
+- `test_studio_gui.py` — Tkinter studio smoke tests (skipped without a display)
 
 ## Developer Workflows
 
@@ -150,7 +162,8 @@ runtime = LanguageRuntime.get_instance()
 | FFI | `runtime/ffi.py` → `FFIBridge` class |
 | Error messages | `tooling/error_localization.py` → `ErrorLocalizer` |
 | CLI | `tooling/cli.py` → `main()` |
-| IDE | `ide/app.py` → `ParserCraftIDE` |
+| Studio controller | `ide/studio.py` → `LanguageStudio` |
+| Studio window | `ide/studio_app.py` → `ParserCraftIDE` |
 | Language config | `config/language_config.py` → `LanguageConfig` |
 | Module system | `runtime/module_system.py` → `ModuleManager` |
 | Incremental parse | `parser/incremental.py` → `IncrementalParser` |
@@ -159,16 +172,32 @@ runtime = LanguageRuntime.get_instance()
 
 User-facing documentation is in `docs/`:
 
+Start at `docs/README.md` (index + learning paths).
+
 | File | Purpose |
 |------|---------|
+| `docs/README.md` | Documentation index and learning paths |
 | `docs/INSTALL.md` | Installation, virtual environments, platform notes |
-| `docs/USER_GUIDE.md` | End-user guide (CLI, REPL, configs, IDE, stdlib, FFI) |
-| `docs/TECHNICAL_REFERENCE.md` | Full public API reference |
-| `docs/TUTORIAL.md` | Step-by-step tutorials (5 progressive examples) |
+| `docs/QUICKSTART.md` | Ten-minute grammar → run walkthrough |
+| `docs/TUTORIAL.md` | Eight progressive tutorials |
+| `docs/LANGUAGE_DEVELOPMENT.md` | Designing and evolving a language |
+| `docs/GRAMMAR_REFERENCE.md` | PEG notation, semantics, AST production |
+| `docs/USER_GUIDE.md` | Task-oriented guide (configs, parsing, execution, Studio) |
+| `docs/STUDIO_GUIDE.md` | Studio manual |
+| `docs/CLI_REFERENCE.md` | Every command/flag, with maturity table |
+| `docs/CODEGEN_GUIDE.md` | Backend behaviour and fidelity limits |
+| `docs/RUNTIME_GUIDE.md` | REPL, stdlib, FFI, LanguageRuntime, modules |
+| `docs/TYPE_SYSTEM.md` | Types, checker, generics, protocols, narrowing |
+| `docs/LSP_AND_DEBUGGING.md` | LSP, DAP, ErrorLocalizer |
+| `docs/PACKAGING.md` | Wheels, VS Code extension, package registry |
+| `docs/ARCHITECTURE.md` | Internals and extension points |
+| `docs/TECHNICAL_REFERENCE.md` | Public API reference |
+| `docs/TROUBLESHOOTING.md` | Symptom → cause → fix, FAQ |
 
 ## Key Behavioural Notes
 
 - `:=` is a valid assignment operator (Pascal-style). `PythonTranspiler._emit_transparent` detects both `=` and `:=` as assignment operators. `_emit_assignment` filters both from the meaningful-children list.
 - `transpile_and_exec(ast)` runs `exec(py_code, namespace)`. The returned dict contains user-defined variables; filter `__builtins__` with `{k: v for k, v in ns.items() if not k.startswith("__")}`.
-- All backend classes implement `translate_source_ast(ast: SourceAST) -> str`.
-- The test suite must stay at 113 passing: `python -m pytest tests/ -q`.
+- All backend classes implement `translate_source_ast(ast)`; Python, C, and LLVM return `str`, while `WasmGenerator` returns a `WasmModule` (call `.to_wat()`).
+- `tests/test_docs.py` enforces that documentation links/anchors resolve, every `docs/*.md` page is indexed, and the quick-start examples plus Aurora samples still run.
+- The test suite must stay at 322 passing: `python -m pytest tests/ -q`.

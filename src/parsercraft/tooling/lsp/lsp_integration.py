@@ -31,13 +31,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from parsercraft.tooling.debug.debug_adapter import DebugAdapter, Debugger
 from parsercraft.tooling.lsp.lsp_advanced import (
     CodeFormatter,
     RefactoringEngine,
     SemanticHighlighter,
 )
-from parsercraft.tooling.debug.debug_adapter import DebugAdapter, Debugger
-from parsercraft.parser.parser_generator import ASTNode
 
 
 @dataclass
@@ -304,7 +303,6 @@ class LSPFeaturesIntegration:
         """
         old_name = params.get("oldName")
         new_name = params.get("newName")
-        position = params.get("position", {})
 
         if not old_name or not new_name:
             return RefactoringResponse(
@@ -478,7 +476,6 @@ class LSPFeaturesIntegration:
         """
         params = request.get("params", {})
         uri = params.get("textDocument", {}).get("uri", "")
-        options = params.get("options", {})
 
         if not uri:
             return []
@@ -519,7 +516,6 @@ class LSPFeaturesIntegration:
         params = request.get("params", {})
         uri = params.get("textDocument", {}).get("uri", "")
         range_ = params.get("range", {})
-        options = params.get("options", {})
 
         if not uri or not range_:
             return []

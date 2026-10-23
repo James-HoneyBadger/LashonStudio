@@ -29,10 +29,13 @@ Example grammar for a simple expression language:
 
 from __future__ import annotations
 
+import bisect
 import re
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
+
+SUPPORTED_TOKENS = frozenset({"NUMBER", "STRING", "IDENT", "NEWLINE", "EOF"})
 
 
 # ---------------------------------------------------------------------------
@@ -104,7 +107,7 @@ class Grammar:
     def validate(self) -> List[str]:
         """Validate grammar for undefined rule references and left recursion."""
         errors = []
-        defined = set(self.rules.keys()) | {"NUMBER", "STRING", "IDENT", "NEWLINE", "EOF"}
+        defined = set(self.rules.keys()) | SUPPORTED_TOKENS
 
         for name, rule in self.rules.items():
             self._check_refs(rule.pattern, defined, name, errors)
@@ -124,6 +127,12 @@ class Grammar:
         if node.node_type == PEGNodeType.RULE_REF:
             if node.value not in defined:
                 errors.append(f"Rule '{rule_name}' references undefined rule '{node.value}'")
+        elif node.node_type == PEGNodeType.TOKEN_REF:
+            if node.value not in SUPPORTED_TOKENS:
+                errors.append(
+                    f"Rule '{rule_name}' references unsupported token '{node.value}' "
+                    f"(supported: {', '.join(sorted(SUPPORTED_TOKENS))})"
+                )
         for child in node.children:
             self._check_refs(child, defined, rule_name, errors)
 
@@ -186,7 +195,8 @@ class GrammarParser:
 
         for line in lines:
             stripped = line.strip()
-            if not stripped or stripped.startswith("#"):
+            if (not stripped or stripped.startswith("#")
+                    or stripped.startswith("//")):
                 continue
             # Continuation lines start with whitespace and don't contain <-
             if current_line and (line[0].isspace() or line[0] == '|') and "<-" not in stripped:
@@ -201,11 +211,14 @@ class GrammarParser:
 
         for rule_text in rule_lines:
             name, pattern = self._parse_rule(rule_text)
-            if name:
-                grammar.add_rule(name, pattern)
-                if not grammar.start_rule or grammar.start_rule == "program":
-                    if not grammar.rules or name == "program":
-                        grammar.start_rule = name
+            if name is None:
+                raise ValueError(
+                    f"Invalid grammar line (expected 'rule <- pattern'): {rule_text!r}"
+                )
+            grammar.add_rule(name, pattern)
+            if not grammar.start_rule or grammar.start_rule == "program":
+                if not grammar.rules or name == "program":
+                    grammar.start_rule = name
 
         # Default start rule to the first defined rule
         if grammar.start_rule not in grammar.rules and grammar.rules:
@@ -225,14 +238,21 @@ class GrammarParser:
         self.pos = 0
         self.text = pattern_text
         pattern = self._parse_choice()
+        self._skip_ws()
+        if self.pos < len(self.text):
+            raise ValueError(
+                f"Invalid grammar rule '{name}': unexpected "
+                f"{self.text[self.pos:]!r} in pattern {pattern_text!r}"
+            )
         return name, pattern
 
     def _parse_choice(self) -> PEGNode:
-        """Parse ordered choice: a / b / c"""
+        """Parse ordered choice: a / b / c (``|`` is accepted as an alias)."""
         alternatives = [self._parse_sequence()]
 
-        while self._peek_str("/"):
-            self._consume("/")
+        while self._peek_str("/") or self._peek_str("|"):
+            separator = "/" if self._peek_str("/") else "|"
+            self._consume(separator)
             alternatives.append(self._parse_sequence())
 
         if len(alternatives) == 1:
@@ -342,8 +362,11 @@ class GrammarParser:
             self.pos += 1
             node = self._parse_choice()
             self._skip_ws()
-            if self.pos < len(self.text) and self.text[self.pos] == ')':
-                self.pos += 1
+            if self.pos >= len(self.text) or self.text[self.pos] != ')':
+                raise ValueError(
+                    f"Unclosed group in grammar pattern: {self.text!r}"
+                )
+            self.pos += 1
             return node
 
         # Rule/token reference
@@ -361,9 +384,12 @@ class GrammarParser:
             if self.text[self.pos] == '\\':
                 self.pos += 1
             self.pos += 1
+        if self.pos >= len(self.text):
+            raise ValueError(
+                f"Unterminated string literal in grammar pattern: {self.text!r}"
+            )
         value = self.text[start:self.pos]
-        if self.pos < len(self.text):
-            self.pos += 1  # skip closing quote
+        self.pos += 1  # skip closing quote
         return PEGNode(PEGNodeType.LITERAL, value)
 
     def _parse_char_class(self) -> PEGNode:
@@ -374,9 +400,12 @@ class GrammarParser:
             if self.text[self.pos] == '\\':
                 self.pos += 1
             self.pos += 1
+        if self.pos >= len(self.text):
+            raise ValueError(
+                f"Unterminated character class in grammar pattern: {self.text!r}"
+            )
         value = self.text[start:self.pos]
-        if self.pos < len(self.text):
-            self.pos += 1  # skip ]
+        self.pos += 1  # skip ]
         return PEGNode(PEGNodeType.CHAR_CLASS, value)
 
     def _parse_identifier(self) -> PEGNode:
@@ -386,8 +415,9 @@ class GrammarParser:
             self.pos += 1
         name = self.text[start:self.pos]
 
-        # Built-in token types
-        if name in ("NUMBER", "STRING", "IDENT", "NEWLINE", "EOF", "INDENT", "DEDENT"):
+        # Built-in token types (INDENT/DEDENT are recognised so that
+        # validation can report them as unsupported, not as unknown rules)
+        if name in SUPPORTED_TOKENS or name in ("INDENT", "DEDENT"):
             return PEGNode(PEGNodeType.TOKEN_REF, name)
 
         return PEGNode(PEGNodeType.RULE_REF, name)
@@ -483,13 +513,27 @@ class PEGInterpreter:
 
         Returns a SourceAST tree, or raises SyntaxError on failure.
         """
+        return self._parse_from_rule(self.grammar.start_rule, source)
+
+    def parse_rule(self, rule_name: str, source: str) -> SourceAST:
+        """Parse ``source`` as a single instance of ``rule_name``.
+
+        Used by :class:`IncrementalParser` to re-parse only the edited
+        region. Raises ``ValueError`` for unknown rules and ``SyntaxError``
+        when the text does not match the rule.
+        """
+        if rule_name not in self.grammar.rules and rule_name not in SUPPORTED_TOKENS:
+            raise ValueError(f"Unknown rule '{rule_name}'")
+        return self._parse_from_rule(rule_name, source)
+
+    def _parse_from_rule(self, rule_name: str, source: str) -> SourceAST:
         self.source = source
         self.memo.clear()
         self.max_pos = 0
-        self.max_rule = ""
+        self.max_rule = rule_name
         self._compute_line_starts()
 
-        result = self._match_rule(self.grammar.start_rule, 0)
+        result = self._match_rule(rule_name, 0)
 
         if not result.success:
             line, col = self._pos_to_line_col(self.max_pos)
@@ -507,7 +551,7 @@ class PEGInterpreter:
                 f"Unexpected input at line {line}, column {col}: '{remaining[:30]}'"
             )
 
-        return result.node if result.node else SourceAST("Program")
+        return result.node if result.node else SourceAST(rule_name)
 
     def _match_rule(self, rule_name: str, pos: int) -> ParseResult:
         """Match a named grammar rule at the given position."""
@@ -516,12 +560,12 @@ class PEGInterpreter:
             return self.memo[memo_key]
 
         # Track furthest position for error reporting
-        if pos > self.max_pos:
-            self.max_pos = pos
+        if pos > self.max_pos or not self.max_rule:
+            self.max_pos = max(pos, self.max_pos)
             self.max_rule = rule_name
 
         # Handle built-in token types
-        if rule_name in ("NUMBER", "STRING", "IDENT", "NEWLINE", "EOF"):
+        if rule_name in SUPPORTED_TOKENS:
             result = self._match_token(rule_name, pos)
             self.memo[memo_key] = result
             return result
@@ -537,10 +581,11 @@ class PEGInterpreter:
 
         if result.success and not rule.is_fragment:
             # Build AST node for this rule
+            line, column = self._pos_to_line_col(pos)
             node = SourceAST(
                 node_type=rule.node_type,
-                line=self._pos_to_line_col(pos)[0],
-                column=self._pos_to_line_col(pos)[1],
+                line=line,
+                column=column,
                 source_text=self.source[pos:result.pos],
             )
 
@@ -562,8 +607,8 @@ class PEGInterpreter:
                         wrapped.append(SourceAST(
                             node_type="Operator",
                             value=c,
-                            line=self._pos_to_line_col(pos)[0],
-                            column=self._pos_to_line_col(pos)[1],
+                            line=line,
+                            column=column,
                         ))
                 node.children = wrapped
 
@@ -702,9 +747,10 @@ class PEGInterpreter:
             m = re.match(r'[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?', self.source[pos:])
             if m:
                 val = m.group(0)
+                line, column = self._pos_to_line_col(pos)
                 node = SourceAST("Number", value=float(val) if '.' in val or 'e' in val.lower() else int(val),
-                                 line=self._pos_to_line_col(pos)[0],
-                                 column=self._pos_to_line_col(pos)[1])
+                                 line=line,
+                                 column=column)
                 return ParseResult(True, pos + len(val), node)
 
         elif token_type == "STRING":
@@ -716,9 +762,10 @@ class PEGInterpreter:
                         i += 2
                     elif self.source[i] == quote:
                         val = self.source[pos + 1:i]
+                        line, column = self._pos_to_line_col(pos)
                         node = SourceAST("String", value=val,
-                                         line=self._pos_to_line_col(pos)[0],
-                                         column=self._pos_to_line_col(pos)[1])
+                                         line=line,
+                                         column=column)
                         return ParseResult(True, i + 1, node)
                     else:
                         i += 1
@@ -727,9 +774,10 @@ class PEGInterpreter:
             m = re.match(r'[a-zA-Z_]\w*', self.source[pos:])
             if m:
                 val = m.group(0)
+                line, column = self._pos_to_line_col(pos)
                 node = SourceAST("Identifier", value=val,
-                                 line=self._pos_to_line_col(pos)[0],
-                                 column=self._pos_to_line_col(pos)[1])
+                                 line=line,
+                                 column=column)
                 return ParseResult(True, pos + len(val), node)
 
         elif token_type == "NEWLINE":
@@ -759,9 +807,14 @@ class PEGInterpreter:
                 changed = True
             # Skip comments
             for pattern in self.grammar.comment_patterns:
-                m = re.match(pattern, self.source[pos:])
-                if m:
-                    pos += len(m.group(0))
+                try:
+                    m = re.match(pattern, self.source[pos:])
+                except re.error as error:
+                    raise ValueError(
+                        f"Invalid comment pattern {pattern!r}: {error}"
+                    ) from error
+                if m and m.end() > 0:
+                    pos += m.end()
                     changed = True
         return pos
 
@@ -774,11 +827,7 @@ class PEGInterpreter:
 
     def _pos_to_line_col(self, pos: int) -> Tuple[int, int]:
         """Convert byte offset to (line, column) — both 1-based."""
-        line = 1
-        for i, start in enumerate(self.line_starts):
-            if start > pos:
-                break
-            line = i + 1
+        line = bisect.bisect_right(self.line_starts, pos)
         col = pos - self.line_starts[line - 1] + 1
         return line, col
 

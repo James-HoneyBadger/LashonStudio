@@ -81,11 +81,11 @@ class LanguageValidator:
         for dup in duplicates:
             self.issues.append(
                 ValidationIssue(
-                    severity="error",
+                    severity="warning",
                     category="keyword_conflict",
-                    message=f"Duplicate keyword: '{dup}'",
+                    message=f"Duplicate keyword alias: '{dup}'",
                     details="Multiple original keywords map to the same custom keyword",  # noqa: E501 pylint: disable=line-too-long
-                    suggestion="Use unique custom keywords for each original keyword",  # noqa: E501 pylint: disable=line-too-long
+                    suggestion="Use unique custom keywords if reverse translation must be unambiguous",  # noqa: E501 pylint: disable=line-too-long
                 )
             )
 

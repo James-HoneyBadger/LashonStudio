@@ -1,6 +1,5 @@
 """Tests for the REPL."""
 
-import pytest
 
 from parsercraft.runtime.repl import REPL
 

@@ -54,16 +54,6 @@ The parser recognises three built-in token names in grammar rules:
 See the TECHNICAL_REFERENCE.md for complete API documentation.
 """
 
-from .parser_generator import (
-    Lexer,
-    Parser,
-    ParserGenerator,
-    Token,
-    TokenType,
-    ASTNode,
-    generate_parser,
-)
-
 from .grammar import (
     Grammar,
     GrammarBuilder,
@@ -75,8 +65,16 @@ from .grammar import (
     SourceAST,
     grammar_from_config,
 )
-
 from .incremental import IncrementalParser
+from .parser_generator import (
+    ASTNode,
+    Lexer,
+    Parser,
+    ParserGenerator,
+    Token,
+    TokenType,
+    generate_parser,
+)
 
 __all__ = [
     "Lexer",

@@ -24,7 +24,7 @@
 
 | Requirement | Minimum | Recommended | Notes |
 |---|---|---|---|
-| Python | 3.10 | 3.12+ | `python3 --version` to check |
+| Python | 3.10 | 3.12 – 3.14 | `python3 --version` to check; 3.14 is used in CI |
 | pip | 22.0 | latest | `pip install --upgrade pip` |
 | PyYAML | 6.0 | latest | Installed automatically |
 | tkinter | any | — | Bundled with CPython; required for the IDE only |
@@ -40,10 +40,14 @@ Clone the repository and install in editable mode so changes to source files tak
 ```bash
 git clone https://github.com/James-HoneyBadger/ParserCraft.git
 cd ParserCraft
-pip install -e .
+python -m venv .venv && . .venv/bin/activate
+pip install -e ".[dev]"     # includes pytest + ruff
 ```
 
-This installs the `parsercraft`, `parsercraft-ide`, `parsercraft-repl`, and `codex` entry-point commands.
+This installs the `parsercraft`, `parsercraft-ide`, `parsercraft-repl`, and
+`codex` entry-point commands. `pip install -e .` (without `[dev]`) is enough to
+run the CLI, Studio, and REPL; the tests can also run from a checkout without
+installing because `pyproject.toml` sets `pythonpath = ["src"]`.
 
 ---
 
@@ -98,7 +102,7 @@ conda deactivate    # conda
 pip install -e ".[dev]"
 ```
 
-Installs `pytest`, `black`, and `flake8` for running the test suite and formatting source.
+Installs `pytest` and `ruff` for running the test suite and linting source.
 
 ### IDE extras
 
@@ -119,17 +123,20 @@ brew install python-tk
 
 ## Verifying the Installation
 
-After installation, confirm all three entry points are available:
+After installation, confirm the entry points are available:
 
 ```bash
 parsercraft --version
-# ParserCraft 4.0.0
+# parsercraft 4.0.0
 
 parsercraft list-presets
 # Lists: python_like, js_like, ruby_like, ...
 
 parsercraft-repl --help
 # Usage information for the REPL launcher
+
+parsercraft-ide --help
+# Studio launcher (requires a display)
 ```
 
 Quick smoke test from Python:
@@ -157,7 +164,11 @@ print("Installation OK")
 python -m pytest tests/ -v
 ```
 
-Expected output: **113 tests passed**. The suite covers grammar parsing, all four code-generation backends, REPL, stdlib, FFI, error localization, incremental parsing, and full pipeline integration.
+Expected output: **322 tests passed**. The suite covers grammar parsing, all
+four code-generation backends (including compile-and-run checks for C and LLVM
+when toolchains are present), REPL, stdlib, FFI, error localization, incremental
+parsing, types, modules, LSP, packaging, the debug adapter, and the Studio
+(headless plus GUI when a display exists).
 
 Run a single test module:
 
@@ -260,11 +271,13 @@ ParserCraft uses `match` statements (Python 3.10+) and `X | Y` union types (Pyth
 
 ### Tests fail with `ImportError`
 
-Ensure the package is installed (editable or otherwise) before running pytest:
+Run pytest from the repository root so `pythonpath = ["src"]` applies, or install
+the package first:
 
 ```bash
-pip install -e .
-python -m pytest tests/ -v
+python -m pytest -q
+# or
+pip install -e ".[dev]" && python -m pytest -q
 ```
 
 ### Tkinter IDE shows no window
@@ -272,5 +285,12 @@ python -m pytest tests/ -v
 On headless servers, set a display or use a remote desktop. The REPL and CLI do not require a display.
 
 ---
+
+## Next steps
+
+- [QUICKSTART.md](QUICKSTART.md) — build a language in ten minutes.
+- [STUDIO_GUIDE.md](STUDIO_GUIDE.md) — tour the Studio.
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — more failure modes.
+- [docs/README.md](README.md) — the full documentation index.
 
 *For further help, open an issue at [github.com/James-HoneyBadger/ParserCraft](https://github.com/James-HoneyBadger/ParserCraft/issues).*

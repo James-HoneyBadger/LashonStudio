@@ -201,6 +201,10 @@ class PythonTranspiler:
 
         return result
 
+    def translate_source_ast(self, ast: SourceAST) -> str:
+        """Alias for :meth:`transpile` to match the common backend interface."""
+        return self.transpile(ast)
+
     def transpile_expression(self, ast: SourceAST) -> str:
         """Transpile a single expression AST node to a Python
         expression string."""
@@ -228,14 +232,15 @@ class PythonTranspiler:
 
         # Dispatch table for expressions
         nt = node.node_type
+        nt_lower = nt.lower()
 
-        if nt in ("Number", "String", "Boolean"):
+        if nt_lower in ("number", "string", "boolean", "bool"):
             return self._expr_literal(node)
-        if nt in ("Identifier", "IDENT"):
+        if nt_lower in ("identifier", "ident"):
             return self._expr_identifier(node)
         if nt in (
                 "expr", "Expr", "comparison",
-                "addition", "multiplication", "term"):
+                "addition", "multiplication"):
             return self._expr_binary_chain(node)
         if nt in ("BinaryOp", "binary_op"):
             return self._expr_binary(node)
@@ -262,7 +267,7 @@ class PythonTranspiler:
             if meaningful:
                 return self._expr_to_str(meaningful[0])
             return self._expr_passthrough(node)
-        if nt in ("term",):
+        if nt == "term":
             return self._expr_binary_chain(node)
         if nt in ("assignment", "Assignment"):
             return self._expr_assignment(node)
@@ -352,17 +357,22 @@ class PythonTranspiler:
         """Emit: class Name(bases): body"""
         children = node.children
         name = ""
-        bases = ""
+        base_parts: list[str] = []
         body_children = []
 
         for child in children:
             if child.node_type in ("Identifier", "IDENT") and not name:
                 name = self._expr_to_str(child)
+            elif child.node_type in ("param_list", "arg_list"):
+                base_parts.append(self._expr_to_str(child))
+            elif child.node_type in ("Identifier", "IDENT"):
+                base_parts.append(self._expr_to_str(child))
             elif child.node_type in ("block", "Block"):
                 body_children = child.children
             else:
                 body_children.append(child)
 
+        bases = ", ".join(part for part in base_parts if part)
         base_str = f"({bases})" if bases else ""
         self._line(f"class {name}{base_str}:")
         self.indent_level += 1
@@ -491,8 +501,8 @@ class PythonTranspiler:
         When used in an IF condition, single = should become ==.
         Also map <> to !=."""
         expr = expr.replace(" <> ", " != ")
-        # Replace ' = ' with ' == ' (but not == which is already correct)
-        expr = re.sub(r'(?<!=)\s*=\s*(?!=)', ' == ', expr)
+        # Replace standalone '=' with '==' (leave ==, !=, <=, >=, := alone)
+        expr = re.sub(r'(?<![<>=!:])\s*=\s*(?![=])', ' == ', expr)
         return expr
 
     def _emit_while(self, node: SourceAST) -> None:
@@ -639,8 +649,13 @@ class PythonTranspiler:
             self._line("return")
 
     def _emit_import(self, node: SourceAST) -> None:
-        if node.children:
-            module = self._expr_to_str(node.children[0])
+        parts = [
+            c for c in node.children
+            if not (c.node_type == "Operator"
+                    and c.value in ("import", "from", ";", ","))
+        ]
+        if parts:
+            module = self._expr_to_str(parts[0])
             self._line(f"import {module}")
         elif node.value:
             self._line(f"import {node.value}")
@@ -649,19 +664,18 @@ class PythonTranspiler:
 
     def _emit_expr_stmt(self, node: SourceAST) -> None:
         """Emit an expression as a statement."""
-        if node.children:
-            expr = self._expr_to_str(node.children[0])
-        elif node.value:
-            expr = str(node.value)
-        else:
-            expr = self._expr_to_str(node)
+        expr = self._expr_to_str(node)
         if expr:
             self._line(expr)
 
     def _emit_print(self, node: SourceAST) -> None:
-        if node.children:
-            args = ", ".join(self._expr_to_str(c) for c in node.children)
-            self._line(f"print({args})")
+        args = [
+            self._expr_to_str(c) for c in node.children
+            if not (c.node_type == "Operator"
+                    and c.value in ("print", "PRINT", ";", ",", "(", ")"))
+        ]
+        if args:
+            self._line(f"print({', '.join(args)})")
         else:
             self._line("print()")
 
@@ -679,12 +693,14 @@ class PythonTranspiler:
     # -------------------------------------------------------------------
 
     def _emit_say(self, node: SourceAST) -> None:
-        """SAY expr → print(expr)"""
-        # Children: [Operator('SAY'), expr]
-        exprs = [c for c in node.children if c.node_type != "Operator"]
-        if exprs:
-            arg = self._expr_to_str(exprs[0])
-            self._line(f"print({arg})")
+        """SAY expr[, expr]* → print(expr...)"""
+        args = [
+            self._expr_to_str(c) for c in node.children
+            if not (c.node_type == "Operator"
+                    and c.value in ("SAY", ",", ";", "(", ")"))
+        ]
+        if args:
+            self._line(f"print({', '.join(args)})")
         else:
             self._line("print()")
 
@@ -921,10 +937,10 @@ class PythonTranspiler:
         self._line(expr)
 
     def _emit_param_list(self, node: SourceAST) -> None:
-        pass  # Handled inline by function_def
+        return  # Handled inline by function_def
 
     def _emit_arg_list(self, node: SourceAST) -> None:
-        pass  # Handled inline by call
+        return  # Handled inline by call
 
     # -----------------------------------------------------------------------
     # Expression stringifiers (produce expression strings)
@@ -932,10 +948,13 @@ class PythonTranspiler:
 
     def _expr_literal(self, node: SourceAST) -> str:
         val = node.value
-        if node.node_type == "String":
+        node_type = node.node_type.lower()
+        if node_type == "string":
             return repr(str(val))
-        if node.node_type == "Boolean":
-            return "True" if val else "False"
+        if node_type in ("boolean", "bool"):
+            if isinstance(val, bool):
+                return "True" if val else "False"
+            return "True" if str(val).strip().lower() == "true" else "False"
         return str(val)
 
     def _expr_identifier(self, node: SourceAST) -> str:
@@ -1058,17 +1077,28 @@ class PythonTranspiler:
             else:
                 args.append(self._expr_to_str(child))
 
-        return f"{func}({', '.join(args)})"
+        arg_text = ", ".join(args)
+        if func.startswith("lambda"):
+            return f"({func})({arg_text})"
+        return f"{func}({arg_text})"
 
     def _expr_list(self, node: SourceAST) -> str:
-        items = [self._expr_to_str(c) for c in node.children]
-        return f"[{', '.join(items)}]"
+        items = [
+            c for c in node.children
+            if not (c.node_type == "Operator" and c.value in ("[", "]", ","))
+        ]
+        return f"[{', '.join(self._expr_to_str(c) for c in items)}]"
 
     def _expr_dict(self, node: SourceAST) -> str:
+        items = [
+            c for c in node.children
+            if not (c.node_type == "Operator"
+                    and c.value in ("{", "}", ",", ":"))
+        ]
         pairs = []
-        for i in range(0, len(node.children) - 1, 2):
-            key = self._expr_to_str(node.children[i])
-            val = self._expr_to_str(node.children[i + 1])
+        for i in range(0, len(items) - 1, 2):
+            key = self._expr_to_str(items[i])
+            val = self._expr_to_str(items[i + 1])
             pairs.append(f"{key}: {val}")
         return "{" + ", ".join(pairs) + "}"
 
@@ -1081,10 +1111,18 @@ class PythonTranspiler:
         return ""
 
     def _expr_param_list(self, node: SourceAST) -> str:
-        return ", ".join(self._expr_to_str(c) for c in node.children)
+        items = [
+            c for c in node.children
+            if not (c.node_type == "Operator" and c.value in ("(", ")", ","))
+        ]
+        return ", ".join(self._expr_to_str(c) for c in items)
 
     def _expr_arg_list(self, node: SourceAST) -> str:
-        return ", ".join(self._expr_to_str(c) for c in node.children)
+        items = [
+            c for c in node.children
+            if not (c.node_type == "Operator" and c.value in ("(", ")", ","))
+        ]
+        return ", ".join(self._expr_to_str(c) for c in items)
 
     def _emit_transparent_binary(self, node: SourceAST) -> None:
         """For term-like nodes that may chain operators."""
@@ -1167,8 +1205,13 @@ def transpile_and_exec(ast: SourceAST,
                        function_map: Optional[Dict[str, str]] = None,
                        globals_dict: Optional[Dict[str, Any]] = None
                        ) -> Dict[str, Any]:
-    """Transpile and execute, returning the resulting namespace."""
+    """Transpile and execute, returning the user-visible namespace.
+
+    Dunder entries injected by ``exec`` (notably ``__builtins__``) are
+    filtered out so the result only contains program-defined names plus
+    anything supplied via ``globals_dict``.
+    """
     code = transpile_to_python(ast, keyword_map, function_map)
-    ns = globals_dict or {}
+    ns = globals_dict if globals_dict is not None else {}
     exec(code, ns)  # noqa: S102  # pylint: disable=exec-used
-    return ns
+    return {key: value for key, value in ns.items() if not key.startswith("__")}

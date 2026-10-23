@@ -1,698 +1,421 @@
 # ParserCraft — User Guide
 
-> Version 4.0.0
+Task-oriented guide to building and running languages with ParserCraft 4.0.0.
+For exhaustive references, follow the links to the dedicated pages.
+
+- New here? Start with [QUICKSTART.md](QUICKSTART.md).
+- Designing a language? Read [LANGUAGE_DEVELOPMENT.md](LANGUAGE_DEVELOPMENT.md).
+- Need a flag or command? See [CLI_REFERENCE.md](CLI_REFERENCE.md).
+- Stuck? Use [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
 ---
 
-## Table of Contents
+## Contents
 
-- [Introduction](#introduction)
-- [Core Concepts](#core-concepts)
-- [Language Configuration (YAML/JSON)](#language-configuration-yamljson)
-  - [Config File Format](#config-file-format)
-  - [Keyword Remapping](#keyword-remapping)
-  - [Custom Functions](#custom-functions)
-  - [Syntax Options](#syntax-options)
-  - [Loading and Saving Configs](#loading-and-saving-configs)
-- [Language Presets](#language-presets)
-- [The CLI](#the-cli)
-  - [Language Management Commands](#language-management-commands)
-  - [Execution Commands](#execution-commands)
-  - [Code Generation Commands](#code-generation-commands)
-  - [Module & Type Commands](#module--type-commands)
-  - [Tooling Commands](#tooling-commands)
-- [The REPL](#the-repl)
-  - [Starting the REPL](#starting-the-repl)
-  - [REPL Commands](#repl-commands)
-  - [Working with the AST](#working-with-the-ast)
-  - [Variables and Namespaces](#variables-and-namespaces)
-- [The Tkinter IDE](#the-tkinter-ide)
-- [Standard Library Injection](#standard-library-injection)
-  - [Built-in Modules](#built-in-modules)
-- [FFI Bridge](#ffi-bridge)
-  - [Calling Python Functions](#calling-python-functions)
-  - [Calling C Libraries](#calling-c-libraries)
-- [Module System](#module-system)
-- [Error Messages and Localization](#error-messages-and-localization)
-- [VS Code Extension Generation](#vs-code-extension-generation)
-- [Config File Examples Gallery](#config-file-examples-gallery)
+1. [Two ways to use ParserCraft](#two-ways-to-use-parsercraft)
+2. [Install and verify](#install-and-verify)
+3. [Create a language configuration](#create-a-language-configuration)
+4. [Map keywords, functions, and operators](#map-keywords-functions-and-operators)
+5. [Define a grammar](#define-a-grammar)
+6. [Execute programs](#execute-programs)
+7. [Generate other targets](#generate-other-targets)
+8. [Use the REPL](#use-the-repl)
+9. [Use the Studio](#use-the-studio)
+10. [Modules, types, and tooling](#modules-types-and-tooling)
+11. [Ship your language](#ship-your-language)
+12. [Limits and security](#limits-and-security)
 
 ---
 
-## Introduction
+## Two ways to use ParserCraft
 
-ParserCraft lets you design, implement, and run your own programming languages from Python. The typical workflow is:
+| Approach | You provide | You get | Typical use |
+|---|---|---|---|
+| **Grammar (PEG)** | `grammar.peg` rules | `SourceAST` → Python/C/WASM/LLVM | real languages with syntax |
+| **Config only** | keyword/function/operator maps | textual translation to Python | localized Python, teaching, quick wins |
 
-1. **Define** the language — either via a YAML/JSON config or by writing PEG grammar rules directly.
-2. **Parse** source programs into an abstract syntax tree (AST).
-3. **Execute or compile** the AST to Python, C, WebAssembly, or LLVM IR.
-
-This guide covers the practical day-to-day use of ParserCraft's tools and APIs. For a step-by-step beginner introduction, see [TUTORIAL.md](TUTORIAL.md). For the complete API reference, see [TECHNICAL_REFERENCE.md](TECHNICAL_REFERENCE.md).
-
----
-
-## Core Concepts
-
-| Term | Meaning |
-|---|---|
-| **PEG grammar** | Parsing Expression Grammar — a deterministic, unambiguous formalism for describing syntax. |
-| **SourceAST** | The tree produced by `PEGInterpreter.parse()`. Each node has a `node_type`, optional `value`, and `children`. |
-| **Language config** | A YAML or JSON file describing keywords, functions, syntax options, and other properties of a custom language. |
-| **Preset** | A built-in template (e.g. `pascal_like`) used as a starting point. |
-| **Backend** | A code generator that translates a `SourceAST` to Python, C, WAT, or LLVM IR. |
-| **Transpile** | Translate source-to-source; ParserCraft's Python backend transpiles AST nodes to runnable Python text. |
+They compose: a language config can hold both keyword mappings (for the config
+REPL) and a `grammar.rules` section (for parsing and codegen). `projects/aurora`
+does exactly that.
 
 ---
 
-## Language Configuration (YAML/JSON)
-
-Language configs are the primary way non-programmers describe a language without writing grammar rules manually.
-
-### Config File Format
-
-A minimal YAML config:
-
-```yaml
-name: MyLang
-version: "1.0"
-description: A simple expression language
-
-keywords:
-  if: if
-  else: else
-  while: while
-  for: for
-  function: function
-  return: return
-
-functions:
-  print: print_val
-  sqrt: sqrt_func
-
-syntax:
-  statement_separator: ";"
-  assignment_operator: "="
-  block_begin: "{"
-  block_end: "}"
-  line_comment: "//"
-  string_delimiters: ["\"", "'"]
-  case_sensitive: true
-```
-
-All keys are optional — missing keys inherit from the `minimal` preset defaults.
-
-### Keyword Remapping
-
-Use keyword remapping to localise a language or change syntax style:
-
-```python
-from parsercraft.config import LanguageConfig
-
-config = LanguageConfig.from_preset("python_like")
-
-# Translate Python keywords to Spanish
-config.rename_keyword("if", "si")
-config.rename_keyword("else", "sino")
-config.rename_keyword("while", "mientras")
-config.rename_keyword("for", "para")
-config.rename_keyword("def", "definir")
-config.rename_keyword("return", "retornar")
-
-config.save("espanol.yaml")
-```
-
-Or set the full mapping at once:
-
-```python
-config.set_keyword_mapping({
-    "if": "si",
-    "else": "sino",
-    "while": "mientras",
-})
-```
-
-### Custom Functions
-
-Map language function names to Python runtime callables:
-
-```python
-config.add_function("escribir", "print")    # escribir(x) → print(x)
-config.add_function("raiz", "math.sqrt")    # raiz(x) → sqrt(x)
-```
-
-### Syntax Options
-
-Control fundamental syntax properties:
-
-```python
-config.set_syntax_option("statement_separator", ";")
-config.set_syntax_option("assignment_operator", ":=")   # Pascal style
-config.set_syntax_option("block_begin", "BEGIN")
-config.set_syntax_option("block_end", "END")
-config.set_syntax_option("line_comment", "--")          # SQL/Lua style
-config.set_syntax_option("case_sensitive", False)
-```
-
-### Loading and Saving Configs
-
-```python
-from parsercraft.config import LanguageConfig
-
-# Load from file (YAML or JSON auto-detected)
-config = LanguageConfig.load("my_lang.yaml")
-
-# Load from a built-in preset
-config = LanguageConfig.from_preset("pascal_like")
-
-# Save as YAML (default)
-config.save("output.yaml")
-
-# Save as JSON
-config.save("output.json", fmt="json")
-
-# Export keyword mapping as a human-readable table
-table = config.export_mapping_table()
-print(table)
-```
-
----
-
-## Language Presets
-
-Presets are fully configured starting points. Use `list-presets` to see all available ones:
+## Install and verify
 
 ```bash
-parsercraft list-presets
+python -m venv .venv && . .venv/bin/activate
+pip install -e ".[dev]"
+
+parsercraft --version          # parsercraft 4.0.0
+python -m pytest -q            # 322 passed
 ```
 
-| Preset | Assignment | Blocks | Comments | Notable |
-|---|---|---|---|---|
-| `python_like` | `=` | indentation | `#` | `def`, `class`, `import` |
-| `js_like` | `=` | `{}` | `//` | `function`, `let`, `const` |
-| `ruby_like` | `=` | `do`…`end` | `#` | `def`, `puts`, method-style |
-| `golang_like` | `:=` / `=` | `{}` | `//` | `func`, `var`, `go` |
-| `rust_like` | `=` | `{}` | `//` | `fn`, `let mut`, `match` |
-| `clike` | `=` | `{}` | `//` | typed declarations |
-| `functional` | `=` | `let…in` | `(*…*)` | lambdas, `where`, `match` |
-| `lisp_like` | `setq` | `()` S-exps | `;` | `defun`, `lambda`, `cond` |
-| `basic_like` | `=` | line numbers | `REM` | `PRINT`, `GOTO`, `INPUT` |
-| `pascal_like` | `:=` | `BEGIN`…`END` | `{…}` | `PROCEDURE`, `FUNCTION`, `VAR` |
-
-Load and customise:
-
-```python
-config = LanguageConfig.from_preset("ruby_like")
-config.rename_keyword("def", "método")
-config.rename_keyword("puts", "imprimir")
-config.save("ruby_espanol.yaml")
-```
+Platform notes live in [INSTALL.md](INSTALL.md).
 
 ---
 
-## The CLI
+## Create a language configuration
 
-All CLI commands follow the pattern:
-
-```
-parsercraft <command> [options] [arguments]
-```
-
-Run `parsercraft --help` for the full command list, or `parsercraft <command> --help` for per-command help.
-
-### Language Management Commands
-
-#### `create`
-
-Interactive wizard for creating a new language config:
+Start a complete project (config + grammar + sample + tests):
 
 ```bash
-parsercraft create
+parsercraft init "My Lang" --directory ./languages
+cd languages/my-lang && python -m pytest tests -q
 ```
 
-Prompts for language name, base preset, keywords, and syntax options, then saves a YAML file.
-
-#### `edit`
-
-Open a config in the visual editor:
+Or create a single config from a preset:
 
 ```bash
-parsercraft edit my_lang.yaml
-```
-
-#### `validate`
-
-Check a config for structural errors:
-
-```bash
+parsercraft create --preset python_like --output my_lang.yaml
 parsercraft validate my_lang.yaml
-# ✓ my_lang.yaml is valid
-```
-
-#### `info`
-
-Display a formatted summary of a config:
-
-```bash
 parsercraft info my_lang.yaml
 ```
 
-Shows keywords, functions, syntax options, and identifier rules.
+Presets: `python_like`, `js_like`, `minimal`, `ruby_like`, `golang_like`,
+`rust_like`, `clike`, `functional`, `lisp_like`, `basic_like`.
 
-#### `export` / `import`
+Minimal shape:
 
-Convert between YAML and JSON:
+```yaml
+name: MyLang
+version: "0.1.0"
+description: "A tiny language"
+author: "you"
 
-```bash
-parsercraft export my_lang.yaml --format json   # → my_lang.json
-parsercraft import foreign.json                 # normalise and save as YAML
+keywords:
+  print: "print"
+  if: "if"
+  else: "else"
+  while: "while"
+  "true": "True"
+  "false": "False"
+
+functions:
+  length: "len"
+  show: "print"
+
+operators:
+  equals: "=="
+
+syntax_options:
+  single_line_comment: "//"
+  require_semicolons: true
 ```
 
-#### `convert`
+Loading and saving from Python:
 
-Convert format in-place:
+```python
+from parsercraft.config import LanguageConfig
 
-```bash
-parsercraft convert my_lang.yaml   # saves as my_lang.json
+config = LanguageConfig.load("my_lang.yaml")   # or .json
+config.save("copy.yaml")
+print(config.name, config.version)
 ```
 
-#### `diff`
+`LanguageConfig.validate()` returns hard errors; `validation_warnings()` reports
+duplicate alias warnings. The CLI prints both and exits 0 when there are no hard
+errors. Full schema: [TECHNICAL_REFERENCE.md](TECHNICAL_REFERENCE.md#languageconfig).
 
-Compare two language configs:
+---
 
-```bash
-parsercraft diff base.yaml custom.yaml
+## Map keywords, functions, and operators
+
+Keys are **your** words; values are the Python targets.
+
+```yaml
+keywords:
+  escribir: "print"
+  si: "if"
+  sino: "else"
+  mientras: "while"
+
+functions:
+  longitud: "len"
 ```
 
-#### `update`
-
-Apply a JSON patch to a config:
-
 ```bash
-parsercraft update my_lang.yaml '{"keywords": {"if": "cuando"}}'
+parsercraft translate --config espanol.yaml --input programa.txt
 ```
 
-#### `list-presets`
+Programmatic edits:
 
-```bash
-parsercraft list-presets
+```python
+from parsercraft.config import LanguageConfig
+
+config = LanguageConfig.load("my_lang.yaml")
+config.rename_keyword("print", "escribir")
+config.add_function("longitud", "len")
+config.remove_keyword("escribir")
+config.save("my_lang.yaml")
 ```
 
-#### `delete`
+Unknown names raise `ValueError("Keyword 'x' not found")`; invalid identifiers
+raise with the validator's warning as the message.
 
-Safely remove a config (with confirmation):
+---
 
-```bash
-parsercraft delete my_lang.yaml
+## Define a grammar
+
+Keep grammar text in `grammar.peg` (or under `grammar.rules` in YAML):
+
+```peg
+program     <- statement+
+statement   <- assignment / print_stmt
+assignment  <- IDENT "=" expr ";"
+print_stmt  <- "print" expr ";"
+expr        <- term (("+" / "-") term)*
+term        <- factor (("*" / "/") factor)*
+factor      <- NUMBER / IDENT / "(" expr ")"
 ```
 
-### Execution Commands
+```python
+from parsercraft.parser import GrammarParser, PEGInterpreter
 
-#### `repl`
+grammar = GrammarParser().parse(open("grammar.peg").read())
+ast = PEGInterpreter(grammar).parse("x = 21 * 2 ; print x ;")
 
-Launch the interactive REPL with a language config:
-
-```bash
-parsercraft repl my_lang.yaml
+print(ast.pretty())
+for node in ast.children:
+    print(node.node_type, node.line, node.column)
 ```
 
-#### `batch`
+Rules you should know:
 
-Process a directory of source files:
+- `<-` defines a rule (`=` is accepted too).
+- `"literal"`, `'literal'`, `[a-z0-9_]`, `.`, `rule`, `TOKEN`.
+- `a / b` ordered choice (`|` works as an alias).
+- `p*`, `p+`, `p?`, `&p`, `!p`, `( … )`.
+- Comments: `#` and `//`.
+- Left recursion is rejected — rewrite it with repetition.
+- Built-in tokens: `NUMBER`, `IDENT`, `STRING`, `NEWLINE`, `EOF`. `INDENT` and
+  `DEDENT` parse as tokens but validation rejects them as unsupported.
 
-```bash
-parsercraft batch ./programs/ --config my_lang.yaml --output ./out/
+Semantics and pitfalls: [GRAMMAR_REFERENCE.md](GRAMMAR_REFERENCE.md).
+
+---
+
+## Execute programs
+
+```python
+from parsercraft.codegen import PythonTranspiler, transpile_and_exec
+
+print(PythonTranspiler().translate_source_ast(ast))
+
+namespace = transpile_and_exec(ast)          # {'x': 42}
+print(namespace)
 ```
 
-#### `test`
+Options:
 
-Run the built-in test harness against a language config:
+```python
+from parsercraft.codegen import PythonTranspiler, TranspileOptions
 
-```bash
-parsercraft test my_lang.yaml
+transpiler = PythonTranspiler(TranspileOptions(
+    indent_str="  ",
+    keyword_map={"print": "print"},
+    function_map={"show": "print"},
+    wrap_in_main=True,
+))
+print(transpiler.transpile(ast))
 ```
 
-#### `translate`
+`transpile_and_exec` filters dunder keys, so the returned dict contains only
+your names (plus anything passed via `globals_dict`).
 
-Translate a source file using keyword remapping:
+---
+
+## Generate other targets
 
 ```bash
-parsercraft translate program.src --from english.yaml --to espanol.yaml
+parsercraft codegen-c    program.src --config my_lang.yaml --output out.c
+parsercraft codegen-llvm program.src --config my_lang.yaml --output out.ll
+parsercraft codegen-wasm program.src --config my_lang.yaml --output out.wat
 ```
 
-### Code Generation Commands
-
-#### `codegen-c`
-
-Generate ANSI C from a source file:
-
 ```bash
-parsercraft codegen-c program.src --config my_lang.yaml
+gcc -std=c99 out.c -o program && ./program
+clang out.ll -o program && ./program
 ```
 
-#### `codegen-wasm`
+C and LLVM handle functions, `if/else`, `while`, recursion, calls, and printing
+for the documented AST nodes. WASM is partial: it emits module scaffolding and a
+`main` body but not user function bodies. Details and fidelity notes:
+[CODEGEN_GUIDE.md](CODEGEN_GUIDE.md).
 
-Generate WebAssembly Text Format:
+From Python:
 
-```bash
-parsercraft codegen-wasm program.src --config my_lang.yaml
-```
+```python
+from parsercraft.codegen import CCodeGenerator, LLVMIRGenerator, WasmGenerator
 
-#### `codegen-llvm`
-
-Generate LLVM IR:
-
-```bash
-parsercraft codegen-llvm program.src --config my_lang.yaml
-```
-
-### Module & Type Commands
-
-#### `module-info`
-
-Display module information for a source file:
-
-```bash
-parsercraft module-info main.src
-```
-
-#### `module-deps`
-
-List all transitive dependencies:
-
-```bash
-parsercraft module-deps main.src
-```
-
-#### `module-cycles`
-
-Detect circular imports:
-
-```bash
-parsercraft module-cycles main.src
-```
-
-#### `type-check`
-
-Run the type checker:
-
-```bash
-parsercraft type-check program.src --config my_lang.yaml
-```
-
-### Tooling Commands
-
-#### `lsp`
-
-Start the Language Server Protocol server:
-
-```bash
-parsercraft lsp --port 8080
-parsercraft lsp --stdio     # stdin/stdout transport
-```
-
-#### `extension`
-
-Generate a VS Code extension package:
-
-```bash
-parsercraft extension my_lang.yaml --out ./vscode-my-lang/
-```
-
-#### `refactor-rename`
-
-Rename a symbol across source files:
-
-```bash
-parsercraft refactor-rename --old "foo" --new "bar" --dir ./src/
-```
-
-#### `format`
-
-Format a source file:
-
-```bash
-parsercraft format program.src --config my_lang.yaml
-```
-
-#### `debug-launch`
-
-Launch the DAP debug adapter:
-
-```bash
-parsercraft debug-launch program.src --config my_lang.yaml
+c_src = CCodeGenerator().translate_source_ast(ast)
+ir = LLVMIRGenerator().translate_source_ast(ast)
+wat = WasmGenerator().translate_source_ast(ast).to_wat()   # returns WasmModule
 ```
 
 ---
 
-## The REPL
+## Use the REPL
 
-### Starting the REPL
-
-**Standalone** (uses a default minimal grammar):
+Grammar REPL:
 
 ```bash
-parsercraft-repl
+parsercraft repl --grammar grammar.peg
 ```
 
-**With a language config:**
+```text
+>>> fn twice(x) { return x * 2 ; }
+>>> print twice(21) ;
+42
+>>> :ast
+>>> :py
+>>> :quit
+```
+
+Config REPL:
 
 ```bash
-parsercraft repl my_lang.yaml
+parsercraft repl espanol.yaml
 ```
 
-**With a PEG grammar file:**
+```text
+>>> escribir "hola"
+hola
+>>> .keywords
+>>> .exit
+```
+
+Command sets differ (`:` for grammar, `.` for config). Programmatic use:
+
+```python
+from parsercraft.runtime import REPL
+from parsercraft.parser import GrammarParser
+
+repl = REPL(grammar=GrammarParser().parse(open("grammar.peg").read()))
+repl.eval_line('print "hi" ;')            # 'hi\n'
+ns = repl.eval_lines(["a = 1 ;", "b = a + 1 ;"])
+```
+
+Full REPL, stdlib, and FFI details: [RUNTIME_GUIDE.md](RUNTIME_GUIDE.md).
+
+---
+
+## Use the Studio
 
 ```bash
-parsercraft repl --grammar my_grammar.peg
+parsercraft-ide                          # opens the Aurora sample when available
+parsercraft-ide projects/aurora          # open a project
 ```
 
-### REPL Commands
+Layout: project tree on the left, Source / Grammar / Language tabs in the middle,
+Console / Variables / Python / C / WASM / LLVM IR / AST tabs on the right.
 
-All REPL meta-commands begin with `:`.
+Everyday actions:
 
-| Command | Effect |
+| Action | Shortcut |
 |---|---|
-| `:help` | Show all available REPL commands |
-| `:ast` | Print the AST of the last evaluated expression |
-| `:py` | Print the Python source generated from the last input |
-| `:vars` | List all variables and their values in the current namespace |
-| `:reset` | Clear the namespace and start fresh |
-| `:load <file>` | Execute a source file and import its bindings into the session |
-| `:grammar` | Print the current grammar rules |
-| `:quit` or `:exit` | Exit the REPL |
+| Run | `F5` |
+| Parse only | `F6` |
+| Generate all backends | `F7` |
+| Save project | `Ctrl+S` |
+| Open project | `Ctrl+O` |
+| New project | `Ctrl+N` |
 
-### Working with the AST
-
-```
-> x = 2 + 3 * 4 ;
-Result: x = 14
-
-> :ast
-program
-  statement
-    IDENT 'x'
-    Operator '='
-    expr
-      term
-        Number '2'
-      ...
-```
-
-### Variables and Namespaces
-
-```
-> a = 10 ;
-> b = a * 2 ;
-> :vars
-  a = 10
-  b = 20
-
-> :reset
-Namespace cleared.
-
-> :vars
-(empty)
-```
+Saving writes `grammar.peg` and syncs its rules into `language.yaml` after
+validating the grammar. Manual: [STUDIO_GUIDE.md](STUDIO_GUIDE.md).
 
 ---
 
-## The Tkinter IDE
+## Modules, types, and tooling
 
-Launch the integrated development environment:
+**Modules**
 
 ```bash
-parsercraft-ide
+parsercraft module-info utils --module-dir ./modules
+parsercraft module-deps main --module-dir ./modules
+parsercraft module-cycles --module-dir ./modules
 ```
 
-The IDE provides:
-
-- **Grammar Editor** — Write or load a PEG grammar; syntax is highlighted.
-- **Source Editor** — Write programs in your custom language; errors are underlined.
-- **Console Output** — See parse results, generated code, and execution output.
-- **Project Manager** — Create, open, and save language projects.
-
-The IDE is self-contained and requires no network access. It uses `tkinter` from the standard library.
-
----
-
-## Standard Library Injection
-
-The `StdLib` class provides six injectable module namespaces that can be added to any runtime:
-
 ```python
-from parsercraft.runtime import StdLib
+from parsercraft.runtime import ModuleManager
+from parsercraft.config import LanguageConfig
 
-stdlib = StdLib()
-namespace = {}
-stdlib.inject(namespace)
-```
-
-### Built-in Modules
-
-| Module | Injected Names | Purpose |
-|---|---|---|
-| `io` | `print_val`, `read_line`, `write_file`, `read_file` | Console and file I/O |
-| `math` | `sqrt`, `abs_val`, `floor`, `ceil`, `pow_val`, `log`, `sin`, `cos`, `pi`, `e` | Mathematical functions |
-| `string` | `concat`, `len_val`, `to_upper`, `to_lower`, `trim`, `split`, `replace`, `starts_with`, `ends_with` | String manipulation |
-| `collections` | `make_list`, `append`, `pop`, `len_list`, `make_dict`, `dict_get`, `dict_set` | Data structures |
-| `system` | `exit_prog`, `get_env`, `sleep_ms`, `current_time` | System interaction |
-| `random` | `rand_int`, `rand_float`, `rand_choice`, `shuffle` | Random number generation |
-
-Inject a single module:
-
-```python
-stdlib.inject_module(namespace, "math")
-stdlib.inject_module(namespace, "string")
-```
-
----
-
-## FFI Bridge
-
-The `FFIBridge` allows custom languages to call external code at runtime, with no changes to the grammar or transpiler.
-
-### Calling Python Functions
-
-```python
-from parsercraft.runtime import FFIBridge
-
-ffi = FFIBridge()
-
-# Register an arbitrary Python callable
-ffi.register_python("double", lambda x: x * 2)
-ffi.register_python("greet", lambda name: f"Hello, {name}!")
-
-# Import an entire Python module
-ffi.import_python_module("json")   # json.dumps, json.loads, etc.
-ffi.import_python_module("os.path")
-```
-
-### Calling C Libraries
-
-```python
-import ctypes
-
-ffi.load_c_library("libm", "/usr/lib/libm.so.6")
-ffi.register_c_function(
-    "libm", "sqrt",
-    argtypes=[ctypes.c_double],
-    restype=ctypes.c_double
-)
-
-# Now call in source: sqrt(2.0) → 1.4142...
-result = ffi.call("sqrt", 2.0)
-print(result)  # 1.4142135623730951
-```
-
----
-
-## Module System
-
-The `ModuleManager` handles multi-file languages with `import` / `use` statements.
-
-```python
-from parsercraft.runtime.module_system import ModuleManager
-
-manager = ModuleManager()
-manager.add_search_path("./lib")
-
-# Load a module by name
+manager = ModuleManager(LanguageConfig.load("my_lang.yaml"), search_paths=["modules"])
 module = manager.load_module("utils")
-
-# Check for circular dependencies before loading
-manager.check_cycles("main")
+print(list(module.exports), manager.resolve_dependencies("utils"))
 ```
 
-Circular dependency detection raises `CircularDependencyError` before execution begins.
+Syntax and limits: [RUNTIME_GUIDE.md](RUNTIME_GUIDE.md#module-system).
 
----
-
-## Error Messages and Localization
-
-ParserCraft produces structured, human-readable error messages with source context:
-
-```
-SyntaxError at line 3, column 7: Expected ";" but found "END"
-
-  3 │   x := 42
-                ^
-```
-
-`ErrorLocalizer` supports multiple locales. To use a non-English locale:
-
-```python
-from parsercraft.tooling import ErrorLocalizer
-
-loc = ErrorLocalizer(locale="es")
-msg = loc.format_error("unexpected_token", token="END", expected=";")
-print(msg)
-# Error de sintaxis en línea 3: Se esperaba ";" pero se encontró "END"
-```
-
----
-
-## VS Code Extension Generation
-
-ParserCraft can generate a complete, publishable VS Code extension from any language config:
+**Types**
 
 ```bash
-parsercraft extension my_lang.yaml --out ./my-lang-extension/
+parsercraft type-check --config my_lang.yaml --input program.src --level strict
 ```
 
-The generated extension includes:
+The checker is line-oriented and heuristic; it understands `name: type = value`
+and literal inference. See [TYPE_SYSTEM.md](TYPE_SYSTEM.md).
 
-- Syntax highlighting grammar (TextMate `.tmLanguage`)
-- Language configuration (comment toggling, bracket matching)
-- `package.json` with correct activation events
-- A README and icon placeholder
-
-Publish with:
+**Editor and debugger**
 
 ```bash
-cd my-lang-extension
-npm install -g @vscode/vsce
-vsce package
-vsce publish
+parsercraft lsp --config my_lang.yaml --stdio     # stdio subset
+parsercraft format program.src --in-place
+parsercraft refactor-rename program.src old new
 ```
+
+See [LSP_AND_DEBUGGING.md](LSP_AND_DEBUGGING.md) for capabilities and the DAP
+controller.
 
 ---
 
-## Config File Examples Gallery
+## Ship your language
 
-Ready-made configs are in `configs/examples/`:
+1. Copy the shape of `projects/aurora`: `language.yaml`, `grammar.peg`,
+   `samples/`, README.
+2. Generate a reference: `DocumentationGenerator().save_markdown(config, "REFERENCE.md")`.
+3. Generate a VS Code extension:
+   `parsercraft extension --config language.yaml --output ./my-lang-vscode`.
+4. Decide how users run it: `parsercraft-ide`, `parsercraft repl`, or a
+   generated backend plus your own toolchain.
 
-| File | Language Style |
+Packaging details, including what the extension generator does *not* produce:
+[PACKAGING.md](PACKAGING.md).
+
+---
+
+## Limits and security
+
+- **Execution is unsandboxed.** Transpiled code runs through `exec`; FFI calls
+  native libraries through `ctypes`. Only run trusted source.
+- **WASM codegen is incomplete** (see above).
+- **C/LLVM are integer-typed** unless values are float literals; no arrays,
+  structs, or pointers.
+- **LSP stdio** serves `initialize`, `shutdown`, `exit`, and completion; other
+  features are programmatic.
+- **Placeholders:** `generics`, `check-protocol`, `package-search`,
+  `package-install`, and `test-run` report success without performing analysis.
+- **The type checker is advisory**, not a proof of safety.
+
+---
+
+## Command cheat sheet
+
+| Goal | Command |
 |---|---|
-| `python_like.yaml` | Python-inspired |
-| `pascal_like.yaml` | Pascal / Delphi style |
-| `basic_like.yaml` | Classic BASIC |
-| `functional_ml.yaml` | ML / Haskell functional style |
-| `lisp_like.yaml` | Lisp / Scheme s-expressions |
-| `ruby_like.yaml` | Ruby method-style |
-| `forth_like.yaml` | Forth stack-based |
-| `spanish.yaml` | Spanish-keyword Python variant |
-| `gw_basic.yaml` | GW-BASIC / QBasic style |
-| `minimal.json` | Bare minimum config |
-| `demo_config.yaml` | Annotated full-feature example |
+| Scaffold project | `parsercraft init "My Lang" -d ./languages` |
+| Create config | `parsercraft create --preset python_like -o lang.yaml` |
+| Validate | `parsercraft validate lang.yaml` |
+| Inspect | `parsercraft info lang.yaml` |
+| Grammar REPL | `parsercraft repl --grammar g.peg` |
+| Config REPL | `parsercraft repl lang.yaml` |
+| Run a program | `parsercraft run prog.src -g g.peg` |
+| Run a script | `parsercraft batch lang.yaml --script prog.txt --show-vars` |
+| Emit C | `parsercraft codegen-c prog.src -c lang.yaml -o prog.c` |
+| Emit LLVM | `parsercraft codegen-llvm prog.src -c lang.yaml -o prog.ll` |
+| Emit WAT | `parsercraft codegen-wasm prog.src -c lang.yaml -o prog.wat` |
+| Type check | `parsercraft type-check -c lang.yaml -i prog.src` |
+| LSP | `parsercraft lsp -c lang.yaml --stdio` |
+| Extension | `parsercraft extension -c lang.yaml -o ./ext` |
+| Studio | `parsercraft-ide projects/aurora` |
 
-See [configs/examples/README.md](../configs/examples/README.md) for descriptions of each.
+Every command and flag: [CLI_REFERENCE.md](CLI_REFERENCE.md).

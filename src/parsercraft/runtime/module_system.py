@@ -30,8 +30,8 @@ Usage:
 
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -600,8 +600,6 @@ class ParserCraftModuleNotFoundError(Exception):
     Named to avoid shadowing the built-in ModuleNotFoundError.
     """
 
-    pass
-
 
 # Backward-compatible alias
 ModuleNotFoundError = ParserCraftModuleNotFoundError  # noqa: A001
@@ -610,13 +608,9 @@ ModuleNotFoundError = ParserCraftModuleNotFoundError  # noqa: A001
 class ModuleLoadError(Exception):
     """Raised when a module cannot be loaded."""
 
-    pass
-
 
 class CircularDependencyError(Exception):
     """Raised when circular dependencies are detected."""
-
-    pass
 
 
 # Example usage and testing

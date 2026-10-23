@@ -27,8 +27,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-from parsercraft.codegen.codegen_c import CCodeGenerator, CType, CVariable, CFunction
-from parsercraft.codegen.codegen_wasm import WasmGenerator, WasmModule, WasmFunction, WasmType
+from parsercraft.codegen.codegen_c import CCodeGenerator, CFunction, CType, CVariable
+from parsercraft.codegen.codegen_wasm import WasmFunction, WasmGenerator, WasmModule, WasmType
 
 
 @dataclass

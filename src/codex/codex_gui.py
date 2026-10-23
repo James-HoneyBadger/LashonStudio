@@ -37,12 +37,12 @@ from codex.codex_components import (  # noqa: E402 pylint: disable=wrong-import-
     CodeExMenu,
     CodeExProjectExplorer,
 )
-from parsercraft.interpreter_generator import (  # noqa: E402 pylint: disable=wrong-import-position
+from parsercraft.config.language_config import (  # noqa: E402 pylint: disable=wrong-import-position
+    LanguageConfig,
+)
+from parsercraft.runtime.interpreter_generator import (  # noqa: E402 pylint: disable=wrong-import-position
     InterpreterGenerator,
     InterpreterPackage,
-)
-from parsercraft.language_config import (  # noqa: E402 pylint: disable=wrong-import-position
-    LanguageConfig,
 )
 
 

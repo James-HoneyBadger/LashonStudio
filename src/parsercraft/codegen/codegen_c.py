@@ -31,6 +31,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set
 
+from parsercraft.codegen.common import meaningful_children, split_chain
+
 
 class CType(Enum):
     """C type mappings."""
@@ -283,6 +285,7 @@ class CCodeGenerator:
         self.globals = []
         self.includes = {"<stdio.h>", "<stdlib.h>", "<string.h>"}
         self._body_lines = []
+        self._declared = set()
         self.indent_level = 1  # Inside main()
 
         self._visit_source_node(ast)
@@ -328,16 +331,21 @@ class CCodeGenerator:
                 for child in node.children:
                     self._visit_source_node(child)
 
+        elif nt in ("block", "Block"):
+            for child in node.children:
+                self._visit_source_node(child)
+
         elif nt in ("assignment", "Assignment"):
-            meaningful = [
-                c for c in node.children
-                if not (c.node_type == "Operator"
-                        and c.value in ("=", ";"))]
+            meaningful = meaningful_children(node)
             if len(meaningful) >= 2:
                 target = self._source_expr(meaningful[0])
                 value = self._source_expr(meaningful[1])
-                c_type = self._infer_c_type(meaningful[1])
-                self._body_lines.append(f"{c_type} {target} = {value};")
+                if target in self._declared:
+                    self._body_lines.append(f"{target} = {value};")
+                else:
+                    c_type = self._infer_c_type(meaningful[1])
+                    self._body_lines.append(f"{c_type} {target} = {value};")
+                    self._declared.add(target)
 
         elif nt in ("function_def", "FunctionDef"):
             meaningful = [
@@ -366,23 +374,32 @@ class CCodeGenerator:
             func = CFunction(
                 name=name, return_type="int", parameters=params_dict)
             saved = self._body_lines
+            saved_declared = self._declared
             self._body_lines = []
+            self._declared = set(params_dict)
             for child in body_nodes:
                 self._visit_source_node(child)
             func.body = self._body_lines
             self._body_lines = saved
+            self._declared = saved_declared
             self.functions.append(func)
 
         elif nt in ("if_stmt", "IfStmt"):
             children = [c for c in node.children if c.node_type != "Operator"]
             if children:
                 cond = self._source_expr(children[0])
+                blocks = [
+                    c for c in children[1:]
+                    if c.node_type in ("block", "Block")
+                ]
                 self._body_lines.append(f"if ({cond}) {{")
-                if len(children) > 1:
-                    for child in children[1:]:
-                        if child.node_type in ("block", "Block"):
-                            for stmt in child.children:
-                                self._visit_source_node(stmt)
+                if blocks:
+                    for stmt in blocks[0].children:
+                        self._visit_source_node(stmt)
+                for block in blocks[1:]:
+                    self._body_lines.append("} else {")
+                    for stmt in block.children:
+                        self._visit_source_node(stmt)
                 self._body_lines.append("}")
 
         elif nt in ("while_stmt", "WhileStmt"):
@@ -418,7 +435,7 @@ class CCodeGenerator:
                 vals = []
                 for a in args:
                     val = self._source_expr(a)
-                    fmts.append("%d")  # Default to int format
+                    fmts.append("%s" if val.startswith('"') else "%d")
                     vals.append(val)
                 fmt = " ".join(fmts) + "\\n"
                 args_str = ", ".join(vals)
@@ -446,17 +463,12 @@ class CCodeGenerator:
         if nt in (
                 "expr", "Expr", "comparison",
                 "addition", "multiplication", "term"):
-            structural = {"=", ";", ":", ",", "(", ")", "{", "}", "[", "]"}
-            children = [
-                c for c in node.children
-                if not (c.node_type == "Operator"
-                        and c.value in structural)]
-            parts = []
-            for child in children:
-                if child.node_type == "Operator":
-                    parts.append(str(child.value))
-                else:
-                    parts.append(self._source_expr(child))
+            operands, operators = split_chain(node)
+            parts: list[str] = []
+            for index, operand in enumerate(operands):
+                parts.append(self._source_expr(operand))
+                if index < len(operators):
+                    parts.append(str(operators[index].value))
             return " ".join(parts) if parts else ""
 
         if nt in ("factor", "primary"):

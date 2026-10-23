@@ -1,121 +1,30 @@
-# ParserCraft — Tutorials
+# ParserCraft Tutorials
 
-> Version 4.0.0
+Eight progressive tutorials, from a five-line grammar to a packaged language.
+Each tutorial can be read independently, but they build on one another.
+
+| # | Tutorial | You will learn |
+|---|---|---|
+| 1 | Your first language in 15 minutes | grammar → AST → execute |
+| 2 | Control flow and functions | layering a real grammar |
+| 3 | Config-driven language design | presets, keyword remapping, REPL |
+| 4 | Four backends | Python, C, WASM, LLVM IR |
+| 5 | Build Aurora from scratch | a complete, tested language |
+| 6 | Write a backend | custom code generation |
+| 7 | Runtime, stdlib, FFI | semantics and native calls |
+| 8 | Test, package, and ship | CI, wheel, VS Code extension |
+
+All snippets assume `pip install -e .`. See [INSTALL.md](INSTALL.md).
 
 ---
 
-## Contents
+## Tutorial 1 — Your first language in 15 minutes
 
-- [Tutorial 1: Your First Language in 15 Minutes](#tutorial-1-your-first-language-in-15-minutes)
-- [Tutorial 2: Config-Driven Language Design](#tutorial-2-config-driven-language-design)
-- [Tutorial 3: Multi-Backend Code Generation](#tutorial-3-multi-backend-code-generation)
-- [Tutorial 4: Building a Pascal-Like Language](#tutorial-4-building-a-pascal-like-language)
-- [Tutorial 5: Adding a Custom Backend](#tutorial-5-adding-a-custom-backend)
+### 1.1 Write the grammar
 
----
+**`mini.peg`**
 
-## Tutorial 1: Your First Language in 15 Minutes
-
-This tutorial walks you through creating a minimal arithmetic language, parsing a program, and executing it — all in about 30 lines of Python.
-
-### Step 1 — Install ParserCraft
-
-```bash
-git clone https://github.com/James-HoneyBadger/ParserCraft.git
-cd ParserCraft
-pip install -e .
-```
-
-Verify with:
-
-```bash
-parsercraft --version
-# ParserCraft 4.0.0
-```
-
-### Step 2 — Write the Grammar
-
-A grammar defines what programs in your language look like. ParserCraft uses PEG (Parsing Expression Grammars), which are clean and unambiguous.
-
-Create `my_lang.py`:
-
-```python
-from parsercraft.parser import GrammarParser, PEGInterpreter
-from parsercraft.codegen import transpile_and_exec
-
-# Define the grammar using PEG text notation
-grammar_text = """
-    program   <- statement+
-    statement <- IDENT "=" expr ";"
-    expr      <- term (("+" / "-") term)*
-    term      <- factor (("*" / "/") factor)*
-    factor    <- NUMBER / IDENT / "(" expr ")"
-"""
-
-grammar = GrammarParser().parse(grammar_text)
-print("Grammar compiled successfully.")
-```
-
-**What this grammar says:**
-- A `program` is one or more `statement`s.
-- A `statement` is an identifier, then `=`, then an expression, then `;`.
-- An `expr` is a `term` optionally followed by `+` or `-` and more terms.
-- A `term` is a `factor` optionally followed by `*` or `/` and more factors.
-- A `factor` is a number, or an identifier, or a parenthesised expression.
-
-### Step 3 — Parse Source Code
-
-Add this to `my_lang.py`:
-
-```python
-# Source code in our new language
-source = """
-    x = 2 + 3 * 4 ;
-    y = ( x - 1 ) * 2 ;
-    area = 10 * 5 ;
-"""
-
-interp = PEGInterpreter(grammar)
-ast = interp.parse(source)
-print("Parsed successfully!")
-print(ast.pretty())
-```
-
-Run it:
-
-```bash
-python my_lang.py
-```
-
-You should see the AST tree printed — each node shows the rule name and any values.
-
-### Step 4 — Execute the Program
-
-Add one more block:
-
-```python
-result = transpile_and_exec(ast)
-print("\nResults:")
-for name, value in sorted(result.items()):
-    print(f"  {name} = {value}")
-```
-
-Expected output:
-
-```
-Results:
-  area = 50
-  x = 14
-  y = 26
-```
-
-That is all it takes: grammar → parser → AST → execution.
-
-### Step 5 — Run from the CLI
-
-Save the grammar as a text file `my_lang.peg`:
-
-```
+```peg
 program   <- statement+
 statement <- IDENT "=" expr ";"
 expr      <- term (("+" / "-") term)*
@@ -123,456 +32,675 @@ term      <- factor (("*" / "/") factor)*
 factor    <- NUMBER / IDENT / "(" expr ")"
 ```
 
-Then launch the REPL with it:
+### 1.2 Parse
+
+```python
+from parsercraft.parser import GrammarParser, PEGInterpreter
+
+grammar = GrammarParser().parse(open("mini.peg").read())
+assert grammar.validate() == []
+
+interpreter = PEGInterpreter(grammar)
+ast = interpreter.parse("x = 2 + 3 * 4 ;")
+print(ast.pretty())
+```
+
+Each rule becomes an AST node; literals/operators become `Operator` children;
+`NUMBER`/`IDENT` become `Number`/`Identifier` leaves.
+
+### 1.3 Execute
+
+```python
+from parsercraft.codegen import transpile_and_exec, transpile_to_python
+
+print(transpile_to_python(ast))
+# x = 2 + 3 * 4
+
+print(transpile_and_exec(ast))
+# {'x': 14}
+```
+
+`transpile_and_exec` filters `__builtins__` from the returned namespace.
+
+### 1.4 Grammar-driven REPL
 
 ```bash
-parsercraft repl --grammar my_lang.peg
+parsercraft repl --grammar mini.peg
 ```
 
-Type expressions interactively:
-
 ```
-> x = 10 + 5 ;
-> y = x * 2 ;
-> :vars
+>>> x = 10 + 5 ;
+>>> y = x * 2 ;
+>>> :vars
   x = 15
   y = 30
-> :ast
-> :quit
+>>> :ast
+>>> :quit
 ```
+
+The `--grammar` REPL uses the PEG interpreter and `:` commands. The
+config-driven REPL (without `--grammar`) uses `.` commands; do not mix them.
+
+**Checkpoint:** a parser, an AST, and an executable language.
 
 ---
 
-## Tutorial 2: Config-Driven Language Design
+## Tutorial 2 — Control flow and functions
 
-This tutorial shows how to use a YAML config file to define a language without writing PEG grammar rules manually. This approach is ideal for keyword-remapping, localisation, and rapid prototyping.
+Extend `mini.peg` into **Calc**.
 
-### Step 1 — Start from a Preset
+### 2.1 Grammar
 
-```python
-from parsercraft.config import LanguageConfig
-
-# Start with the Python-like preset
-config = LanguageConfig.from_preset("python_like")
-print(config.name)          # "Python-Like"
-print(config.keywords)      # {'if': 'if', 'else': 'else', ...}
+```peg
+program       <- statement+
+statement     <- function_def / if_stmt / while_stmt / return_stmt
+               / print_stmt / assignment / expr_stmt
+function_def  <- "fn" IDENT "(" param_list? ")" block
+block         <- "{" statement* "}"
+param_list    <- IDENT ("," IDENT)*
+if_stmt       <- "if" comparison block ("else" block)?
+while_stmt    <- "while" comparison block
+return_stmt   <- "return" expr ";"
+print_stmt    <- "print" expr ";"
+assignment    <- IDENT "=" expr ";"
+expr_stmt     <- call ";"
+comparison    <- expr ("==" / "!=" / "<=" / ">=" / "<" / ">") expr
+expr          <- term (("+" / "-") term)*
+term          <- factor (("*" / "/" / "%") factor)*
+factor        <- call / NUMBER / STRING / boolean / IDENT / "(" expr ")"
+call          <- IDENT "(" arg_list? ")"
+arg_list      <- expr ("," expr)*
+boolean       <- "true" / "false"
 ```
 
-### Step 2 — Customise Keywords
+Ordering matters: keywords before identifiers, `<=` before `<`, specific
+statements before generic expressions.
 
-Let us build a Spanish-language Python variant:
+### 2.2 Program
 
-```python
-config.name = "PythonEspanol"
-config.description = "Python with Spanish keywords"
-
-mappings = {
-    "if":       "si",
-    "else":     "sino",
-    "elif":     "si_no",
-    "while":    "mientras",
-    "for":      "para",
-    "def":      "definir",
-    "return":   "retornar",
-    "True":     "Verdadero",
-    "False":    "Falso",
-    "and":      "y",
-    "or":       "o",
-    "not":      "no",
-    "import":   "importar",
-    "class":    "clase",
-    "pass":     "pasar",
+```calc
+fn fib(n) {
+  if n <= 1 { return n ; }
+  return fib(n - 1) + fib(n - 2) ;
 }
 
-for english, spanish in mappings.items():
-    config.rename_keyword(english, spanish)
+fn fact(n) {
+  if n <= 1 { return 1 ; }
+  return n * fact(n - 1) ;
+}
+
+print "fib(10) =" ;
+print fib(10) ;
+print "10! =" ;
+print fact(10) ;
 ```
 
-### Step 3 — Add Custom Functions
+### 2.3 Run it
 
 ```python
-config.add_function("imprimir", "print")
-config.add_function("longitud", "len")
-config.add_function("tipo",     "type")
-config.add_function("rango",    "range")
+from parsercraft.parser import GrammarParser, PEGInterpreter
+from parsercraft.codegen import transpile_and_exec
+
+grammar = GrammarParser().parse(open("calc.peg").read())
+ast = PEGInterpreter(grammar).parse(open("program.calc").read())
+print(transpile_and_exec(ast))
 ```
 
-### Step 4 — Save the Config
+`print` output:
+
+```
+fib(10) =
+55
+10! =
+3628800
+```
+
+### 2.4 Negative test
 
 ```python
+from parsercraft.parser import GrammarParser, PEGInterpreter
+
+calc = PEGInterpreter(GrammarParser().parse(open("calc.peg").read()))
+try:
+    calc.parse("fn broken( {")
+except SyntaxError as error:
+    print(error)
+# Parse error at line 1, column 11 (in rule 'param_list'): unexpected ' {'
+```
+
+The reported rule is the furthest one reached, which is often *deeper* than the
+construct you were editing — use the line/column and rule name together.
+
+**Checkpoint:** Calc has the same shape as Aurora.
+
+---
+
+## Tutorial 3 — Config-driven language design
+
+A config-driven language keeps Python/BASIC-like semantics and changes
+vocabulary. No PEG grammar is required.
+
+### 3.1 Start from a preset
+
+```python
+from parsercraft.config import LanguageConfig, list_presets
+
+print(list_presets())
+# ['python_like', 'js_like', 'minimal', 'ruby_like', 'golang_like',
+#  'rust_like', 'clike', 'functional', 'lisp_like', 'basic_like']
+
+config = LanguageConfig.from_preset("python_like")
+print(config.name)          # Python-like
+print(config.keywords["if"]) # KeywordMapping(original='if', custom='if', ...)
+```
+
+### 3.2 Customise keywords and functions
+
+```python
+config.name = "Espanol"
+config.rename_keyword("if", "si")
+config.rename_keyword("else", "sino")
+config.rename_keyword("while", "mientras")
+config.rename_function("print", "imprimir")
 config.save("espanol.yaml")
 ```
 
-Open `espanol.yaml` to inspect the output. It is a complete, human-readable YAML file you can edit directly.
+`add_function("imprimir", "print")` is an alias: it keeps the original
+`print` function and exposes it under the new name.
 
-### Step 5 — Validate
+### 3.3 Validate and inspect
 
 ```bash
 parsercraft validate espanol.yaml
-# ✓ espanol.yaml is valid
+parsercraft info espanol.yaml
+parsercraft export espanol.yaml --format markdown --output espanol.md
 ```
 
-### Step 6 — Use in the REPL
+`validate` exits 0 for valid configs and prints warnings for duplicate keyword
+aliases.
+
+### 3.4 Runtime translation
+
+```python
+from parsercraft.runtime.language_runtime import LanguageRuntime
+
+LanguageRuntime.load_config(config=config)
+print(LanguageRuntime.translate_keyword("si"))        # if
+print(LanguageRuntime.translate_function("imprimir")) # builtin.print
+```
+
+### 3.5 Config-driven REPL
 
 ```bash
 parsercraft repl espanol.yaml
 ```
 
 ```
-> si 1 > 0 : imprimir("hola")
-hola
-> definir doble(x) : retornar x * 2
-> doble(7)
-14
-> :quit
+>>> x = 5
+>>> print(x)
+5
+>>> .vars
+Variables:
+  x = 5
+>>> .exit
 ```
 
-### Step 7 — Inspect the Config
+This REPL translates custom keywords to Python and executes. It is not a PEG
+interpreter; use `--grammar` or the Studio for grammar-driven execution.
 
-```bash
-parsercraft info espanol.yaml
-```
-
-This displays all keywords, functions, and syntax options in a formatted table.
+**Checkpoint:** localise and reskin a language in minutes.
 
 ---
 
-## Tutorial 3: Multi-Backend Code Generation
+## Tutorial 4 — Four backends
 
-One AST, four output formats. This tutorial demonstrates how to use all four ParserCraft backends on the same program.
-
-### Setup
+Using the Calc AST from Tutorial 2:
 
 ```python
-from parsercraft.parser import GrammarParser, PEGInterpreter
-
-grammar = GrammarParser().parse("""
-    program   <- statement+
-    statement <- IDENT "=" expr ";"
-    expr      <- term (("+" / "-") term)*
-    term      <- factor (("*" / "/") factor)*
-    factor    <- NUMBER / IDENT / "(" expr ")"
-""")
-
-source = "a = 3 ; b = 4 ; c = a * a + b * b ;"
-ast = PEGInterpreter(grammar).parse(source)
-```
-
-### Backend 1 — Python
-
-```python
-from parsercraft.codegen import PythonTranspiler, TranspileOptions
-
-opts = TranspileOptions(wrap_in_main=True)
-py_code = PythonTranspiler(opts).translate(ast)
-print("=== Python ===")
-print(py_code)
-```
-
-```python
-# Output:
-if __name__ == "__main__":
-    a = 3
-    b = 4
-    c = a * a + b * b
-```
-
-### Backend 2 — C
-
-```python
-from parsercraft.codegen.codegen_c import CCodeGenerator
-
-c_code = CCodeGenerator().translate_source_ast(ast)
-print("=== C ===")
-print(c_code)
-```
-
-```c
-// Output:
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-int main(void) {
-    int a = 3;
-    int b = 4;
-    int c = a * a + b * b;
-    return 0;
-}
-```
-
-### Backend 3 — WebAssembly
-
-```python
-from parsercraft.codegen.codegen_wasm import WasmGenerator
-
-module = WasmGenerator().translate_source_ast(ast)
-wat = module.to_wat()
-print("=== WAT ===")
-print(wat)
-```
-
-```wat
-;; Output:
-(module $module
-  (memory 256)
-  ...
-  (func $main
-    (local $a i32)
-    (local $b i32)
-    (local $c i32)
-    ...
-  )
+from parsercraft.codegen import (
+    PythonTranspiler, CCodeGenerator, WasmGenerator, LLVMIRGenerator,
 )
+
+python_code = PythonTranspiler().translate_source_ast(ast)
+c_code      = CCodeGenerator().translate_source_ast(ast)
+wat         = WasmGenerator().translate_source_ast(ast).to_wat()
+llvm_ir     = LLVMIRGenerator().translate_source_ast(ast)
 ```
 
-### Backend 4 — LLVM IR
+What each backend gives you:
+
+| Backend | Output | Notes |
+|---|---|---|
+| Python | runnable source | most complete semantics |
+| C | ANSI C with `main()` | source emitter, not an optimizing compiler |
+| WASM | WAT (`(module …)`) | `main` export, minimal imports |
+| LLVM IR | textual SSA IR | compile with `clang`/`llc` |
+
+Compile the IR if you like:
+
+```bash
+clang output.ll -o program
+./program
+```
+
+### CLI equivalents
+
+The CLI reads the grammar from the **config file**, not from `calc.peg`, so put
+the rules in `calc.yaml`:
+
+```yaml
+name: Calc
+grammar:
+  start: program
+  comments: ["//.*"]
+  rules:
+    program: statement+
+    statement: function_def / if_stmt / while_stmt / return_stmt / print_stmt / assignment / expr_stmt
+    function_def: '"fn" IDENT "(" param_list? ")" block'
+    block: '"{" statement* "}"'
+    param_list: 'IDENT ("," IDENT)*'
+    if_stmt: '"if" comparison block ("else" block)?'
+    while_stmt: '"while" comparison block'
+    return_stmt: '"return" expr ";"'
+    print_stmt: '"print" expr ";"'
+    assignment: 'IDENT "=" expr ";"'
+    expr_stmt: 'call ";"'
+    comparison: 'expr ("==" / "!=" / "<=" / ">=" / "<" / ">") expr'
+    expr: 'term (("+" / "-") term)*'
+    term: 'factor (("*" / "/" / "%") factor)*'
+    factor: 'call / NUMBER / STRING / boolean / IDENT / "(" expr ")"'
+    call: 'IDENT "(" arg_list? ")"'
+    arg_list: 'expr ("," expr)*'
+    boolean: '"true" / "false"'
+```
+
+```bash
+parsercraft codegen-c    program.calc --config calc.yaml --output program.c
+parsercraft codegen-wasm  program.calc --config calc.yaml --output program.wat
+parsercraft codegen-llvm  program.calc --config calc.yaml --output program.ll
+```
+
+Quote each YAML value so PEG operators (`*`, `?`, `"`) stay strings. Details and
+fidelity caveats: [CODEGEN_GUIDE.md](CODEGEN_GUIDE.md).
+
+**Checkpoint:** one AST, four targets.
+
+---
+
+## Tutorial 5 — Build Aurora from scratch
+
+Aurora is the bundled reference language: 18 rules, three samples, four
+backends.
+
+### 5.1 Scaffold
+
+Studio: **New**, choose a folder, name the language. Or:
 
 ```python
-from parsercraft.codegen import LLVMIRGenerator
+from parsercraft.ide.studio import LanguageStudio
 
-ir = LLVMIRGenerator().translate_source_ast(ast)
-print("=== LLVM IR ===")
-print(ir)
+studio = LanguageStudio()
+project = studio.new_project("Aurora", ".")
+print(project.root)
 ```
 
-```llvm
-; Output:
-define i32 @main() {
-entry:
-  %a = alloca i32
-  store i32 3, i32* %a
-  ...
-  ret i32 0
+```
+aurora/
+  language.yaml
+  grammar.peg
+  samples/hello.aur
+  README.md
+```
+
+### 5.2 Grammar
+
+Replace `grammar.peg`:
+
+```peg
+program       <- statement+
+statement     <- function_def / if_stmt / while_stmt / return_stmt
+               / print_stmt / assignment / expr_stmt
+function_def  <- "fn" IDENT "(" param_list? ")" block
+block         <- "{" statement* "}"
+param_list    <- IDENT ("," IDENT)*
+if_stmt       <- "if" comparison block ("else" block)?
+while_stmt    <- "while" comparison block
+return_stmt   <- "return" expr ";"
+print_stmt    <- "print" expr ";"
+assignment    <- IDENT "=" expr ";"
+expr_stmt     <- call ";"
+comparison    <- expr ("==" / "!=" / "<=" / ">=" / "<" / ">") expr
+expr          <- term (("+" / "-") term)*
+term          <- factor (("*" / "/" / "%") factor)*
+factor        <- call / NUMBER / STRING / boolean / IDENT / "(" expr ")"
+call          <- IDENT "(" arg_list? ")"
+arg_list      <- expr ("," expr)*
+boolean       <- "true" / "false"
+```
+
+### 5.3 Language metadata
+
+`language.yaml`:
+
+```yaml
+name: Aurora
+version: "1.0.0"
+description: "A small, expressive teaching language built with ParserCraft."
+author: "ParserCraft Studio"
+
+keywords:
+  if: "if"
+  else: "else"
+  while: "while"
+  fn: "fn"
+  return: "return"
+  print: "print"
+  "true": "true"
+  "false": "false"
+
+syntax_options:
+  single_line_comment: "//"
+  require_semicolons: true
+  statement_terminator: ";"
+
+grammar:
+  start: program
+  skip_whitespace: true
+  comments:
+    - "//.*"
+  rules:
+    # keep in sync with grammar.peg; the Studio does this on save
+```
+
+### 5.4 Samples
+
+`hello.aur`:
+
+```aurora
+// Aurora — hello world
+print "Hello, Aurora!" ;
+```
+
+`fibonacci.aur`:
+
+```aurora
+fn fib(n) {
+  if n <= 1 { return n ; }
+  return fib(n - 1) + fib(n - 2) ;
 }
+
+fn fact(n) {
+  if n <= 1 { return 1 ; }
+  return n * fact(n - 1) ;
+}
+
+print "fib(10) =" ;
+print fib(10) ;
+print "10! =" ;
+print fact(10) ;
 ```
 
-### Execute Immediately
+`fizzbuzz.aur`:
+
+```aurora
+fn fizzbuzz(limit) {
+  i = 1 ;
+  while i <= limit {
+    if i % 15 == 0 { print "FizzBuzz" ; }
+    else {
+      if i % 3 == 0 { print "Fizz" ; }
+      else {
+        if i % 5 == 0 { print "Buzz" ; }
+        else { print i ; }
+      }
+    }
+    i = i + 1 ;
+  }
+}
+
+fizzbuzz(15) ;
+```
+
+### 5.5 Validate and run
 
 ```python
-from parsercraft.codegen import transpile_and_exec
-
-result = transpile_and_exec(ast)
-print(f"a={result['a']}, b={result['b']}, c={result['c']}")
-# a=3, b=4, c=25
+studio.open_project("aurora")
+print(studio.validate_grammar().text)   # Grammar OK — 18 rules
+print(studio.run().text)                # Hello from Aurora!
 ```
+
+Studio: **F5** runs, **F6** shows the AST, **F7** generates all backends.
+
+### 5.6 Generate all targets
+
+```python
+from pathlib import Path
+
+source = Path("aurora/samples/fibonacci.aur").read_text()
+results = studio.generate_all(source)
+print({name: (r.ok, len(r.text)) for name, r in results.items()})
+# {'python': (True, ...), 'c': (True, ...), 'wasm': (True, ...), 'llvm': (True, ...)}
+```
+
+### 5.7 CLI
+
+```bash
+parsercraft validate projects/aurora/language.yaml
+parsercraft codegen-c projects/aurora/samples/fibonacci.aur \
+  --config projects/aurora/language.yaml --output /tmp/fib.c
+```
+
+**Checkpoint:** a complete language project.
 
 ---
 
-## Tutorial 4: Building a Pascal-Like Language
+## Tutorial 6 — Write a backend
 
-This tutorial builds a complete Pascal-like language using ParserCraft's`pascal_like` preset and demonstrates the full pipeline with realistic programs.
-
-### The Pascal Config
-
-```bash
-parsercraft info configs/examples/pascal_like.yaml
-```
-
-Key differences from Python-like syntax:
-- Assignment: `:=` instead of `=`
-- Blocks: `BEGIN` … `END` instead of indentation
-- Declarations: `VAR x : INTEGER ;` syntax
-- Functions: `FUNCTION name(args) : ReturnType ;`
-
-### Step 1 — Load and Inspect
+A backend only needs `translate_source_ast(ast) -> str`.
 
 ```python
-from parsercraft.config import LanguageConfig
+from parsercraft.parser import SourceAST
 
-config = LanguageConfig.load("configs/examples/pascal_like.yaml")
-print(config.name)          # pascal_like or similar
-print(config.keywords)
-```
-
-### Step 2 — Define a Simple PEG Grammar for Pascal Assignments
-
-```python
-from parsercraft.parser import GrammarParser, PEGInterpreter
-from parsercraft.codegen import transpile_and_exec
-
-grammar = GrammarParser().parse("""
-    program   <- statement+
-    statement <- IDENT ":=" expr ";"
-    expr      <- term (("+" / "-") term)*
-    term      <- factor (("*" / "/") factor)*
-    factor    <- NUMBER / IDENT / "(" expr ")"
-""")
-```
-
-### Step 3 — Write and Parse Pascal-Like Code
-
-```python
-source = """
-    x := 10 ;
-    y := x * 2 + 5 ;
-    area := x * y ;
-"""
-
-interp = PEGInterpreter(grammar)
-ast = interp.parse(source)
-```
-
-### Step 4 — Execute
-
-```python
-result = transpile_and_exec(ast)
-print(f"x={result['x']}, y={result['y']}, area={result['area']}")
-# x=10, y=25, area=250
-```
-
-> **Note:** ParserCraft's `PythonTranspiler` fully handles `:=` as an assignment operator. The `:=` is treated structurally (filtered out like `;`) and the variable name with its value are emitted as a Python assignment.
-
-### Step 5 — Try the Demo
-
-A complete Pascal-like demo is included in `demos/pascal_like/`:
-
-```bash
-python demos/pascal_like/run_pascal.py
-```
-
-This runs four programs through the full pipeline:
-1. Basic arithmetic
-2. Fibonacci sequence
-3. Statistical calculations
-4. Unit conversions
-
-Each program is shown in Pascal-like syntax, transpiled to Python, executed, then also shown in C, WAT, and LLVM IR.
-
----
-
-## Tutorial 5: Adding a Custom Backend
-
-This tutorial shows how to add a fifth backend — a simple JavaScript emitter — to ParserCraft.
-
-### Step 1 — Create the Backend File
-
-Create `src/parsercraft/codegen/codegen_js.py`:
-
-```python
-"""JavaScript code generator for ParserCraft."""
-
-from __future__ import annotations
-from parsercraft.parser.grammar import SourceAST
-
-
-class JSCodeGenerator:
-    """Translate a SourceAST to JavaScript source code."""
+class OutlineBackend:
+    """Emit an indented outline of the AST."""
 
     def translate_source_ast(self, ast: SourceAST) -> str:
-        lines = []
-        self._emit_node(ast, lines)
+        lines: list[str] = []
+
+        def visit(node: SourceAST, depth: int) -> None:
+            label = node.node_type
+            if node.value is not None:
+                label += f" = {node.value!r}"
+            lines.append("  " * depth + label)
+            for child in node.children:
+                visit(child, depth + 1)
+
+        visit(ast, 0)
         return "\n".join(lines)
-
-    def _emit_node(self, node: SourceAST, lines: list[str]) -> None:
-        if node.node_type in ("program", "Program"):
-            for child in node.children:
-                self._emit_node(child, lines)
-
-        elif node.node_type == "statement":
-            # Detect inline assignment: [IDENT, Operator('='), expr, ...]
-            idents = [c for c in node.children if c.node_type in ("IDENT", "Identifier")]
-            ops    = [c for c in node.children if c.node_type == "Operator" and c.value in ("=", ":=")]
-            exprs  = [c for c in node.children if c.node_type not in ("Operator", "IDENT", "Identifier")]
-            if idents and ops and exprs:
-                lhs = idents[0].value
-                rhs = self._emit_expr(exprs[0])
-                lines.append(f"let {lhs} = {rhs};")
-            else:
-                for child in node.children:
-                    self._emit_node(child, lines)
-
-        else:
-            # Fallback — emit all children
-            for child in node.children:
-                self._emit_node(child, lines)
-
-    def _emit_expr(self, node: SourceAST) -> str:
-        if node.node_type == "Number":
-            return node.value or "0"
-        if node.node_type in ("IDENT", "Identifier"):
-            return node.value or ""
-        if node.node_type == "Operator":
-            return node.value or ""
-        # Compound expression: interleave children
-        return " ".join(self._emit_expr(c) for c in node.children)
 ```
 
-### Step 2 — Export from `__init__.py`
-
-Add to `src/parsercraft/codegen/__init__.py`:
-
-```python
-from parsercraft.codegen.codegen_js import JSCodeGenerator
-__all__ = [..., "JSCodeGenerator"]
-```
-
-### Step 3 — Use the Backend
+Use it:
 
 ```python
 from parsercraft.parser import GrammarParser, PEGInterpreter
-from parsercraft.codegen.codegen_js import JSCodeGenerator
 
-grammar = GrammarParser().parse("""
-    program   <- statement+
-    statement <- IDENT "=" expr ";"
-    expr      <- term (("+" / "-") term)*
-    term      <- factor (("*" / "/") factor)*
-    factor    <- NUMBER / IDENT / "(" expr ")"
-""")
-
-ast = PEGInterpreter(grammar).parse("x = 3 + 4 ; y = x * 2 ;")
-js = JSCodeGenerator().translate_source_ast(ast)
-print(js)
+grammar = GrammarParser().parse(
+    'program <- statement+\n'
+    'statement <- IDENT "=" NUMBER ";"'
+)
+ast = PEGInterpreter(grammar).parse("x = 42 ;")
+print(OutlineBackend().translate_source_ast(ast))
 ```
 
-Expected output:
+Output:
 
-```javascript
-let x = 3 + 4;
-let y = x * 2;
+```
+program
+  statement
+    Identifier = 'x'
+    Operator = '='
+    Number = 42
+    Operator = ';'
 ```
 
-### Step 4 — Add Tests
+### Backend rules of thumb
 
-Create `tests/test_codegen_js.py`:
-
-```python
-from parsercraft.parser import GrammarParser, PEGInterpreter
-from parsercraft.codegen.codegen_js import JSCodeGenerator
-
-
-GRAMMAR = GrammarParser().parse("""
-    program   <- statement+
-    statement <- IDENT "=" expr ";"
-    expr      <- term (("+" / "-") term)*
-    term      <- factor (("*" / "/") factor)*
-    factor    <- NUMBER / IDENT / "(" expr ")"
-""")
-
-
-def parse(src: str):
-    return PEGInterpreter(GRAMMAR).parse(src)
-
-
-def test_simple_assignment():
-    ast = parse("x = 42 ;")
-    js = JSCodeGenerator().translate_source_ast(ast)
-    assert "let x = 42" in js
-
-
-def test_expression():
-    ast = parse("result = 3 + 4 * 2 ;")
-    js = JSCodeGenerator().translate_source_ast(ast)
-    assert "let result" in js
-```
-
-Run:
-
-```bash
-python -m pytest tests/test_codegen_js.py -v
-```
+1. Accept any `SourceAST`-shaped tree.
+2. Dispatch on `node_type`; provide a wrapper fallback.
+3. Filter structural operators (`;`, `,`, `{`, `}`).
+4. Never mutate the AST.
+5. Test every sample through the backend.
 
 ---
 
-*Happy building. If you get stuck, open an issue at [github.com/James-HoneyBadger/ParserCraft](https://github.com/James-HoneyBadger/ParserCraft/issues).*
+## Tutorial 7 — Runtime, stdlib, FFI
+
+### 7.1 Standard library
+
+```python
+from parsercraft.runtime.stdlib import StdLib
+
+stdlib = StdLib()
+stdlib.register_builtins()          # required
+
+ns = {}
+stdlib.inject(ns)                   # print, len, range, int, ...
+print(ns["len"]("hello"))           # 5
+
+stdlib.inject_module("math", ns, ["sqrt"])
+print(ns["sqrt"](9))                # 3.0
+
+math_ns = {}
+stdlib.inject_module("math", math_ns)
+print(math_ns["math"].sqrt(16))     # 4.0
+```
+
+Modules: `io`, `math`, `string`, `collections`, `system`, `random`. Full symbol
+tables: [RUNTIME_GUIDE.md](RUNTIME_GUIDE.md#standard-library).
+
+### 7.2 Custom module
+
+```python
+from parsercraft.runtime.stdlib import StdLib, StdModule
+
+lib = StdLib()
+lib.register_builtins()
+
+mod = StdModule("aurora")
+mod.add_function(
+    "shout",
+    lambda text: str(text).upper() + "!",
+    params=[("text", "string")],
+    returns="string",
+    doc="Uppercase and add an exclamation mark.",
+)
+lib.add_module(mod)
+
+ns = {}
+lib.inject_module("aurora", ns, ["shout"])
+print(ns["shout"]("hello"))  # HELLO!
+```
+
+### 7.3 Python FFI
+
+```python
+from parsercraft.runtime.ffi import FFIBridge
+
+ffi = FFIBridge()
+ffi.register_python("greet", lambda name: f"Hello, {name}!")
+print(ffi.call("greet", "World"))   # Hello, World!
+
+ns = {}
+ffi.inject(ns)
+print(ns["greet"]("Ada"))           # Hello, Ada!
+```
+
+### 7.4 C FFI
+
+```python
+ffi.load_library("m", "/usr/lib/libm.so.6")
+ffi.bind("sqrt", "m", arg_types=["double"], return_type="double")
+print(ffi.call("sqrt", 144.0))      # 12.0
+```
+
+FFI executes native code and `transpile_and_exec` executes Python. Run only
+trusted programs. See [RUNTIME_GUIDE.md](RUNTIME_GUIDE.md#security-model).
+
+---
+
+## Tutorial 8 — Test, package, and ship
+
+### 8.1 Test the language
+
+```python
+from pathlib import Path
+from parsercraft.ide.studio import LanguageStudio
+
+def test_language():
+    studio = LanguageStudio()
+    studio.open_project("projects/aurora")
+    assert studio.validate_grammar().ok
+
+    for sample in Path("projects/aurora/samples").glob("*.aur"):
+        source = sample.read_text()
+        assert studio.run(source).ok, sample
+        for backend, output in studio.generate_all(source).items():
+            assert output.ok, (sample, backend, output.error)
+```
+
+```bash
+python -m pytest -q
+```
+
+### 8.2 Build a wheel
+
+```bash
+python -m build          # or: pip wheel . --no-deps -w dist/
+```
+
+Package data (grammar, samples) is controlled by
+`[tool.setuptools.package-data]` and `MANIFEST.in`; see
+[PACKAGING.md](PACKAGING.md).
+
+### 8.3 Generate a VS Code extension
+
+```bash
+parsercraft extension --config projects/aurora/language.yaml \
+  --output ./aurora-vscode --publisher my-org --version 1.0.0
+cd aurora-vscode
+npm install -g @vscode/vsce
+vsce package
+```
+
+### 8.4 Publish package metadata
+
+```python
+from parsercraft.packaging import Package, PackageRegistry
+from parsercraft.packaging.package_registry import Version
+
+registry = PackageRegistry()
+registry.register_package(Package("aurora", Version.parse("1.0.0")))
+print(registry.resolve("aurora", "^1.0.0"))   # aurora@1.0.0
+```
+
+The `package-search` / `package-install` CLI commands are placeholders until a
+remote registry exists; use the Python API.
+
+### 8.5 Version and document
+
+- Bump `version` in `language.yaml`.
+- Update `CHANGELOG.md`.
+- Keep a project `README.md` with a language tour.
+- Re-run positive and negative tests.
+
+**Checkpoint:** a shippable language.
+
+---
+
+## Where next
+
+- [LANGUAGE_DEVELOPMENT.md](LANGUAGE_DEVELOPMENT.md) — design method.
+- [GRAMMAR_REFERENCE.md](GRAMMAR_REFERENCE.md) — every PEG construct.
+- [CODEGEN_GUIDE.md](CODEGEN_GUIDE.md) — backend details.
+- [STUDIO_GUIDE.md](STUDIO_GUIDE.md) — GUI walkthrough.
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — when something breaks.

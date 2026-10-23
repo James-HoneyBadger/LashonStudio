@@ -31,7 +31,7 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class TypeKind(Enum):
@@ -92,8 +92,16 @@ class Type:
                     for a, b in zip(self.type_args, other.type_args)
                 )
             return True
+        if {self.kind, other.kind} == {TypeKind.INT, TypeKind.FLOAT}:
+            return True
         if self.kind == TypeKind.OPTIONAL:
+            if not self.type_args:
+                return True
             return self.type_args[0].is_compatible_with(other)
+        if other.kind == TypeKind.OPTIONAL:
+            if not other.type_args:
+                return True
+            return self.is_compatible_with(other.type_args[0])
         return False
 
     @staticmethod
@@ -244,7 +252,7 @@ class TypeInference:
         if value.startswith('"') or value.startswith("'"):
             return Type.str()
         # Boolean
-        if value in ("true", "false"):
+        if value in ("true", "false", "True", "False"):
             return Type.bool()
         # List
         if value.startswith('[') and value.endswith(']'):
@@ -300,6 +308,8 @@ class TypeChecker:
 
     def _register_builtin_types(self) -> None:
         """Register built-in functions and types."""
+        if self.config is None:
+            return
         # Register standard library functions
         for func_config in self.config.builtin_functions.values():
             params = [
@@ -343,8 +353,12 @@ class TypeChecker:
         """Type check an expression and return its type."""
         expr = expr.strip()
 
-        # Variable reference
-        if re.match(r'^\w+$', expr):
+        # Boolean literals are keywords, not variables
+        if expr in ("True", "False", "true", "false"):
+            return Type.bool()
+
+        # Variable reference (identifiers only; numbers are literals)
+        if re.match(r'^[A-Za-z_]\w*$', expr):
             var_type = environment.get_variable_type(expr)
             if var_type:
                 return var_type
@@ -362,7 +376,14 @@ class TypeChecker:
         # Literal
         return TypeInference(environment).infer_literal(expr)
 
-    def check_assignment(self, target: str, source: str, environment: TypeEnvironment) -> bool:
+    def check_assignment(
+        self,
+        target: str,
+        source: str,
+        environment: TypeEnvironment,
+        line: int = 0,
+        location: str = "",
+    ) -> bool:
         """Check if assignment is type-safe."""
         source_type = self.check_expression(source, environment)
         
@@ -382,8 +403,8 @@ class TypeChecker:
                     kind="error",
                     code="E101",
                     message=f"Type mismatch: cannot assign {source_type} to {target_type}",
-                    location=f"line {1}",
-                    line=1,
+                    location=location or f"line {line}",
+                    line=line,
                     column=0,
                     suggestion=f"Change source to {target_type} or target to {source_type}",
                 )
@@ -438,7 +459,13 @@ class TypeChecker:
             parts = line.split("=", 1)
             if len(parts) == 2:
                 target, source = parts
-                self.check_assignment(target.strip(), source.strip(), environment)
+                self.check_assignment(
+                    target.strip(),
+                    source.strip(),
+                    environment,
+                    line=line_num,
+                    location=file_path,
+                )
 
     def _parse_type_annotation(self, annotation: str) -> Type:
         """Parse a type annotation string."""

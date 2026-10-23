@@ -22,14 +22,13 @@ Usage:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 from parsercraft.types.generics import (
     GenericChecker,
     GenericClass,
     GenericFunction,
-    GenericType,
     TypeParameter,
     Variance,
 )
@@ -370,13 +369,22 @@ class TypeNarrowingPass:
 
         Args:
             var_name: Variable name
-            op: Comparison operator (==, !=, <, >, <=, >=)
+            op: Comparison operator (==, !=, <, >, <=, >=, is, is not)
             value: Value to compare with
         """
-        # Narrowing by comparison depends on the operator
-        # For example: if x == None -> x is Optional
-        # if x != None -> x is not Optional
-        pass
+        narrowed = self.narrowed_types.get(var_name)
+        if narrowed is None:
+            return
+
+        if op in ("==", "is") and value is None:
+            # x == None implies the value may be absent.
+            narrowed.nullable = True
+        elif op in ("!=", "is not") and value is None:
+            # x != None narrows optional/None away.
+            narrowed.nullable = False
+        elif narrowed.kind in (TypeKind.OPTIONAL, TypeKind.NONE):
+            # A comparison against a non-None value removes None.
+            narrowed.nullable = False
 
     def get_narrowed_type(self, var_name: str) -> Optional[Type]:
         """Get narrowed type for variable.

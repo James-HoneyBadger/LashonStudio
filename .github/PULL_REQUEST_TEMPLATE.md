@@ -36,7 +36,7 @@ python -m pytest tests/ -v
 python demos/pascal_like/run_pascal.py
 ```
 
-- [ ] All 322 existing tests pass (`python -m pytest tests/ -q`)
+- [ ] All 335 existing tests pass (`python -m pytest tests/ -q`)
 - [ ] New tests added (if applicable)
 - [ ] Tested on the affected backends / CLI commands
 

@@ -1,6 +1,6 @@
 # ParserCraft Documentation
 
-> Version 4.0.0 · Python 3.10+ · [Project README](../README.md)
+> Version 4.0.0 · Python 3.10+ · [Project README](https://github.com/James-HoneyBadger/ParserCraft/blob/main/README.md)
 
 ParserCraft is a programming-language construction framework. You define a PEG
 grammar, ParserCraft builds a packrat parser and AST, and code generators emit
@@ -43,14 +43,14 @@ not runnable programs.
 ### Path 1 — “I want to see it work” (15 minutes)
 
 1. [QUICKSTART.md](QUICKSTART.md) — grammar → parse → execute.
-2. [TUTORIAL.md § Tutorial 1](TUTORIAL.md#tutorial-1--your-first-language-in-15-minutes).
+2. [TUTORIAL.md § Tutorial 1](TUTORIAL.md).
 3. Launch the Studio: `parsercraft-ide projects/aurora`.
 
 ### Path 2 — “I want to design a language” (a weekend)
 
 1. [LANGUAGE_DEVELOPMENT.md](LANGUAGE_DEVELOPMENT.md) — design worksheet and method.
 2. [GRAMMAR_REFERENCE.md](GRAMMAR_REFERENCE.md) — the notation, precisely.
-3. [TUTORIAL.md § Tutorial 5](TUTORIAL.md#tutorial-5--build-aurora-from-scratch) — build Aurora.
+3. [TUTORIAL.md § Tutorial 5](TUTORIAL.md) — build Aurora.
 4. [CODEGEN_GUIDE.md](CODEGEN_GUIDE.md) — map the AST to backends.
 5. [RUNTIME_GUIDE.md](RUNTIME_GUIDE.md) — give the language a runtime.
 6. [PACKAGING.md](PACKAGING.md) — ship it.
@@ -63,7 +63,7 @@ not runnable programs.
 
 ### Path 4 — “I want to contribute”
 
-1. [CONTRIBUTING.md](../CONTRIBUTING.md) — setup, tests, style, PRs.
+1. [CONTRIBUTING.md](https://github.com/James-HoneyBadger/ParserCraft/blob/main/CONTRIBUTING.md) — setup, tests, style, PRs.
 2. [ARCHITECTURE.md](ARCHITECTURE.md) — module boundaries.
 3. [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — known failure modes.
 
@@ -127,12 +127,12 @@ implementation wins — please open an issue or a PR with the correction. The
 suite is intentionally explicit about **limitations** (for example, the stdio
 LSP only handles a subset of requests); see
 [TROUBLESHOOTING.md](TROUBLESHOOTING.md) and
-[PROJECT_ANALYSIS.md](../PROJECT_ANALYSIS.md).
+[PROJECT_ANALYSIS.md](https://github.com/James-HoneyBadger/ParserCraft/blob/main/PROJECT_ANALYSIS.md).
 
 ---
 
 ## Versioning
 
 Documents track the `4.x` line. Breaking API changes are recorded in
-[CHANGELOG.md](../CHANGELOG.md). The `4.0.0` documentation set was regenerated
+[CHANGELOG.md](https://github.com/James-HoneyBadger/ParserCraft/blob/main/CHANGELOG.md). The `4.0.0` documentation set was regenerated
 alongside the Studio release.

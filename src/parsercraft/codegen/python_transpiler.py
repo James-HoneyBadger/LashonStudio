@@ -54,6 +54,7 @@ class PythonTranspiler:
         self.options = options or TranspileOptions()
         self.indent_level = 0
         self.output_lines: List[str] = []
+        self.line_map: Dict[int, int] = {}
         self._runtime_needed: Set[str] = set()
         self._imports_needed: Set[str] = set()
 
@@ -154,6 +155,7 @@ class PythonTranspiler:
     def transpile(self, ast: SourceAST) -> str:
         """Transpile a SourceAST tree to Python source code."""
         self.output_lines = []
+        self.line_map = {}
         self.indent_level = 0
         self._runtime_needed = set()
         self._imports_needed = set()
@@ -199,7 +201,24 @@ class PythonTranspiler:
             ) else "" for line in result.split("\n"))
             result = f'if __name__ == "__main__":\n{indented}\n'
 
+        if self.options.source_maps:
+            self.line_map = self._build_line_map(result)
+
         return result
+
+    @staticmethod
+    def _build_line_map(source: str) -> Dict[int, int]:
+        """Map generated Python line numbers to source line numbers."""
+        mapping: Dict[int, int] = {}
+        current: Optional[int] = None
+        for number, line in enumerate(source.split("\n"), 1):
+            marker = re.match(r"\s*#\s*@src\s+(\d+)\s*$", line)
+            if marker:
+                current = int(marker.group(1))
+                continue
+            if current is not None:
+                mapping[number] = current
+        return mapping
 
     def translate_source_ast(self, ast: SourceAST) -> str:
         """Alias for :meth:`transpile` to match the common backend interface."""
@@ -214,8 +233,23 @@ class PythonTranspiler:
     # Core dispatch
     # -----------------------------------------------------------------------
 
+    _SOURCE_MAP_NODES = frozenset({
+        "assignment", "Assignment", "function_def", "FunctionDef",
+        "if_stmt", "IfStmt", "while_stmt", "WhileStmt", "for_stmt",
+        "ForStmt", "return_stmt", "ReturnStmt", "expr_stmt", "ExprStmt",
+        "print_stmt", "PrintStmt", "say_stmt", "ask_stmt", "let_stmt",
+        "repeat_stmt",
+    })
+
     def _emit_node(self, node: SourceAST) -> None:
         """Dispatch to the appropriate handler for a node."""
+        if (
+            self.options.source_maps
+            and getattr(node, "line", 0)
+            and node.node_type in self._SOURCE_MAP_NODES
+        ):
+            self._line(f"# @src {node.line}")
+
         handler = self._handlers.get(node.node_type)
         if handler:
             handler(node)

@@ -123,84 +123,66 @@ editor integrations, but is not advertised over stdio.
 
 ---
 
-## Debug adapter
+## Debug adapter (DAP)
 
-`Debugger` models breakpoints, frames, variables, and stepping. It is a
-**controller**, not a process launcher: you tell it when the program hits a
-line, and it evaluates conditions against the frame values you register.
+`parsercraft debug-launch FILE --config lang.yaml [--port 5678]` starts a real
+Debug Adapter Protocol server over TCP. It compiles the program with source
+maps, runs it in a worker thread, and pauses on language source lines.
 
-```python
-from parsercraft.tooling.debug import Debugger
-from parsercraft.tooling.debug.debug_adapter import Variable
-
-debugger = Debugger("program.src")
-debugger.start()                                  # state = RUNNING, current_frame = 0
-
-frame = debugger.current_frame
-debugger.add_variable(frame, Variable("i", 3, "int"))
-
-bp = debugger.set_breakpoint("program.src", line=4, condition="i > 2")
-hit = debugger.hit_breakpoint("program.src", 4)   # Breakpoint or None
-
-print(debugger.get_stack_trace())                 # frames you append yourself
-print(debugger.get_variables(frame))              # [Variable(name='i', value=3, ...)]
-print(debugger.evaluate_expression("i + 1", frame))   # '4'
-print(debugger.evaluate_expression("__import__('os')", frame))   # None
-
-debugger.step_over()
-debugger.pause()
-debugger.continue_execution()
-debugger.remove_breakpoint(bp.id)
+```bash
+parsercraft debug-launch projects/aurora/samples/fizzbuzz.aur \
+  --config projects/aurora/language.yaml --port 5678
 ```
 
-Conditions evaluate against the variables registered for `current_frame`.
-Register values on that frame (not an arbitrary id) or conditions will not see
-them.
+VS Code `launch.json`:
 
-### Breakpoints
-
-`Breakpoint` fields: `id`, `source_path`, `line`, `column`, `condition`,
-`hit_condition`, `log_message`, `verified`, `message`.
-
-- `condition` is evaluated with a **safe AST evaluator** when the line is hit.
-- If a condition raises or is invalid, the breakpoint is marked
-  `verified=False` with `message="Invalid condition: ..."` and skipped.
-- `hit_condition` and `log_message` are stored for adapter use; they are not
-  interpreted by `hit_breakpoint`.
-
-### Safe expression evaluation
-
-`evaluate_expression` parses the expression and evaluates only:
-
-- literals, names, boolean operators, comparisons, unary/binary arithmetic
-- list/tuple/dict/set literals, subscripts
-
-Calls, attribute access, comprehensions, lambdas, and assignments are rejected.
-Failures return `None` rather than raising.
-
-### Debug Adapter Protocol handler
-
-```python
-from parsercraft.tooling.debug import DebugAdapter
-
-adapter = DebugAdapter(debugger)
+```json
+{
+  "type": "parsercraft",
+  "request": "launch",
+  "name": "Debug Aurora",
+  "program": "${workspaceFolder}/samples/fizzbuzz.aur",
+  "config": "${workspaceFolder}/language.yaml",
+  "port": 5678
+}
 ```
 
-`DebugAdapter` translates DAP-shaped requests/responses on top of `Debugger`.
-The `parsercraft debug-launch` command exits 2 with guidance: it does **not**
-open a DAP socket or execute the program. To debug a real run, drive `Debugger`
-from your own runner (or the generated Python) and call `hit_breakpoint` at each
-line.
+(Point the editor's debug adapter client at `tcp://127.0.0.1:5678`.)
 
-### Verified behaviour
+### Supported requests
 
-- Breakpoint conditions use the same whitelist as `evaluate_expression`.
-- A condition such as `i > 2` is evaluated against the current frame's
-  variables; a malformed condition disables the breakpoint instead of raising.
-- Stepping methods update the debugger state but do not advance a program by
-  themselves.
+`initialize`, `launch`, `setBreakpoints`, `configurationDone`, `threads`,
+`stackTrace`, `scopes`, `variables`, `evaluate`, `continue`, `next`, `stepIn`,
+`stepOut`, `pause`, `disconnect`, `setExceptionBreakpoints`.
 
----
+Events: `initialized`, `stopped` (breakpoint/step/pause), `output`,
+`terminated`, `exited`.
+
+### How it works
+
+- `PythonTranspiler` with `TranspileOptions(source_maps=True)` inserts
+  `# @src N` markers and exposes `line_map` (generated Python line → source
+  line).
+- The debuggee runs in a thread with `sys.settrace`; the trace hook maps each
+  Python line to a source line and compares it with breakpoints.
+- When a breakpoint or step triggers, the thread blocks on an event while the
+  adapter answers `stackTrace`, `variables`, and `evaluate`.
+- Program output is forwarded as DAP `output` events; stdout is proxied in a
+  thread-aware way so the server's own logging is unaffected.
+
+### Limits
+
+- One debug session and one client connection per server.
+- Breakpoints are line-based; column, conditional, hit-count, and logpoint
+  breakpoints are not implemented.
+- `evaluate` uses the paused frame's globals/locals with full Python semantics;
+  debug only trusted programs.
+- Variable trees are flat (`variablesReference` is always 0), and only
+  `Locals` is exposed (no globals/watch scopes).
+- The program is transpiled to Python; native C/WASM/LLVM execution is not
+  debugged.
+- `Debugger`/`DebugAdapter` remain available as a lower-level controller for
+  embedding.
 
 ## Localized errors
 

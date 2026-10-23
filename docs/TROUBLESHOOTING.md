@@ -288,13 +288,13 @@ dropped statement.
 
 Run `opt -passes=verify` or `llc` to see the precise error.
 
-### WASM output is incomplete
+### WASM output fails validation or cannot find a function
 
-By design today. `WasmGenerator.translate_source_ast` emits module scaffolding,
-memory, imports, and a `main` body containing top-level assignments/expressions
-and calls. Function definitions, `if`, `while`, returns, and prints are **not**
-emitted, so calls can reference undefined functions. Use the Python/C/LLVM
-backends for executable output; treat WAT as a starting point.
+Calling a function that is not defined in the same source raises
+`ValueError("WASM backend cannot resolve function ...")`; define it locally or
+extend the backend with imports. Float values are truncated to `i32`. String
+printing requires the host to provide `console.__log_str` and export/read
+memory.
 
 ### `translate_source_ast` returns an object, not a string (WASM)
 
@@ -355,14 +355,23 @@ rename/extract/inline are still Python-API only.
 
 Socket transport is not implemented and exits with code 2. Use `--stdio`.
 
-### Breakpoint conditions never fire
+### Breakpoints never fire in `debug-launch`
+
+- Launch with `--config` (or `--grammar`) so the source can be parsed; otherwise
+  the server reports a debuggee error.
+- Breakpoint lines are language source lines (1-based), not generated Python
+  lines.
+- The adapter serves one client on the selected port; confirm the editor points
+  at `tcp://127.0.0.1:<port>` and sends `setBreakpoints` before
+  `configurationDone`.
+- Only line breakpoints are implemented (no conditions/hit counts).
+
+### `Debugger` breakpoint conditions never fire
 
 - Register variables on `debugger.current_frame`; conditions are evaluated
   against that frame's variables.
-- Ensure the condition is valid Python **within the safe whitelist** (no calls).
-  Invalid conditions set `verified=False` and `message="Invalid condition: ..."`.
-- `hit_breakpoint` must be called by your runner at each executed line;
-  `debug-launch` exits 2 and does not run anything.
+- Conditions use the safe evaluator (no calls); invalid conditions set
+  `verified=False`.
 
 ### `refactor-rename` finds no occurrences
 
@@ -434,14 +443,14 @@ mapping works without `grammar.rules` (config REPL, `translate`, `batch`). Code
 generation and the PEG REPL do need a grammar.
 
 **Are the backends equivalent?** Python is the reference. C and LLVM execute the
-documented node set. WASM is partial (see above). None implement full language
+documented node set. WASM is integer-only (see above). None implement full language
 semantics beyond what the AST encodes — your grammar decides what exists.
 
 **Is there a sandbox?** No. Generated code runs with full Python privileges; FFI
 calls native code. See
 [RUNTIME_GUIDE.md](RUNTIME_GUIDE.md#security-model).
 
-**Why 322 tests?** The suite covers each layer plus regressions for issues found
+**Why 335 tests?** The suite covers each layer plus regressions for issues found
 during review. Run `python -m pytest -q`; all should pass.
 
 **Where do I report bugs?** Open an issue at

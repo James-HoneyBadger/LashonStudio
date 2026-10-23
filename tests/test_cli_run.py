@@ -110,3 +110,57 @@ def test_run_missing_file(tmp_path, monkeypatch, capsys):
 
     assert exit_code == 1
     assert "not found" in capsys.readouterr().err
+
+
+def test_run_sandbox_executes_in_child(tmp_path, monkeypatch, capsys):
+    config, program = _write(tmp_path, "x = 21 ;\nprint x ;\n")
+
+    exit_code = _run(
+        monkeypatch, "run", str(program),
+        "--config", str(config), "--sandbox",
+    )
+
+    assert exit_code == 0
+    assert capsys.readouterr().out == "21\n"
+
+
+def test_run_sandbox_rejects_json(tmp_path, monkeypatch, capsys):
+    config, program = _write(tmp_path, "x = 1 ;\n")
+
+    exit_code = _run(
+        monkeypatch, "run", str(program),
+        "--config", str(config), "--sandbox", "--json",
+    )
+
+    assert exit_code == 1
+    assert "--json" in capsys.readouterr().err
+
+
+def test_run_sandbox_times_out(tmp_path, monkeypatch, capsys):
+    config, program = _write(
+        tmp_path, "i = 0 ;\nwhile i < 3 {\n  i = i ;\n}\n"
+    )
+    config.write_text(
+        "grammar:\n"
+        "  rules:\n"
+        "    program: 'statement+'\n"
+        "    statement: 'while_stmt / assignment / print_stmt'\n"
+        "    while_stmt: \"'while' comparison block\"\n"
+        "    block: \"'{' statement* '}'\"\n"
+        "    comparison: 'expr (\"<\" / \">\") expr'\n"
+        "    assignment: 'IDENT \"=\" expr \";\"'\n"
+        "    print_stmt: \"'print' IDENT ';'\"\n"
+        "    expr: 'term ((\"+\" / \"-\") term)*'\n"
+        "    term: 'factor ((\"*\" / \"/\") factor)*'\n"
+        "    factor: 'NUMBER / IDENT'\n",
+        encoding="utf-8",
+    )
+
+    exit_code = _run(
+        monkeypatch, "run", str(program),
+        "--config", str(config), "--sandbox",
+        "--sandbox-timeout", "0.5",
+    )
+
+    assert exit_code == 124
+    assert "exceeded" in capsys.readouterr().err

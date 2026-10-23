@@ -115,3 +115,30 @@ def test_type_check_text_output(tmp_path, monkeypatch, capsys):
 
     assert exit_code == 0
     assert "No type errors" in capsys.readouterr().out
+
+
+def test_debug_launch_wires_dap_server(tmp_path, monkeypatch, capsys):
+    from parsercraft.tooling.debug import dap_server
+
+    program = tmp_path / "program.src"
+    program.write_text("x = 1 ;\n", encoding="utf-8")
+    config = tmp_path / "lang.yaml"
+    config.write_text("grammar:\n  rules:\n    program: 'statement+'\n"
+                      "    statement: 'IDENT \"=\" NUMBER \";\"'\n",
+                      encoding="utf-8")
+
+    started = {}
+
+    def fake_serve(self, ready=None):
+        started["program"] = self._program
+        started["config"] = self._config
+
+    monkeypatch.setattr(dap_server.DAPServer, "serve_forever", fake_serve)
+    exit_code = _run(
+        monkeypatch, "debug-launch", str(program),
+        "--config", str(config), "--breakpoint", "1",
+    )
+
+    assert exit_code == 0
+    assert started["program"] == str(program)
+    assert started["config"] == str(config)

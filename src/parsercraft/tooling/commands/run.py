@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +27,54 @@ def _json_safe(namespace: dict[str, Any]) -> dict[str, Any]:
         else:
             result[name] = value
     return result
+
+
+def _sandbox_limits() -> None:
+    """Apply conservative resource limits in the child (POSIX only)."""
+    try:
+        import resource
+    except ImportError:  # pragma: no cover - Windows
+        return
+    resource.setrlimit(resource.RLIMIT_CPU, (5, 5))
+    resource.setrlimit(resource.RLIMIT_AS, (512 * 1024 * 1024,) * 2)
+    resource.setrlimit(resource.RLIMIT_NOFILE, (64, 64))
+    resource.setrlimit(resource.RLIMIT_FSIZE, (10 * 1024 * 1024,) * 2)
+
+
+def _run_sandboxed(code: str, timeout: float) -> int:
+    """Run generated Python in an isolated child process with limits."""
+    with tempfile.TemporaryDirectory(prefix="parsercraft-run-") as workdir:
+        script = Path(workdir) / "program.py"
+        script.write_text(code, encoding="utf-8")
+        environment = {
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            "PYTHONIOENCODING": "utf-8",
+            "PYTHONDONTWRITEBYTECODE": "1",
+        }
+        preexec = _sandbox_limits if os.name == "posix" else None
+        try:
+            completed = subprocess.run(
+                [sys.executable, "-I", str(script)],
+                cwd=workdir,
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                preexec_fn=preexec,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            print(
+                f"Error: sandboxed program exceeded {timeout:g}s",
+                file=sys.stderr,
+            )
+            return 124
+
+    if completed.stdout:
+        sys.stdout.write(completed.stdout)
+    if completed.stderr:
+        sys.stderr.write(completed.stderr)
+    return completed.returncode
 
 
 def cmd_run(args) -> int:
@@ -49,6 +100,16 @@ def cmd_run(args) -> int:
 
         if args.show_python:
             print(transpile_to_python(ast), file=sys.stderr)
+
+        if args.sandbox:
+            if args.json:
+                print(
+                    "Error: --json cannot be combined with --sandbox",
+                    file=sys.stderr,
+                )
+                return 1
+            code = transpile_to_python(ast)
+            return _run_sandboxed(code, args.sandbox_timeout)
 
         if args.json:
             # Keep stdout valid JSON by sending program output to stderr.

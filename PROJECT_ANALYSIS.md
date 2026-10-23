@@ -9,7 +9,7 @@
 ## Executive Summary
 
 ParserCraft is a **well-implemented language construction framework** with a clean
-subpackage architecture, four code-generation backends, and 322 passing tests.
+subpackage architecture, four code-generation backends, and 335 passing tests.
 The core pipeline (PEG grammar → AST → backend) is fully functional. The areas
 with the most limited coverage are advanced type-system generics, the debug
 adapter, and partial module-system edge-case handling.
@@ -186,7 +186,7 @@ Reference project: `projects/aurora` (18 rules, 3 samples, all four backends).
 
 ## 7. Test Coverage
 
-322 tests across 21 test files, all passing:
+335 tests across 22 test files, all passing:
 
 | Test file | Covers |
 |-----------|--------|
@@ -211,6 +211,7 @@ Reference project: `projects/aurora` (18 rules, 3 samples, all four backends).
 | `test_cli_run.py` | `run` command: config/PEG execution, JSON output, errors |
 | `test_cli_init.py` | `init` scaffolding, overwrite protection, generated project |
 | `test_cli_checks.py` | `generics` checker and not-implemented command exits |
+| `test_dap_server.py` | DAP protocol, breakpoints, stepping, variables, evaluation |
 
 Run: `python -m pytest tests/ -v`
 
@@ -272,6 +273,6 @@ Python 3.10+ required.
 
 ParserCraft v4.0.0 is **production-ready** for its core use-case: defining PEG
 grammars, parsing source code, and generating output in Python, C, WebAssembly,
-or LLVM IR. All 322 tests pass. Remaining work is architectural (CLI
+or LLVM IR. All 335 tests pass. Remaining work is architectural (CLI
 decomposition and convergence of the legacy config-driven parser) rather than
 correctness-critical.

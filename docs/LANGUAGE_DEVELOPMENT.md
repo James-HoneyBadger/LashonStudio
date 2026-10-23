@@ -478,7 +478,7 @@ parsercraft-ide projects/aurora
 ```
 
 The full build is in
-[TUTORIAL.md § Tutorial 5](TUTORIAL.md#tutorial-5--build-aurora-from-scratch).
+[TUTORIAL.md § Tutorial 5](TUTORIAL.md).
 
 ---
 

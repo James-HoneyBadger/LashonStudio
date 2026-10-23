@@ -164,7 +164,7 @@ print("Installation OK")
 python -m pytest tests/ -v
 ```
 
-Expected output: **322 tests passed**. The suite covers grammar parsing, all
+Expected output: **335 tests passed**. The suite covers grammar parsing, all
 four code-generation backends (including compile-and-run checks for C and LLVM
 when toolchains are present), REPL, stdlib, FFI, error localization, incremental
 parsing, types, modules, LSP, packaging, the debug adapter, and the Studio
@@ -291,6 +291,6 @@ On headless servers, set a display or use a remote desktop. The REPL and CLI do 
 - [QUICKSTART.md](QUICKSTART.md) — build a language in ten minutes.
 - [STUDIO_GUIDE.md](STUDIO_GUIDE.md) — tour the Studio.
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — more failure modes.
-- [docs/README.md](README.md) — the full documentation index.
+- [docs/index.md](index.md) — the full documentation index.
 
 *For further help, open an issue at [github.com/James-HoneyBadger/ParserCraft](https://github.com/James-HoneyBadger/ParserCraft/issues).*

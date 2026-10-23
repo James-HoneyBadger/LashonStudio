@@ -59,3 +59,7 @@ Thumbs.db
 # Project specific
 *.log
 .cache/
+
+# MkDocs build output
+site/
+_site/

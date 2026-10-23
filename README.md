@@ -4,7 +4,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-322%20passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-335%20passing-brightgreen.svg)](tests/)
 [![Version](https://img.shields.io/badge/version-4.0.0-informational.svg)](pyproject.toml)
 
 ParserCraft is a full-stack programming language construction framework. Define a PEG grammar — either in text notation or via a fluent Python API — and immediately get a working parser, an abstract syntax tree, and code generators targeting Python, C, WebAssembly, and LLVM IR. Add a config-driven REPL, a Language Server Protocol implementation, a DAP debugger, and a Tkinter IDE, and you have everything needed to design, implement, and ship a custom language from a single Python package.
@@ -299,7 +299,7 @@ parsercraft <command> [options]
 | `codegen-llvm <src> [--config <cfg>]` | Emit LLVM IR from source |
 | `refactor-rename <src> <old> <new>` | Rename a symbol across source files |
 | `format <src>` | Auto-format a source file |
-| `debug-launch <src>` | Not implemented (exit 2); use the `Debugger` API |
+| `debug-launch <src>` | Start a DAP server (breakpoints, stepping, variables) |
 | `test-run [path]` | Run a project's pytest suite (optional coverage) |
 | `generics <src>` | Check generic declarations and instantiations |
 | `check-protocol <src>` | Not implemented (exit 2); use `ProtocolChecker` |
@@ -397,7 +397,7 @@ See [docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md) for the full API 
 
 ## Documentation
 
-Start at [docs/README.md](docs/README.md) for learning paths and the full index.
+Start at [docs/index.md](docs/index.md) for learning paths and the full index.
 
 | Document | Description |
 |---|---|
@@ -427,7 +427,7 @@ python -m pytest tests/ -v
 python -m pytest -q --cov --cov-fail-under=43
 ```
 
-322 tests covering grammar parsing, all four code-generation backends (with
+335 tests covering grammar parsing, all four code-generation backends (with
 compile-and-run checks for C and LLVM), REPL, stdlib, FFI, error localization,
 incremental parsing, types, modules, LSP, packaging, the debug adapter, and the
 Studio controller/GUI.

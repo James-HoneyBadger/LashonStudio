@@ -7,6 +7,8 @@ All notable changes to ParserCraft. This project follows
 
 ### Added
 
+- **Documentation site**: MkDocs Material configuration, a landing page, and a
+  GitHub Pages workflow (`docs.yml`).
 - **`parsercraft init`** — scaffold a runnable language project (config, PEG
   grammar, sample, README, and tests that validate grammar, execution, and all
   backends).
@@ -40,12 +42,20 @@ All notable changes to ParserCraft. This project follows
   single-sourced from `parsercraft.__version__`; `setup.py` was removed.
 - CI now runs lint, a docs check, Python 3.10–3.14 tests, a coverage gate
   (43%), Windows/macOS smoke tests, and a build + `twine check` packaging job.
-- WASM generation is explicitly reported as partial (`StudioResult.supported`,
-  warnings in the Studio pane and CLI) instead of silently succeeding.
-- `check-protocol`, `package-search`, `package-install`, and `debug-launch` now
-  exit 2 with guidance instead of printing success.
+- WASM generation now emits functions, locals, calls, `if`/`else`, `while`,
+  returns, and integer/string prints, with data-segment strings and a host
+  contract (`console.__log_i32`, `console.__log_str`, exported memory).
+- `debug-launch` now starts a real TCP DAP server with source-mapped execution,
+  line breakpoints, stepping, variables, and evaluation.
+- `check-protocol`, `package-search`, and `package-install` now exit 2 with
+  guidance instead of printing success.
+- `tooling/cli.py` is now a thin parser/registry; command implementations live
+  in `tooling/commands/` (`config`, `execution`, `modules`, `tooling`, and the
+  single-purpose modules).
 - C and LLVM backends share `codegen/common.py` for AST traversal and
   operator-chain splitting (removes duplicated structural-operator logic).
+- `run --sandbox` executes in an isolated child process with POSIX resource
+  limits and a wall-clock timeout.
 - `type-check --json` emits structured diagnostics for editors.
 - `PythonTranspiler.translate_source_ast` is the canonical entry point (`transpile`
   remains an alias).
@@ -54,7 +64,7 @@ All notable changes to ParserCraft. This project follows
   avoids re-declaring variables on reassignment.
 - LLVM backend now emits function calls, block bodies, `printf` calls, correct
   `i1` comparison typing, and zero-extension on boolean returns.
-- WASM backend documentation now states the actual (partial) coverage.
+- WASM backend documentation describes the integer subset and host imports.
 - Grammar parser is strict: trailing junk, unclosed groups, and unterminated
   literals/classes raise instead of truncating; zero-width comment patterns can
   no longer loop.

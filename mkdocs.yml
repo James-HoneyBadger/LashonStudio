@@ -1,0 +1,60 @@
+site_name: ParserCraft
+site_description: A framework for building programming languages with PEG grammars
+site_url: https://james-honeybadger.github.io/ParserCraft/
+repo_url: https://github.com/James-HoneyBadger/ParserCraft
+repo_name: James-HoneyBadger/ParserCraft
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.highlight
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Install: INSTALL.md
+      - Quick start: QUICKSTART.md
+      - Tutorials: TUTORIAL.md
+  - Language design:
+      - Language development: LANGUAGE_DEVELOPMENT.md
+      - Grammar reference: GRAMMAR_REFERENCE.md
+  - Using ParserCraft:
+      - User guide: USER_GUIDE.md
+      - Studio: STUDIO_GUIDE.md
+      - CLI reference: CLI_REFERENCE.md
+      - Runtime, stdlib, FFI: RUNTIME_GUIDE.md
+  - Implementation:
+      - Code generation: CODEGEN_GUIDE.md
+      - Type system: TYPE_SYSTEM.md
+      - LSP and debugging: LSP_AND_DEBUGGING.md
+      - Packaging: PACKAGING.md
+      - Architecture: ARCHITECTURE.md
+  - Reference:
+      - Technical reference: TECHNICAL_REFERENCE.md
+      - Troubleshooting: TROUBLESHOOTING.md

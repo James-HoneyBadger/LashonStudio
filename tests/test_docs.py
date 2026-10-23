@@ -63,13 +63,13 @@ def test_documentation_links_and_anchors_resolve():
 
 
 def test_docs_index_lists_every_page():
-    index = (DOCS / "README.md").read_text(encoding="utf-8")
+    index = (DOCS / "index.md").read_text(encoding="utf-8")
     missing = [
         page.name
         for page in sorted(DOCS.glob("*.md"))
-        if page.name != "README.md" and f"({page.name})" not in index
+        if page.name != "index.md" and f"({page.name})" not in index
     ]
-    assert not missing, f"docs/README.md does not link: {missing}"
+    assert not missing, f"docs/index.md does not link: {missing}"
 
 
 def test_quickstart_mini_grammar_example_runs():

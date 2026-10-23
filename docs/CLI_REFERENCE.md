@@ -28,8 +28,8 @@ explicit.
 | Status | Commands |
 |---|---|
 | **Stable** | `init`, `create`, `edit`, `validate`, `info`, `export`, `import`, `convert`, `diff`, `update`, `delete`, `list-presets`, `run`, `repl`, `batch`, `translate`, `extension`, `codegen-c`, `codegen-wasm`, `codegen-llvm`, `module-info`, `module-deps`, `module-cycles`, `generics`, `test-run`, `refactor-rename`, `format` |
-| **Functional, heuristic** | `type-check` (pattern-based), `lsp` (stdio protocol), `test` (config-driven harness) |
-| **Not implemented (exit 2)** | `check-protocol`, `package-search`, `package-install`, `debug-launch` |
+| **Functional, heuristic** | `type-check` (pattern-based), `lsp` (stdio protocol), `test` (config-driven harness), `debug-launch` (DAP subset) |
+| **Not implemented (exit 2)** | `check-protocol`, `package-search`, `package-install` |
 
 Placeholders print a clear message and exit 0; they do not silently corrupt
 anything. Use the Python APIs documented in
@@ -210,6 +210,8 @@ Parses `FILE` with the supplied grammar and executes the transpiled Python.
 | `--grammar`, `-g` | PEG file; overrides `--config` |
 | `--json` | print `{"variables": {...}}` to stdout; program output goes to stderr |
 | `--show-python` | print generated Python to stderr before running |
+| `--sandbox` | run in an isolated subprocess with CPU/memory/file limits (POSIX) |
+| `--sandbox-timeout` | wall-clock timeout for sandbox mode (default 10s) |
 
 A grammar is required; without `--config`/`--grammar` the command exits 1.
 Exit code is 1 for parse, IO, and runtime errors.
@@ -220,7 +222,14 @@ parsercraft run projects/aurora/samples/fibonacci.aur \
 
 parsercraft run program.aur --grammar grammar.peg --json
 # {"variables": {"x": 21, "y": 42}}
+
+parsercraft run program.aur --config lang.yaml --sandbox
 ```
+
+`--sandbox` launches a child `python -I` process in a temporary directory with
+`RLIMIT_CPU` (5s), `RLIMIT_AS` (512 MB), `RLIMIT_NOFILE`, and `RLIMIT_FSIZE`.
+It is process isolation, **not** a security sandbox: the child can still read
+files and open sockets. `--json` is rejected in sandbox mode.
 
 ### `repl`
 
@@ -302,8 +311,6 @@ parsercraft codegen-c projects/aurora/samples/fibonacci.aur \
 ```
 
 These commands emit source; they do not invoke a C/WASM/LLVM toolchain.
-`codegen-wasm` prints a warning because the WASM backend does not yet emit user
-function bodies, control flow, or prints.
 
 ---
 
@@ -435,12 +442,13 @@ prints to stdout.
 
 ```bash
 parsercraft debug-launch FILE [--port PORT] [-b/--breakpoint LINE]...
+                            [--config CONFIG | --grammar GRAMMAR]
 ```
 
-Exits 2: it does not start a DAP server or run the program. Drive
-`Debugger` from Python instead (`set_breakpoint`, `hit_breakpoint`,
-`get_variables`, `evaluate_expression`). See
-[LSP_AND_DEBUGGING.md](LSP_AND_DEBUGGING.md#debug-adapter).
+Starts a DAP server over TCP (default port 5678) that compiles the program,
+runs it, and honors line breakpoints, stepping, variables, and evaluation.
+`--breakpoint` seeds breakpoints before a client connects. See
+[LSP_AND_DEBUGGING.md](LSP_AND_DEBUGGING.md#debug-adapter-dap).
 
 ### `test-run`
 

@@ -1,5 +1,7 @@
 """Tests for code generators (C, WASM, LLVM IR)."""
 
+from pathlib import Path
+
 import pytest
 
 from parsercraft.codegen.codegen_c import CCodeGenerator
@@ -198,3 +200,97 @@ class TestBackendControlFlow:
         ir = LLVMIRGenerator().translate_source_ast(ast)
         assert "icmp sle i32" in ir
         assert "icmp ne i32 %" not in ir
+
+
+class TestWasmFunctionCodegen:
+    """WASM function, control-flow, and string-output support."""
+
+    PROJECT = Path(__file__).resolve().parent.parent / "projects" / "aurora"
+
+    @staticmethod
+    def _run_wat(wat: str) -> list[str]:
+        wasmtime = pytest.importorskip("wasmtime")
+
+        engine = wasmtime.Engine()
+        store = wasmtime.Store(engine)
+        module = wasmtime.Module(engine, wasmtime.wat2wasm(wat))
+        output: list[str] = []
+
+        def log_i32(value):
+            output.append(str(value))
+
+        def log_str(caller, ptr, length):
+            memory = caller.get("memory")
+            output.append(
+                bytes(memory.read(caller, ptr, ptr + length)).decode("utf-8")
+            )
+
+        def sqrt(value):
+            return value ** 0.5
+
+        i32 = wasmtime.ValType.i32()
+        f64 = wasmtime.ValType.f64()
+        imports = [
+            wasmtime.Func(store, wasmtime.FuncType([i32], []), log_i32),
+            wasmtime.Func(
+                store,
+                wasmtime.FuncType([i32, i32], []),
+                log_str,
+                access_caller=True,
+            ),
+            wasmtime.Func(
+                store, wasmtime.FuncType([f64], [f64]), sqrt
+            ),
+        ]
+        instance = wasmtime.Instance(store, module, imports)
+        instance.exports(store)["main"](store)
+        return output
+
+    def _compile(self, sample: str):
+        grammar = GrammarParser().parse(
+            (self.PROJECT / "grammar.peg").read_text(encoding="utf-8")
+        )
+        ast = PEGInterpreter(grammar).parse(
+            (self.PROJECT / "samples" / sample).read_text(encoding="utf-8")
+        )
+        return WasmGenerator().translate_source_ast(ast).to_wat()
+
+    def test_emits_functions_locals_and_calls(self):
+        wat = self._compile("fibonacci.aur")
+        assert "(func $fib (param $n i32) (result i32)" in wat
+        assert "call $fib" in wat
+        assert "local.get $" in wat
+        assert "(data" in wat
+
+    def test_imports_precede_memory_and_export_memory(self):
+        wat = self._compile("hello.aur")
+        assert wat.index("(import") < wat.index("(memory")
+        assert '(export "memory" (memory 0))' in wat
+
+    @pytest.mark.parametrize(
+        ("sample", "expected"),
+        [
+            ("fibonacci.aur", ["fib(10) =", "55", "10! =", "3628800"]),
+            ("hello.aur", ["Hello, Aurora!", "Designed in ParserCraft Studio."]),
+        ],
+    )
+    def test_generated_wasm_executes(self, sample, expected):
+        assert self._run_wat(self._compile(sample)) == expected
+
+    def test_fizzbuzz_control_flow_executes(self):
+        output = self._run_wat(self._compile("fizzbuzz.aur"))
+        assert output[:3] == ["1", "2", "Fizz"]
+        assert output[-1] == "FizzBuzz"
+        assert len(output) == 15
+
+    def test_unknown_calls_are_rejected(self):
+        grammar = GrammarParser().parse(
+            'program <- statement+\n'
+            'statement <- IDENT "=" call ";"\n'
+            'call <- IDENT "(" arg_list? ")"\n'
+            'arg_list <- NUMBER ("," NUMBER)*'
+        )
+        ast = PEGInterpreter(grammar).parse("x = missing(1) ;")
+
+        with pytest.raises(ValueError, match="cannot resolve function"):
+            WasmGenerator().translate_source_ast(ast)

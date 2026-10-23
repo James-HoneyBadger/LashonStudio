@@ -47,7 +47,7 @@ python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 
 parsercraft --version          # parsercraft 4.0.0
-python -m pytest -q            # 322 passed
+python -m pytest -q            # 335 passed
 ```
 
 Platform notes live in [INSTALL.md](INSTALL.md).
@@ -237,9 +237,9 @@ gcc -std=c99 out.c -o program && ./program
 clang out.ll -o program && ./program
 ```
 
-C and LLVM handle functions, `if/else`, `while`, recursion, calls, and printing
-for the documented AST nodes. WASM is partial: it emits module scaffolding and a
-`main` body but not user function bodies. Details and fidelity notes:
+C, LLVM, and WASM handle functions, `if/else`, `while`, recursion, calls, and
+printing for the documented AST nodes (WASM is integer-only and needs host
+`console` imports). Details and fidelity notes:
 [CODEGEN_GUIDE.md](CODEGEN_GUIDE.md).
 
 From Python:

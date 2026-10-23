@@ -4,7 +4,7 @@ ParserCraft is a Python framework for defining languages with PEG grammars,
 parsing source into an AST, and generating output for several targets. This
 page describes how the pieces fit together so you can extend them safely.
 
-Version 4.0.0, ~20,800 lines of library code, 322 tests.
+Version 4.0.0, ~20,800 lines of library code, 335 tests.
 
 ---
 
@@ -63,12 +63,18 @@ the PEG path.
 | `runtime/ffi.py` | `FFIBridge` (ctypes + Python bindings) |
 | `runtime/module_system.py` | `ModuleManager`, import/export parsing, dependency graph |
 | `runtime/interpreter_generator.py` | packages an interpreter for CodeEx |
-| `tooling/cli.py` | `main()`, every `parsercraft` subcommand, config-driven REPL |
+| `tooling/cli.py` | argument parser and command registry (`main()`) |
+| `tooling/commands/config.py` | create/validate/info/export/import/convert/diff/update/delete/list-presets |
+| `tooling/commands/execution.py` | REPL, batch, test harness, translation helpers |
 | `tooling/commands/codegen.py` | `codegen-c/wasm/llvm` implementations |
+| `tooling/commands/run.py`, `init.py`, `generics.py`, `typecheck.py` | one-shot execution, scaffolding, generic and type checks |
+| `tooling/commands/modules.py`, `tooling.py` | module graph commands; LSP/extension/format/debug/package commands |
+| `tooling/commands/common.py` | config/grammar loading helpers |
 | `tooling/lsp/lsp_server.py` | `LSPServer`, `DocumentManager`, stdio loop |
 | `tooling/lsp/lsp_advanced.py` | refactoring, formatting, semantic highlighting |
 | `tooling/lsp/lsp_integration.py` | feature integration layer |
 | `tooling/debug/debug_adapter.py` | `Debugger`, `DebugAdapter`, safe expression evaluator |
+| `tooling/debug/dap_server.py` | TCP DAP server with source-mapped execution, breakpoints, stepping |
 | `tooling/error_localization.py` | `ErrorLocalizer` and the English catalog |
 | `tooling/test_framework.py` | `LanguageTestRunner` and test case model |
 | `types/type_system.py` | `Type`, `TypeKind`, `TypeEnvironment`, `TypeChecker` |
@@ -172,7 +178,7 @@ studio_app.py (Tkinter view)  ──calls──►  studio.py (LanguageStudio)
   `.generate()`, and `.generate_all()` return `StudioResult` objects with
   `ok`, `text`, `error`, `diagnostics`, `elapsed_ms`, `value`, `supported`,
   and `warnings` (`generate_all()` returns a `{target: StudioResult}` dict).
-  `supported=False` marks deliberately partial output such as WASM.
+  `supported=False` marks deliberately partial output.
 - `StudioProject.from_path()` and `.save()` read and write the project.
   `save()` parses and validates the grammar first, then writes `grammar.peg` and
   syncs its rules into `language.yaml` (raising `ValueError` if the grammar is
@@ -205,7 +211,7 @@ the widgets when a display is available.
 | Want to… | Do this |
 |---|---|
 | Add a backend | new class in `codegen/`, `translate_source_ast`, export in `codegen/__init__.py`, add CLI command |
-| Add a CLI command | function in `tooling/cli.py`, register a subparser in `main()` |
+| Add a CLI command | implement `cmd_*` in `tooling/commands/`, export it from `commands/__init__.py`, register a subparser and dispatch entry in `tooling/cli.py` |
 | Add a stdlib module | build a `StdModule`, `stdlib.add_module(...)` |
 | Bind native code | `FFIBridge.bind` / `register_python` |
 | Add diagnostics | extend `ErrorLocalizer` catalog or `TypeChecker` |

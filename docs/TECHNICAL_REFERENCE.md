@@ -317,7 +317,7 @@ class CCodeGenerator:
     def translate_type(self, lang_type: str) -> str
 ```
 
-### `WasmGenerator` (experimental)
+### `WasmGenerator`
 
 ```python
 class WasmGenerator:
@@ -337,8 +337,9 @@ class WasmGenerator:
     def gen_temp_var(self) -> str
 ```
 
-`WasmModule.to_wat()` returns WAT text; `WasmModule.save(path)` writes it. Only
-top-level `main` instructions are generated from an AST today.
+`WasmModule.to_wat()` returns WAT text; `WasmModule.save(path)` writes it.
+AST translation emits functions, locals, calls, `if`/`else`, `while`,
+returns, and integer/string prints using the documented host imports.
 
 ### `LLVMIRGenerator`
 

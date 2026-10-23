@@ -78,7 +78,7 @@ When a grammar defines `statement <- IDENT "=" expr ";"` without a separate `ass
 ## Testing
 
 ```bash
-python -m pytest tests/ -v   # 322 tests
+python -m pytest tests/ -v   # 335 tests
 ```
 
 Test files:
@@ -172,11 +172,11 @@ runtime = LanguageRuntime.get_instance()
 
 User-facing documentation is in `docs/`:
 
-Start at `docs/README.md` (index + learning paths).
+Start at `docs/index.md` (index + learning paths).
 
 | File | Purpose |
 |------|---------|
-| `docs/README.md` | Documentation index and learning paths |
+| `docs/index.md` | Documentation index and learning paths |
 | `docs/INSTALL.md` | Installation, virtual environments, platform notes |
 | `docs/QUICKSTART.md` | Ten-minute grammar → run walkthrough |
 | `docs/TUTORIAL.md` | Eight progressive tutorials |
@@ -200,4 +200,4 @@ Start at `docs/README.md` (index + learning paths).
 - `transpile_and_exec(ast)` runs `exec(py_code, namespace)`. The returned dict contains user-defined variables; filter `__builtins__` with `{k: v for k, v in ns.items() if not k.startswith("__")}`.
 - All backend classes implement `translate_source_ast(ast)`; Python, C, and LLVM return `str`, while `WasmGenerator` returns a `WasmModule` (call `.to_wat()`).
 - `tests/test_docs.py` enforces that documentation links/anchors resolve, every `docs/*.md` page is indexed, and the quick-start examples plus Aurora samples still run.
-- The test suite must stay at 322 passing: `python -m pytest tests/ -q`.
+- The test suite must stay at 335 passing: `python -m pytest tests/ -q`.

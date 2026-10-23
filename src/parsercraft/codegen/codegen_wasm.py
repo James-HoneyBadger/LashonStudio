@@ -204,12 +204,13 @@ class WasmModule:
         """Convert module to WAT format."""
         lines = [f"(module ${self.name}"]
 
-        # Memory
-        lines.append(f"  (memory {self.memory_size})")
-
-        # Imports
+        # Imports must precede memory and function definitions.
         for imp in self.imports.values():
             lines.append(f"  {imp.to_wat()}")
+
+        # Memory (exported so hosts can read string data)
+        lines.append(f"  (memory {self.memory_size})")
+        lines.append('  (export "memory" (memory 0))')
 
         # Functions
         for func in self.functions.values():
@@ -222,7 +223,13 @@ class WasmModule:
 
         # Data segments
         for address, data in self.data_segment.items():
-            lines.append(f'  (data (i32.const {address}) "{data.decode()}")')
+            escaped = "".join(
+                chr(byte)
+                if 32 <= byte < 127 and byte not in (34, 92)
+                else f"\\{byte:02x}"
+                for byte in data
+            )
+            lines.append(f'  (data (i32.const {address}) "{escaped}")')
 
         lines.append(")")
 
@@ -335,8 +342,16 @@ class WasmGenerator:
         self.module.add_import(
             WasmImport(
                 module="console",
-                name="log",
+                name="__log_i32",
                 params=[("value", WasmType.I32)],
+            )
+        )
+
+        self.module.add_import(
+            WasmImport(
+                module="console",
+                name="__log_str",
+                params=[("ptr", WasmType.I32), ("len", WasmType.I32)],
             )
         )
 
@@ -344,7 +359,7 @@ class WasmGenerator:
         self.module.add_import(
             WasmImport(
                 module="math",
-                name="sqrt",
+                name="__sqrt",
                 params=[("value", WasmType.F64)],
                 return_type=WasmType.F64,
             )
@@ -440,152 +455,377 @@ class WasmGenerator:
     def translate_source_ast(self, ast: Any) -> WasmModule:
         """Translate a SourceAST tree into a WASM module.
 
-        Produces a WasmModule with a main function containing the
-        translated top-level instructions. Function definitions, branches,
-        loops, and prints are not emitted yet; see the module docstring.
+        Supports the documented subset: integer functions and calls,
+        assignments, ``if``/``else``, ``while``, returns, and prints.
+        Strings are stored in memory and printed through the imported
+        ``console.logStr(ptr, len)`` host function.
         """
+        from parsercraft.codegen.common import (
+            inline_assignment,
+            meaningful_children,
+            split_chain,
+        )
+
+        self._inline_assignment = inline_assignment
+        self._meaningful_children = meaningful_children
+        self._split_chain = split_chain
+
         self.module = WasmModule()
         self.module.set_memory_size(256)
-        self._locals = []
+        self._functions = []
+        self._strings: Dict[str, int] = {}
+        self._next_data = 0
+        self._label_counter = 0
+
+        top_level: List[Any] = []
+        function_nodes: List[Any] = []
+        for child in ast.children:
+            function = self._function_def(child)
+            if function is not None:
+                function_nodes.append(function)
+            else:
+                top_level.append(child)
+
+        self._function_names = {
+            self._function_name(function) for function in function_nodes
+        }
+        for function in function_nodes:
+            self._compile_function(function)
+
         self._instructions = []
-        self._local_index = {}
+        self._locals = []
+        self._local_names = set()
+        self._param_names = set()
+        for statement in top_level:
+            self._emit_statement(statement)
 
-        self._visit_source_node(ast)
+        for function in self._functions:
+            self.module.add_function(function)
 
-        # Create main function with generated instructions
-        main_func = WasmFunction(
+        main = WasmFunction(
             name="main",
             return_type=WasmType.I32,
             locals=self._locals,
-            body=self._instructions + ["(i32.const 0)"],
+            body=self._instructions + ["i32.const 0"],
             is_export=True,
         )
-        self.module.add_function(main_func)
+        self.module.add_function(main)
         self._add_stdlib_imports()
-
         return self.module
 
-    def _visit_source_node(self, node: Any) -> None:
-        """Visit a SourceAST node and generate WASM instructions."""
+    def _function_name(self, node: Any) -> str:
+        for child in self._meaningful_children(node):
+            if child.node_type in ("Identifier", "IDENT"):
+                return str(child.value)
+        return ""
+
+    def _function_def(self, node: Any) -> Optional[Any]:
+        """Return a function definition node, unwrapping statement wrappers."""
+        if node.node_type in ("function_def", "FunctionDef"):
+            return node
+        if node.node_type in ("statement", "Statement"):
+            children = [
+                child for child in node.children
+                if child.node_type in ("function_def", "FunctionDef")
+            ]
+            if len(children) == 1:
+                return children[0]
+        return None
+
+    # -- function compilation --------------------------------------------
+
+    def _compile_function(self, node: Any) -> None:
+        meaningful = self._meaningful_children(node)
+        name = ""
+        params: List[str] = []
+        body_nodes: List[Any] = []
+
+        for child in meaningful:
+            if child.node_type in ("Identifier", "IDENT") and not name:
+                name = str(child.value)
+            elif child.node_type == "param_list":
+                params = [
+                    str(param.value)
+                    for param in child.children
+                    if param.node_type in ("Identifier", "IDENT")
+                ]
+            elif child.node_type in ("block", "Block"):
+                body_nodes = list(child.children)
+            elif child.node_type not in ("Operator",):
+                body_nodes.append(child)
+
+        if not name:
+            return
+
+        self._instructions = []
+        self._locals = []
+        self._local_names = set()
+        self._param_names = set(params)
+        for statement in body_nodes:
+            self._emit_statement(statement)
+
+        self._functions.append(
+            WasmFunction(
+                name=name,
+                params=[(param, WasmType.I32) for param in params],
+                return_type=WasmType.I32,
+                locals=self._locals,
+                body=self._instructions + ["i32.const 0"],
+            )
+        )
+
+    def _ensure_local(self, name: str) -> None:
+        if name in self._local_names or name in self._param_names:
+            return
+        self._locals.append(WasmLocal(name, WasmType.I32))
+        self._local_names.add(name)
+
+    # -- statements ------------------------------------------------------
+
+    def _emit_statement(self, node: Any) -> None:
         nt = node.node_type
 
-        if nt in ("program", "Program", "Module"):
+        if nt in ("program", "Program", "Module", "block", "Block"):
             for child in node.children:
-                self._visit_source_node(child)
+                self._emit_statement(child)
+            return
 
-        elif nt in ("statement", "Statement"):
-            # Detect inline assignment: IDENT '=' expr ';'
-            ops = [c for c in node.children if c.node_type == "Operator"]
-            if any(o.value == "=" for o in ops):
-                meaningful = [
-                    c for c in node.children
-                    if not (
-                        c.node_type == "Operator"
-                        and c.value in ("=", ";")
-                    )
-                ]
-                if len(meaningful) >= 2:
-                    target = self._source_expr_name(meaningful[0])
-                    if target not in self._local_index:
-                        idx = len(self._locals)
-                        self._locals.append(WasmLocal(target, WasmType.I32))
-                        self._local_index[target] = idx
-                    self._emit_source_expr(meaningful[1])
-                    self._instructions.append(f"(local.set ${target})")
+        if nt in ("statement", "Statement"):
+            if self._function_def(node) is not None:
+                return
+            pair = self._inline_assignment(node)
+            if pair is not None:
+                target, value = pair
+                self._emit_assignment(target, value)
             else:
                 for child in node.children:
-                    self._visit_source_node(child)
+                    self._emit_statement(child)
+            return
 
-        elif nt in ("assignment", "Assignment"):
-            meaningful = [
-                c for c in node.children
-                if not (c.node_type == "Operator" and c.value in ("=", ";"))
-            ]
+        if nt in ("assignment", "Assignment"):
+            meaningful = self._meaningful_children(node)
             if len(meaningful) >= 2:
-                target = self._source_expr_name(meaningful[0])
-                # Ensure local exists
-                if target not in self._local_index:
-                    idx = len(self._locals)
-                    self._locals.append(WasmLocal(target, WasmType.I32))
-                    self._local_index[target] = idx
-                # Generate value expression
-                self._emit_source_expr(meaningful[1])
-                self._instructions.append(f"(local.set ${target})")
+                self._emit_assignment(meaningful[0], meaningful[1])
+            return
 
-        elif nt in ("expr_stmt", "ExprStmt"):
-            meaningful = [
-                c for c in node.children if c.node_type != "Operator"
+        if nt in ("function_def", "FunctionDef"):
+            # Nested definitions are not supported; ignore rather than
+            # emitting their bodies into the caller.
+            return
+
+        if nt in ("if_stmt", "IfStmt"):
+            children = [c for c in node.children if c.node_type != "Operator"]
+            if not children:
+                return
+            self._emit_expression(children[0])
+            self._instructions.append("if")
+            blocks = [
+                c for c in children[1:]
+                if c.node_type in ("block", "Block")
             ]
+            then_nodes = blocks[0].children if blocks else children[1:]
+            for child in then_nodes:
+                self._emit_statement(child)
+            if len(blocks) > 1:
+                self._instructions.append("else")
+                for child in blocks[1].children:
+                    self._emit_statement(child)
+            self._instructions.append("end")
+            return
+
+        if nt in ("while_stmt", "WhileStmt"):
+            children = [c for c in node.children if c.node_type != "Operator"]
+            if not children:
+                return
+            self._label_counter += 1
+            exit_label = f"while_exit_{self._label_counter}"
+            loop_label = f"while_loop_{self._label_counter}"
+            self._instructions.append(f"block ${exit_label}")
+            self._instructions.append(f"loop ${loop_label}")
+            self._emit_expression(children[0])
+            self._instructions.append("i32.eqz")
+            self._instructions.append(f"br_if ${exit_label}")
+            body = children[1:]
+            for child in body:
+                self._emit_statement(child)
+            self._instructions.append(f"br ${loop_label}")
+            self._instructions.append("end")
+            self._instructions.append("end")
+            return
+
+        if nt in ("return_stmt", "ReturnStmt"):
+            meaningful = [c for c in node.children if c.node_type != "Operator"]
             if meaningful:
-                self._emit_source_expr(meaningful[0])
-                self._instructions.append("(drop)")
+                self._emit_expression(meaningful[0])
+            else:
+                self._instructions.append("i32.const 0")
+            self._instructions.append("return")
+            return
 
-    def _emit_source_expr(self, node: Any) -> None:
-        """Emit WASM instructions for a SourceAST expression.
+        if nt in ("print_stmt", "PrintStmt"):
+            for child in [c for c in node.children if c.node_type != "Operator"]:
+                text = self._string_literal(child)
+                if text is not None:
+                    address = self._allocate_string(text)
+                    self._instructions.append(f"i32.const {address}")
+                    self._instructions.append(
+                        f"i32.const {len(text.encode('utf-8'))}"
+                    )
+                    self._instructions.append("call $__log_str")
+                else:
+                    self._emit_expression(child)
+                    self._instructions.append("call $__log_i32")
+            return
 
-        Pushes value on the stack.
-        """
+        if nt in ("expr_stmt", "ExprStmt"):
+            meaningful = [c for c in node.children if c.node_type != "Operator"]
+            if meaningful:
+                self._emit_expression(meaningful[0])
+                self._instructions.append("drop")
+            return
+
+        # Transparent fallback: walk children.
+        for child in node.children:
+            self._emit_statement(child)
+
+    def _emit_assignment(self, target: Any, value: Any) -> None:
+        name = self._source_expr_name(target)
+        self._ensure_local(name)
+        self._emit_expression(value)
+        self._instructions.append(f"local.set ${name}")
+
+    # -- expressions -----------------------------------------------------
+
+    def _emit_expression(self, node: Any) -> None:
         nt = node.node_type
 
         if nt == "Number":
-            val = node.value
-            if isinstance(val, float):
-                self._instructions.append(f"(f64.const {val})")
-            else:
-                self._instructions.append(f"(i32.const {int(val)})")
+            value = node.value
+            if isinstance(value, float):
+                value = int(value)
+            self._instructions.append(f"i32.const {int(value)}")
+            return
 
-        elif nt in ("Identifier", "IDENT"):
+        if nt == "String":
+            text = str(node.value)
+            address = self._allocate_string(text)
+            self._instructions.append(f"i32.const {address}")
+            return
+
+        if nt in ("boolean", "Boolean", "bool", "Bool"):
+            value = str(node.value).strip().lower()
+            self._instructions.append(
+                "i32.const 0" if value in ("false", "0") else "i32.const 1"
+            )
+            return
+
+        if nt in ("Identifier", "IDENT"):
             name = str(node.value)
-            self._instructions.append(f"(local.get ${name})")
+            self._ensure_local(name)
+            self._instructions.append(f"local.get ${name}")
+            return
 
-        elif nt == "Operator":
-            pass  # Operators are handled by the binary chain
+        if nt == "Operator":
+            return
 
-        elif nt in (
-            "expr", "Expr", "comparison", "addition", "multiplication", "term"
-        ):
-            structural = {"=", ";", ":", ",", "(", ")", "{", "}", "[", "]"}
-            children = [
-                c for c in node.children
-                if not (c.node_type == "Operator" and c.value in structural)
-            ]
-            # Separate operands and operators
-            operands = [c for c in children if c.node_type != "Operator"]
-            operators = [c for c in children if c.node_type == "Operator"]
-
-            if operands:
-                self._emit_source_expr(operands[0])  # First operand
-                for i, op in enumerate(operators):
-                    if i + 1 < len(operands):
-                        self._emit_source_expr(operands[i + 1])
-                        self._instructions.append(
-                            self.generate_binary_op(
-                                str(op.value), WasmType.I32, WasmType.I32
-                            )
-                        )
-
-        elif nt in ("factor", "primary"):
-            meaningful = [
-                c for c in node.children if c.node_type != "Operator"
-            ]
-            if meaningful:
-                self._emit_source_expr(meaningful[0])
-
-        elif nt in ("call", "Call"):
+        if nt in ("call", "Call", "FunctionCall"):
             children = [c for c in node.children if c.node_type != "Operator"]
-            if children:
-                # Push args first
-                for arg in children[1:]:
-                    self._emit_source_expr(arg)
-                func_name = self._source_expr_name(children[0])
-                self._instructions.append(f"(call ${func_name})")
+            if not children:
+                self._instructions.append("i32.const 0")
+                return
+            for argument in children[1:]:
+                self._emit_expression(argument)
+            name = self._source_expr_name(children[0])
+            if name not in self._function_names:
+                raise ValueError(
+                    f"WASM backend cannot resolve function '{name}'. "
+                    "Define it in the same source file; external builtins are "
+                    "not available yet."
+                )
+            self._instructions.append(f"call ${name}")
+            return
 
-        elif node.children:
+        if nt in (
+            "expr", "Expr", "comparison", "addition", "multiplication",
+            "term", "Comparison",
+        ):
+            operands, operators = self._split_chain(node)
+            if not operands:
+                self._instructions.append("i32.const 0")
+                return
+            self._emit_expression(operands[0])
+            for index, operator in enumerate(operators):
+                if index + 1 >= len(operands):
+                    break
+                self._emit_expression(operands[index + 1])
+                instruction = self._binary_instruction(str(operator.value))
+                if instruction:
+                    self._instructions.append(instruction)
+                else:
+                    self._instructions.append("drop")
+                    self._instructions.append("drop")
+                    self._instructions.append("i32.const 0")
+            return
+
+        if nt in ("factor", "primary", "Primary"):
             meaningful = [
                 c for c in node.children if c.node_type != "Operator"
             ]
             if meaningful:
-                self._emit_source_expr(meaningful[0])
+                self._emit_expression(meaningful[0])
+            else:
+                self._instructions.append("i32.const 0")
+            return
+
+        if node.value is not None:
+            self._instructions.append(f"i32.const {int(node.value)}")
+            return
+
+        meaningful = [c for c in node.children if c.node_type != "Operator"]
+        if meaningful:
+            self._emit_expression(meaningful[0])
+        else:
+            self._instructions.append("i32.const 0")
+
+    def _binary_instruction(self, operator: str) -> Optional[str]:
+        return {
+            "+": "i32.add",
+            "-": "i32.sub",
+            "*": "i32.mul",
+            "/": "i32.div_s",
+            "%": "i32.rem_s",
+            "==": "i32.eq",
+            "!=": "i32.ne",
+            "<": "i32.lt_s",
+            ">": "i32.gt_s",
+            "<=": "i32.le_s",
+            ">=": "i32.ge_s",
+            "&&": "i32.and",
+            "and": "i32.and",
+            "||": "i32.or",
+            "or": "i32.or",
+        }.get(operator)
+
+    def _string_literal(self, node: Any) -> Optional[str]:
+        if node.node_type == "String":
+            return str(node.value)
+        if node.node_type in (
+            "expr", "Expr", "term", "factor", "primary", "Primary",
+        ):
+            meaningful = [c for c in node.children if c.node_type != "Operator"]
+            if len(meaningful) == 1:
+                return self._string_literal(meaningful[0])
+        return None
+
+    def _allocate_string(self, text: str) -> int:
+        if text in self._strings:
+            return self._strings[text]
+        data = text.encode("utf-8")
+        address = self._next_data
+        self.module.add_data(address, data)
+        self._strings[text] = address
+        self._next_data += len(data) + 1
+        return address
 
     def _source_expr_name(self, node: Any) -> str:
         """Extract name string from an identifier-type node."""

@@ -108,8 +108,8 @@ class TestPipeline:
         assert "int main" in results["c"].text
         assert results["wasm"].text.startswith("(module")
         assert "LLVM IR" in results["llvm"].text
-        assert results["wasm"].supported is False
-        assert results["wasm"].warnings
+        assert results["wasm"].supported is True
+        assert results["wasm"].warnings == []
         assert results["python"].supported is True
 
     def test_parse_error_is_reported(self, studio):

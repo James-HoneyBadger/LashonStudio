@@ -1,7 +1,7 @@
 # ParserCraft Studio Guide
 
 ParserCraft Studio is the graphical language-design workbench. It wraps the
-headless [`LanguageStudio`](../src/parsercraft/ide/studio.py) controller in a
+headless `LanguageStudio` (`src/parsercraft/ide/studio.py`) controller in a
 Tkinter shell.
 
 ```bash
@@ -175,8 +175,7 @@ YAML.
 ### Generate targets
 
 **F7** fills all four backend tabs. Failures are shown per tab as comments, and
-the console lists which backends failed. Partial backends (WASM) are prefixed
-with a warning comment in their pane and noted in the console.
+the console lists which backends failed.
 
 ---
 
@@ -224,7 +223,8 @@ for backend, output in studio.generate_all(source).items():
 
 `StudioResult` fields: `ok`, `text`, `error`, `diagnostics`, `elapsed_ms`,
 `value`, `supported`, `warnings`. Failures are data, not exceptions.
-`supported=False` means the output is deliberately partial (currently WASM).
+`supported=False` marks deliberately partial output; all bundled backends
+currently report `True`.
 
 ---
 

@@ -639,22 +639,11 @@ class LanguageStudio:
                 f"{type(error).__name__}: {error}", parsed.elapsed_ms
             )
 
-        warnings: List[str] = []
-        supported = True
-        if backend == "wasm":
-            supported = False
-            warnings.append(
-                "WASM output is partial: function bodies, control flow, "
-                "and prints are not emitted yet."
-            )
-
         return StudioResult(
             True,
             text=text,
             elapsed_ms=parsed.elapsed_ms,
             value=text,
-            supported=supported,
-            warnings=warnings,
         )
 
     def generate_all(self, source: Optional[str] = None) -> Dict[str, StudioResult]:

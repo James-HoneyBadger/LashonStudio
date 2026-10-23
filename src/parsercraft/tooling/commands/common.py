@@ -7,9 +7,24 @@ from pathlib import Path
 from typing import Any, Optional
 
 try:
-    from yaml import safe_load
+    from yaml import YAMLError, safe_load
 except ImportError:  # pragma: no cover - PyYAML is a runtime dependency
+    YAMLError = None  # type: ignore[assignment,misc]
     safe_load = None  # type: ignore[assignment]
+
+if YAMLError is not None:
+    CONFIG_LOAD_ERRORS: tuple[type[Exception], ...] = (
+        OSError,
+        ValueError,
+        json.JSONDecodeError,
+        YAMLError,
+    )
+else:  # pragma: no cover - yaml is required in practice
+    CONFIG_LOAD_ERRORS = (  # type: ignore[unreachable]
+        OSError,
+        ValueError,
+        json.JSONDecodeError,
+    )
 
 
 def load_raw_config(config_path: str | Path) -> dict[str, Any]:

@@ -14,7 +14,7 @@ git clone https://github.com/James-HoneyBadger/ParserCraft.git
 cd ParserCraft
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
-python -m pytest -q          # 322 passing
+python -m pytest -q          # 335 passing
 python -m pytest -q --cov --cov-fail-under=43
 ruff check src tests
 ```
@@ -71,10 +71,11 @@ python -m pytest tests/ --cov=src/parsercraft --cov-report=term-missing
 ## Documentation
 
 - Every user-visible change needs a docs update in `docs/` (index:
-  [docs/README.md](docs/README.md)).
+  [docs/index.md](docs/index.md)).
 - Verify snippets by running them; docs claim what the code actually does,
   including limitations.
-- Relative links must resolve, including anchors.
+- Relative links must resolve, including anchors (`python -m pytest tests/test_docs.py`).
+- Preview the site with `pip install -e ".[docs]" && mkdocs serve`.
 - CLI changes require an update to
   [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md) and its maturity table.
 

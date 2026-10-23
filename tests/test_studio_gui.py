@@ -57,8 +57,9 @@ def test_generate_all_fills_backends(app):
     app.update()
     assert "int main" in app.code_views["c"].get("1.0", "end")
     wasm = app.code_views["wasm"].get("1.0", "end")
-    assert "WASM output is partial" in wasm
     assert "(module" in wasm
+    assert "(func $main" in wasm
+    assert "(data" in wasm
     assert "LLVM" in app.code_views["llvm"].get("1.0", "end")
     assert app.code_views["python"].get("1.0", "end").startswith("print(")
 

@@ -227,6 +227,20 @@ raise `ValueError: Invalid version: ...`.
 
 ---
 
+## Documentation site
+
+The docs are built with MkDocs Material:
+
+```bash
+pip install -e ".[docs]"
+mkdocs serve          # http://127.0.0.1:8000
+mkdocs build          # static site in site/
+```
+
+`.github/workflows/docs.yml` builds and deploys to GitHub Pages on pushes that
+touch `docs/`, `mkdocs.yml`, or `pyproject.toml`. The site landing page is
+[docs/index.md](index.md); the full index lives there too.
+
 ## Publishing a language (not a Python package)
 
 If you want to distribute a *language* rather than ParserCraft:

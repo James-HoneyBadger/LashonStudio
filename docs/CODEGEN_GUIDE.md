@@ -27,11 +27,11 @@ llvm_ir = LLVMIRGenerator().translate_source_ast(ast)
 | Python | `PythonTranspiler`, `transpile_to_python`, `transpile_and_exec` | `str` / `dict` | **Complete** for the documented node set |
 | C | `CCodeGenerator` | `str` | **Complete** for the documented node set; integer-typed |
 | LLVM IR | `LLVMIRGenerator` | `str` | **Complete** for the documented node set; verifies with `clang` |
-| WebAssembly | `WasmGenerator` | `WasmModule` | **Experimental** — scaffolding, memory, imports, and top-level `main` body only |
+| WebAssembly | `WasmGenerator` | `WasmModule` | **Complete** for the documented integer subset (functions, calls, control flow, prints) |
 
-The Aurora sample (`projects/aurora`) is translated by the Python, C, and LLVM
-backends and executed successfully; the WASM backend emits a module whose
-`main` does not yet contain user function bodies.
+All three Aurora samples are translated by the Python, C, LLVM, and WASM
+backends and execute successfully (WASM is verified with `wasmtime` in the
+test suite when available).
 
 ---
 
@@ -302,36 +302,83 @@ module.save("out.wat")
 Note the return type: unlike the other backends, `translate_source_ast` returns
 a `WasmModule`, not a string.
 
-### What is emitted today
+### What is emitted
 
 ```wat
 (module $module
+  (import "console" "__log_i32" (func $__log_i32 (param $value i32)))
+  (import "console" "__log_str" (func $__log_str (param $ptr i32) (param $len i32)))
+  (import "math" "__sqrt" (func $__sqrt (param $value f64) (result f64)))
   (memory 256)
-  (import "console" "log" (func $log (param $value i32)))
-  (import "math" "sqrt" (func $sqrt (param $value f64) (result f64)))
+  (export "memory" (memory 0))
+  (func $fib (param $n i32) (result i32)
+    local.get $n
+    i32.const 1
+    i32.le_s
+    if
+    local.get $n
+    return
+    end
+    ...
+  )
   (export "main" (func $main))
   (func $main (result i32)
-    (i32.const 0)))
+    i32.const 0          ;; string address
+    i32.const 9          ;; byte length
+    call $__log_str
+    ...
+  )
+  (data (i32.const 0) "fib(10) =")
+)
 ```
 
-- Module scaffolding, 256 pages of memory, and standard imports.
-- Top-level assignments become `local`s with `local.set`; arithmetic chains
-  emit `i32.add`/`sub`/`mul`/`div_s`/`rem_s` and comparison instructions.
-- Top-level calls emit `(call $name)` with argument expressions pushed first.
-- Expressions are exposed through `_emit_source_expr`, and reusable builders
-  (`generate_binary_op`, `generate_if`, `generate_loop`,
-  `generate_memory_load/store`, `translate_type`) are public.
+- Functions are emitted as `(func $name (param …) (result i32))`, with
+  parameters and lazily declared locals.
+- Assignments become `local.set`; identifiers and parameters use `local.get`.
+- Expression chains emit operands then `i32.add/sub/mul/div_s/rem_s`,
+  `i32.eq/ne/lt_s/gt_s/le_s/ge_s`, and `i32.and/or`.
+- `if`/`else` and `while` use structured WAT (`block`/`loop`/`br_if`).
+- Calls push arguments then `call $name`.
+- `print` of a string allocates a data segment and calls
+  `console.logStr(ptr, len)`; other expressions call `console.log(i32)`.
+- Module memory is exported as `memory` so hosts can read string data.
 
-### What is not emitted yet
+### Host contract
 
-- Function definitions and their bodies (`fn`/`function_def`).
-- `if`, `while`, `return`, and print statements.
-- Strings, floats beyond literal emission, and any runtime/console output.
+A WASM host must provide:
 
-Because user functions are not emitted, a program that calls one produces WAT
-referencing an undefined function. Treat WASM output as a **structural
-skeleton** to extend, not as a deployable build. The Studio's WASM pane shows
-exactly this output; do not mistake it for a working module.
+```js
+const imports = {
+  console: {
+    __log_i32: (value) => console.log(value),
+    __log_str: (ptr, len) => console.log(readString(ptr, len)),
+  },
+  math: { __sqrt: Math.sqrt },
+};
+```
+
+With Python:
+
+```python
+import wasmtime
+
+engine = wasmtime.Engine()
+store = wasmtime.Store(engine)
+module = wasmtime.Module(engine, wasmtime.wat2wasm(wat_text))
+# imports: log_i32, log_str (access_caller=True), sqrt -- see tests/test_codegen.py
+instance = wasmtime.Instance(store, module, imports)
+instance.exports(store)["main"](store)
+```
+
+### Limitations
+
+- Values are `i32`; float literals are truncated, and `double` operations are
+  not modelled.
+- No globals, arrays, structs, pointers, `for` loops, or `break`/`continue`.
+- Calls to functions not defined in the same source raise
+  `ValueError("WASM backend cannot resolve function ...")`; external builtins
+  are not available yet.
+- Strings are only printed; string values and concatenation are unsupported.
 
 ---
 

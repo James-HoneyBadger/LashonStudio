@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from typing import Optional
 
@@ -71,11 +70,6 @@ def cmd_codegen_wasm(args):
 
         print(f"✓ Generated WebAssembly: {output_file}")
         print(f"  Lines: {len(wat_text.split(chr(10)))}")
-        print(
-            "Warning: WASM output is partial (no function bodies, control "
-            "flow, or prints yet).",
-            file=sys.stderr,
-        )
 
         return 0
 

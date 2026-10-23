@@ -29,6 +29,10 @@ All notable changes to ParserCraft. This project follows
 
 ### Added
 
+- **Python backend in Rust** (`backends/python.rs`): emit-only Python source
+  for assignments, prints, functions, `if`/`else`, `while`, returns, and
+  arithmetic; `parsercraft-rs codegen-py ... [--run]`. Generated code executes
+  with the same output as the Python transpiler on every Aurora sample.
 - **C backend in Rust** (`crates/parsercraft-core/src/backends/c.rs`): emits
   assignments, prints, functions, `if`/`else`, `while`, returns, and arithmetic;
   `parsercraft-rs codegen-c ... [--compile] [--run]` builds and runs a program

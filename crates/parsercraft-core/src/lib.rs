@@ -23,6 +23,13 @@ pub fn generate_c(grammar_text: &str, source: &str) -> Result<String, String> {
     Ok(backends::c::generate_c(&ast))
 }
 
+/// Generate Python source for a program.
+pub fn generate_python(grammar_text: &str, source: &str) -> Result<String, String> {
+    let grammar = parse_peg_text(grammar_text)?;
+    let ast = parse_to_ast(&grammar, source).map_err(|(message, _, _)| message)?;
+    Ok(backends::python::generate_python(&ast))
+}
+
 /// Parse ``source`` with PEG text notation, returning the JSON AST document.
 pub fn parse_text(grammar_text: &str, source: &str) -> Result<String, String> {
     let grammar = parse_peg_text(grammar_text)?;

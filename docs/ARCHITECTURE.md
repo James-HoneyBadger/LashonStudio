@@ -282,7 +282,8 @@ crates/parsercraft-cli/     `parsercraft-rs` binary
 | Python bindings | PyO3, loaded by `parsercraft.parser.native` | done, opt-in via `backend="auto"` |
 | `parsercraft-rs validate / rules / ast / parse` | Rust | done |
 | C backend | Rust (`backends/c.rs`), output verified against the Python backend | done |
-| Transpiler + WASM/LLVM backends | Python only | **not ported** |
+| Python backend | Rust (`backends/python.rs`), emit-only; output verified by execution | done |
+| WASM/LLVM backends | Python only | **not ported** |
 | CLI, LSP, DAP, Studio, packaging | Python only | **not ported** |
 
 That split is deliberate: the core is where a native implementation pays for

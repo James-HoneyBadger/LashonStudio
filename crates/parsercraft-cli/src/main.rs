@@ -7,7 +7,9 @@
 use std::path::Path;
 use std::process::ExitCode;
 
-use parsercraft_core::{generate_c, parse_document, parse_peg_text};
+use parsercraft_core::{
+    generate_c, generate_python, parse_document, parse_peg_text,
+};
 
 const USAGE: &str = "\
 parsercraft-rs — Rust core front end
@@ -18,6 +20,7 @@ usage:
   parsercraft-rs ast <grammar.peg> <program>
   parsercraft-rs parse <grammar.peg> <program>
   parsercraft-rs codegen-c <grammar.peg> <program> [-o out.c] [--compile] [--run]
+  parsercraft-rs codegen-py <grammar.peg> <program> [-o out.py] [--run]
   parsercraft-rs version
 ";
 
@@ -35,6 +38,7 @@ fn main() -> ExitCode {
         "ast" => ast(args.get(1), args.get(2)),
         "parse" => parse(args.get(1), args.get(2)),
         "codegen-c" => codegen_c(&args[1..]),
+        "codegen-py" => codegen_py(&args[1..]),
         "help" | "--help" | "-h" | "" => {
             print!("{USAGE}");
             Ok(())
@@ -225,6 +229,50 @@ fn codegen_c(args: &[String]) -> Result<(), String> {
             if !status.success() {
                 return Err(format!("{binary} exited with {status}"));
             }
+        }
+    }
+    Ok(())
+}
+
+fn codegen_py(args: &[String]) -> Result<(), String> {
+    let grammar_path = args.first().ok_or("missing grammar path")?;
+    let program_path = args.get(1).ok_or("missing program path")?;
+    let mut output = program_path.trim_end_matches(".aur").to_string() + ".py";
+    let mut run = false;
+
+    let mut index = 2;
+    while index < args.len() {
+        match args[index].as_str() {
+            "-o" | "--output" => {
+                index += 1;
+                output = args
+                    .get(index)
+                    .ok_or("missing value for --output")?
+                    .clone();
+            }
+            "--run" => run = true,
+            other => return Err(format!("unknown option '{other}'")),
+        }
+        index += 1;
+    }
+
+    let grammar_text = std::fs::read_to_string(grammar_path)
+        .map_err(|error| format!("cannot read {grammar_path}: {error}"))?;
+    let source = std::fs::read_to_string(program_path)
+        .map_err(|error| format!("cannot read {program_path}: {error}"))?;
+
+    let code = generate_python(&grammar_text, &source)?;
+    std::fs::write(&output, &code).map_err(|error| format!("cannot write {output}: {error}"))?;
+    println!("wrote {output} ({} lines)", code.lines().count());
+
+    if run {
+        let python = std::env::var("PYTHON").unwrap_or_else(|_| "python3".to_string());
+        let status = std::process::Command::new(&python)
+            .arg(&output)
+            .status()
+            .map_err(|error| format!("cannot run {python}: {error}"))?;
+        if !status.success() {
+            return Err(format!("{output} exited with {status}"));
         }
     }
     Ok(())

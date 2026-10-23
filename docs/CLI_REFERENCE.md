@@ -608,6 +608,7 @@ parsercraft-rs rules grammar.peg        # one rule name per line
 parsercraft-rs ast grammar.peg prog.aur # pretty JSON AST
 parsercraft-rs parse grammar.peg prog.aur  # exit 0/1, prints the first error
 parsercraft-rs codegen-c grammar.peg prog.aur -o prog.c [--compile] [--run]
+parsercraft-rs codegen-py grammar.peg prog.aur -o prog.py [--run]
 parsercraft-rs version
 ```
 
@@ -621,8 +622,11 @@ parsercraft-rs codegen-c grammar.peg samples/fizzbuzz.aur -o fizzbuzz.c --run
 
 `validate` exits 1 when the grammar cannot be parsed; `parse` exits 1 on a
 syntax error and prints the same message shape as the Python engine
-(`Parse error at line N, column M (in rule 'x'): ...`). The WASM and LLVM backends, `run` (which executes transpiled Python), and the
-editor tooling are still Python-only.
+(`Parse error at line N, column M (in rule 'x'): ...`). `codegen-py` emits Python source for the same constructs; `--run` executes it
+with `python3` (or `$PYTHON`). Both backends are checked against the Python
+pipeline in `tests/test_rust_cli.py`.
+
+The WASM and LLVM backends and the editor tooling are still Python-only.
 
 ---
 

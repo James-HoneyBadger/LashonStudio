@@ -99,3 +99,38 @@ def test_c_backend_matches_python_output(sample, tmp_path):
         exec(compile(code, str(source), "exec"), {"__name__": "__main__"})  # noqa: S102
 
     assert native == buffer.getvalue()
+
+
+@pytest.mark.parametrize("sample", ["hello.aur", "fibonacci.aur", "fizzbuzz.aur"])
+def test_python_backend_matches_python_pipeline(sample, tmp_path):
+    source = SAMPLES / sample
+    output = tmp_path / source.with_suffix(".py").name
+    completed = run(
+        "codegen-py", str(GRAMMAR), str(source), "-o", str(output)
+    )
+    assert completed.returncode == 0, completed.stderr
+    generated = output.read_text(encoding="utf-8")
+    assert generated.strip(), "generated Python should not be empty"
+
+    import io
+    import sys
+    from contextlib import redirect_stdout
+
+    def execute(code: str) -> str:
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            exec(compile(code, "generated", "exec"), {"__name__": "__main__"})  # noqa: S102
+        return buffer.getvalue()
+
+    produced = subprocess.run(
+        [sys.executable, str(output)], capture_output=True, text=True, check=True
+    ).stdout
+
+    from parsercraft.codegen.python_transpiler import PythonTranspiler
+    from parsercraft.parser import GrammarParser, PEGInterpreter
+
+    grammar = GrammarParser().parse(GRAMMAR.read_text(encoding="utf-8"))
+    ast = PEGInterpreter(grammar).parse(source.read_text(encoding="utf-8"))
+    reference = execute(PythonTranspiler().transpile(ast))
+
+    assert produced == reference

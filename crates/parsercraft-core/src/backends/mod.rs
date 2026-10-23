@@ -2,3 +2,4 @@
 //! WASM and LLVM until they are ported.
 
 pub mod c;
+pub mod python;

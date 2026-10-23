@@ -30,6 +30,13 @@ pub fn generate_python(grammar_text: &str, source: &str) -> Result<String, Strin
     Ok(backends::python::generate_python(&ast))
 }
 
+/// Generate WebAssembly text for a program.
+pub fn generate_wasm(grammar_text: &str, source: &str) -> Result<String, String> {
+    let grammar = parse_peg_text(grammar_text)?;
+    let ast = parse_to_ast(&grammar, source).map_err(|(message, _, _)| message)?;
+    Ok(backends::wasm::generate_wasm(&ast))
+}
+
 /// Parse ``source`` with PEG text notation, returning the JSON AST document.
 pub fn parse_text(grammar_text: &str, source: &str) -> Result<String, String> {
     let grammar = parse_peg_text(grammar_text)?;

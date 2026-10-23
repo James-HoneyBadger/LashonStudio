@@ -134,3 +134,56 @@ def test_python_backend_matches_python_pipeline(sample, tmp_path):
     reference = execute(PythonTranspiler().transpile(ast))
 
     assert produced == reference
+
+
+@pytest.mark.parametrize("sample", ["hello.aur", "fibonacci.aur", "fizzbuzz.aur"])
+def test_wasm_backend_runs_like_the_python_backend(sample, tmp_path):
+    wasmtime = pytest.importorskip("wasmtime")
+
+    source = SAMPLES / sample
+    output = tmp_path / source.with_suffix(".wat").name
+    completed = run("codegen-wasm", str(GRAMMAR), str(source), "-o", str(output))
+    assert completed.returncode == 0, completed.stderr
+
+    def execute(wat: str) -> list[str]:
+        engine = wasmtime.Engine()
+        store = wasmtime.Store(engine)
+        module = wasmtime.Module(engine, wasmtime.wat2wasm(wat))
+        printed: list[str] = []
+
+        def log_i32(value):
+            printed.append(str(value))
+
+        def log_str(caller, ptr, length):
+            memory = caller.get("memory")
+            printed.append(
+                bytes(memory.read(caller, ptr, ptr + length)).decode("utf-8")
+            )
+
+        i32 = wasmtime.ValType.i32()
+        f64 = wasmtime.ValType.f64()
+        instance = wasmtime.Instance(
+            store,
+            module,
+            [
+                wasmtime.Func(store, wasmtime.FuncType([i32], []), log_i32),
+                wasmtime.Func(
+                    store, wasmtime.FuncType([i32, i32], []), log_str,
+                    access_caller=True,
+                ),
+                wasmtime.Func(
+                    store, wasmtime.FuncType([f64], [f64]), lambda v: v ** 0.5
+                ),
+            ],
+        )
+        instance.exports(store)["main"](store)
+        return printed
+
+    from parsercraft.codegen.codegen_wasm import WasmGenerator
+    from parsercraft.parser import GrammarParser, PEGInterpreter
+
+    grammar = GrammarParser().parse(GRAMMAR.read_text(encoding="utf-8"))
+    ast = PEGInterpreter(grammar).parse(source.read_text(encoding="utf-8"))
+    reference = execute(WasmGenerator().translate_source_ast(ast).to_wat())
+
+    assert execute(output.read_text(encoding="utf-8")) == reference

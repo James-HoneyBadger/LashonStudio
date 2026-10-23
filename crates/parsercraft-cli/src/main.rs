@@ -8,7 +8,7 @@ use std::path::Path;
 use std::process::ExitCode;
 
 use parsercraft_core::{
-    generate_c, generate_python, parse_document, parse_peg_text,
+    generate_c, generate_python, generate_wasm, parse_document, parse_peg_text,
 };
 
 const USAGE: &str = "\
@@ -21,6 +21,7 @@ usage:
   parsercraft-rs parse <grammar.peg> <program>
   parsercraft-rs codegen-c <grammar.peg> <program> [-o out.c] [--compile] [--run]
   parsercraft-rs codegen-py <grammar.peg> <program> [-o out.py] [--run]
+  parsercraft-rs codegen-wasm <grammar.peg> <program> [-o out.wat]
   parsercraft-rs version
 ";
 
@@ -39,6 +40,7 @@ fn main() -> ExitCode {
         "parse" => parse(args.get(1), args.get(2)),
         "codegen-c" => codegen_c(&args[1..]),
         "codegen-py" => codegen_py(&args[1..]),
+        "codegen-wasm" => codegen_wasm(&args[1..]),
         "help" | "--help" | "-h" | "" => {
             print!("{USAGE}");
             Ok(())
@@ -275,5 +277,28 @@ fn codegen_py(args: &[String]) -> Result<(), String> {
             return Err(format!("{output} exited with {status}"));
         }
     }
+    Ok(())
+}
+
+fn codegen_wasm(args: &[String]) -> Result<(), String> {
+    let grammar_path = args.first().ok_or("missing grammar path")?;
+    let program_path = args.get(1).ok_or("missing program path")?;
+    let mut output = program_path.trim_end_matches(".aur").to_string() + ".wat";
+
+    if let Some(flag) = args.get(2) {
+        if flag == "-o" || flag == "--output" {
+            output = args.get(3).ok_or("missing value for --output")?.clone();
+        } else {
+            return Err(format!("unknown option '{flag}'"));
+        }
+    }
+
+    let grammar_text = std::fs::read_to_string(grammar_path)
+        .map_err(|error| format!("cannot read {grammar_path}: {error}"))?;
+    let source = std::fs::read_to_string(program_path)
+        .map_err(|error| format!("cannot read {program_path}: {error}"))?;
+    let wat = generate_wasm(&grammar_text, &source)?;
+    std::fs::write(&output, &wat).map_err(|error| format!("cannot write {output}: {error}"))?;
+    println!("wrote {output} ({} lines)", wat.lines().count());
     Ok(())
 }

@@ -35,10 +35,23 @@ def _sandbox_limits() -> None:
         import resource
     except ImportError:  # pragma: no cover - Windows
         return
-    resource.setrlimit(resource.RLIMIT_CPU, (5, 5))
-    resource.setrlimit(resource.RLIMIT_AS, (512 * 1024 * 1024,) * 2)
-    resource.setrlimit(resource.RLIMIT_NOFILE, (64, 64))
-    resource.setrlimit(resource.RLIMIT_FSIZE, (10 * 1024 * 1024,) * 2)
+
+    limits = (
+        ("RLIMIT_CPU", (5, 5)),
+        ("RLIMIT_AS", (512 * 1024 * 1024,) * 2),
+        ("RLIMIT_NOFILE", (64, 64)),
+        ("RLIMIT_FSIZE", (10 * 1024 * 1024,) * 2),
+    )
+    for name, value in limits:
+        limit = getattr(resource, name, None)
+        if limit is None:
+            continue
+        try:
+            resource.setrlimit(limit, value)
+        except (ValueError, OSError):
+            # Some platforms do not support every limit (notably RLIMIT_AS
+            # on macOS); continue with the ones that work.
+            continue
 
 
 def _run_sandboxed(code: str, timeout: float) -> int:

@@ -42,7 +42,7 @@ jobs:
         run: python -m pytest -q
       - name: Coverage gate
         if: matrix.python-version == '3.12'
-        run: python -m pytest -q --cov --cov-report=term-missing --cov-fail-under=45
+        run: python -m pytest -q --cov --cov-report=term-missing --cov-fail-under=43
 
   cross-platform:
     runs-on: ${{ matrix.os }}

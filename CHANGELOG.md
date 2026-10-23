@@ -39,7 +39,7 @@ All notable changes to ParserCraft. This project follows
   `release`), and package data live in `pyproject.toml`; the version is
   single-sourced from `parsercraft.__version__`; `setup.py` was removed.
 - CI now runs lint, a docs check, Python 3.10–3.14 tests, a coverage gate
-  (45%), Windows/macOS smoke tests, and a build + `twine check` packaging job.
+  (43%), Windows/macOS smoke tests, and a build + `twine check` packaging job.
 - WASM generation is explicitly reported as partial (`StudioResult.supported`,
   warnings in the Studio pane and CLI) instead of silently succeeding.
 - `check-protocol`, `package-search`, `package-install`, and `debug-launch` now

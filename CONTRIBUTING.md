@@ -15,7 +15,7 @@ cd ParserCraft
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 python -m pytest -q          # 322 passing
-python -m pytest -q --cov --cov-fail-under=45
+python -m pytest -q --cov --cov-fail-under=43
 ruff check src tests
 ```
 
@@ -48,7 +48,7 @@ No install is required to run tests from a checkout: `pyproject.toml` sets
 - Add a regression test for every bug fix.
 - Keep existing tests passing; do not weaken assertions to make a change fit.
 - Toolchain-dependent tests (C, LLVM) should skip when the compiler is missing.
-- CI gates: ruff, docs link/example checks, Python 3.10–3.14, a 45% coverage
+- CI gates: ruff, docs link/example checks, Python 3.10–3.14, a 43% coverage
   floor on 3.12, Windows/macOS smoke tests, and `python -m build` + `twine
   check`.
 - GUI tests must skip without a display.

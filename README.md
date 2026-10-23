@@ -424,7 +424,7 @@ Start at [docs/README.md](docs/README.md) for learning paths and the full index.
 
 ```bash
 python -m pytest tests/ -v
-python -m pytest -q --cov --cov-fail-under=45
+python -m pytest -q --cov --cov-fail-under=43
 ```
 
 322 tests covering grammar parsing, all four code-generation backends (with

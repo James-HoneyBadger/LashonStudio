@@ -49,10 +49,19 @@ mod python {
     use pyo3::prelude::*;
 
     /// Parse ``source`` with ``grammar_json`` (the Python serializer's format).
+    ///
+    /// Always returns the JSON envelope ``{"ok": ...}`` so the Python binding
+    /// can raise its own ``NativeParseError`` with the engine's message.
     #[pyfunction]
     fn parse(grammar_json: &str, source: &str) -> PyResult<String> {
-        super::parse_json_grammar(grammar_json, source)
-            .map_err(PyValueError::new_err)
+        match super::parse_json_grammar(grammar_json, source) {
+            Ok(document) => Ok(document),
+            Err(message) => Ok(serde_json::json!({
+                "ok": false,
+                "error": message,
+            })
+            .to_string()),
+        }
     }
 
     /// Parse ``source`` with PEG text notation.

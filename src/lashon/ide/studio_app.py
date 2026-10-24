@@ -27,6 +27,7 @@ import yaml
 from lashon.ide import settings
 from lashon.ide.canvas_view import render
 from lashon.ide.editor import CodeEditor
+from lashon.ide.repl_panel import ReplPanel
 from lashon.ide.studio import (
     LanguageStudio,
     StudioProject,
@@ -212,6 +213,8 @@ class LashonIDE(tk.Tk):
         run_menu.add_separator()
         run_menu.add_command(label="Generate All Backends", accelerator="F7",
                              command=self._generate_all)
+        run_menu.add_command(label="Focus Statement REPL", accelerator="Ctrl+R",
+                             command=self._open_repl)
         menubar.add_cascade(label="Run", menu=run_menu)
 
         sample_menu = self._menu(menubar)
@@ -493,6 +496,12 @@ class LashonIDE(tk.Tk):
         ast_scroll.pack(side="right", fill="y")
         self.ast_tree.pack(fill="both", expand=True)
 
+        repl_frame = tk.Frame(self.output_tabs, bg=BG)
+        self.output_tabs.add(repl_frame, text="REPL")
+        self.repl_panel = ReplPanel(repl_frame, PALETTE,
+                                    on_draw=self._on_repl_draw)
+        self.repl_panel.pack(fill="both", expand=True)
+
     def _add_text_tab(self, title: str) -> tk.Text:
         frame = tk.Frame(self.output_tabs, bg=PANEL)
         self.output_tabs.add(frame, text=title)
@@ -531,9 +540,20 @@ class LashonIDE(tk.Tk):
     def _tick_clock(self) -> None:
         try:
             self.clock_label.configure(text=datetime.now().strftime("%H:%M:%S"))
-            self.after(1000, self._tick_clock)
+            self._clock_job = self.after(1000, self._tick_clock)
         except tk.TclError:  # pragma: no cover - window already destroyed
             pass
+
+    def destroy(self) -> None:
+        """Cancel pending callbacks before tearing the window down."""
+        for job in (getattr(self, "_clock_job", None),
+                    self._auto_validate_job):
+            if job:
+                try:
+                    self.after_cancel(job)
+                except tk.TclError:  # pragma: no cover - already gone
+                    pass
+        super().destroy()
 
     def _bind_shortcuts(self) -> None:
         self.bind("<Control-Shift-P>", lambda _e: self._show_palette())
@@ -548,6 +568,7 @@ class LashonIDE(tk.Tk):
         self.bind("<F5>", lambda _e: self._run_program())
         self.bind("<F6>", lambda _e: self._parse_source())
         self.bind("<F7>", lambda _e: self._generate_all())
+        self.bind("<Control-r>", lambda _e: self._open_repl())
 
     # ------------------------------------------------------------------
     # Loading / saving
@@ -611,6 +632,8 @@ class LashonIDE(tk.Tk):
 
         self._log(f"Opened project: {project.name} ({project.root})", "success")
         self._validate_grammar(log_success=False)
+        if self.studio.grammar is not None:
+            self.repl_panel.use_grammar(self.studio.grammar)
         self._set_status(f"Loaded {project.name}")
         return True
 
@@ -912,6 +935,22 @@ class LashonIDE(tk.Tk):
             self._log(self.studio.last_graphics.summary(), "info")
         self._log(f"Finished in {result.elapsed_ms:.1f} ms", "success")
         self._set_status("Run complete", "success")
+
+    def _on_repl_draw(self, graphics) -> None:
+        """Show the REPL session's drawing on the Canvas tab."""
+        self.studio.last_graphics = graphics
+        self._redraw_canvas()
+        if not graphics.is_empty():
+            self._set_stage("Run", "ok")
+
+    def _open_repl(self) -> None:
+        """Switch to the REPL tab and put the caret in the prompt."""
+        index = self.output_tabs.index("end")
+        for tab in range(index):
+            if self.output_tabs.tab(tab, "text") == "REPL":
+                self.output_tabs.select(tab)
+                break
+        self.repl_panel.focus_prompt()
 
     def _redraw_canvas(self) -> None:
         """Replay the last run's drawing onto the Canvas tab."""

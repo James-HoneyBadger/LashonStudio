@@ -275,6 +275,7 @@ def test_project_can_declare_its_own_sample_extension():
     assert project.sample_path.stem == "hello"
     assert [p.name for p in project.sample_files()] == [
         "circles.logo", "hello.logo", "spiral.logo", "square.logo",
+        "star.logo",
     ]
 
 

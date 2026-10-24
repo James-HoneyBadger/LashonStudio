@@ -97,6 +97,7 @@ on a small laptop screen.
 | **Language editor** | YAML: metadata, keywords, operators, syntax options |
 | **Console** | Timestamped output, timings, errors, backend summaries |
 | **Canvas** | Live drawing surface: turtle statements paint here after every run |
+| **REPL** | Statement-by-statement evaluation with a live canvas (Ctrl+R) |
 | **Variables** | Namespace after a run |
 | **Python / C / WASM / LLVM IR** | Generated output |
 | **Pipeline** | Live status for Grammar → Parse → Run → Python/C/WASM/LLVM: `○` idle, `✓` passed, `✗` failed |
@@ -116,6 +117,27 @@ Drawing is a runtime feature, not a code-generation one, so it works for any
 grammar that uses the turtle statement names. `projects/logo` is the worked
 example; [GRAPHICS.md](GRAPHICS.md) documents the vocabulary and the export
 formats (SVG, ASCII, JSON).
+
+### The REPL tab
+
+The last tab is an interactive session bound to the project's grammar — the
+same engine as `lashon-repl`, inside the workbench. Type a statement, press
+Enter, and it is evaluated against the editors' grammar; the caret stays in the
+prompt, ↑/↓ walk history, and **Ctrl+R** jumps to it from anywhere.
+
+```
+>>> FD 100 ;
+canvas: 1 strokes, 100×0 units
+>>> RT 90 ;
+canvas: 1 strokes, 100×0 units
+>>> FD 60 ;
+canvas: 2 strokes, 100×60 units
+```
+
+Every statement repaints the **Canvas** tab, so a drawing language can be
+explored stroke by stroke. The REPL commands work too (`:help`, `:vars`, `:py`,
+`:ast`, `:canvas …`, `:reset`); opening a project rebinds the session to that
+project's grammar and starts a fresh namespace.
 
 Failed parses and grammar validation open the **Problems** tab automatically.
 The offending line is underlined in the editor with a red squiggle, and

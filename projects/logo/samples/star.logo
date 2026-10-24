@@ -1,0 +1,5 @@
+// star.logo — the classic five-point star
+CLS ;
+COLOR 14 ;
+REPEAT 5 FD 160 ; RT 144 ; END
+SAY "star" ;

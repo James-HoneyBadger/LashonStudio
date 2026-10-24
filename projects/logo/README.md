@@ -6,7 +6,7 @@ programs cannot: **the canvas**.
 ```bash
 lashon run projects/logo/samples/spiral.logo \
       --config projects/logo/language.yaml --canvas spiral.svg
-lashon-ide projects/logo        # the Canvas tab paints as you run
+lashon-ide projects/logo        # Canvas tab paints on Run; Ctrl+R for the REPL
 lashon-repl --config projects/logo/language.yaml --canvas
 ```
 
@@ -51,7 +51,8 @@ whatever host is running it — the Studio canvas, the REPL window, an SVG file
 |---|---|
 | `hello.logo` | a square, the smallest complete program |
 | `square.logo` | the same square with a colour |
-| `spiral.logo` | a square spiral plus a hexagonal ring |
+| `star.logo` | a five-point star (144° turns) |
+| `spiral.logo` | a vortex: 72 long steps with 175° turns |
 | `circles.logo` | three concentric circles |
 
 ## Notes

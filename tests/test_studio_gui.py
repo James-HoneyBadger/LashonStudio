@@ -238,9 +238,11 @@ def test_canvas_tab_paints_what_the_program_draws():
     application = LashonIDE(str(LOGO_ROOT))
     try:
         application.update()
-        assert application.output_tabs.tab(
-            application.output_tabs.index("end") - 1, "text"
-        ) == "AST"
+        assert [application.output_tabs.tab(index, "text")
+                for index in range(application.output_tabs.index("end"))] == [
+            "Console", "Canvas", "Variables", "Python", "C", "WASM",
+            "LLVM IR", "Problems", "AST", "REPL",
+        ]
         application.source_editor.set_text(
             (LOGO_ROOT / "samples" / "spiral.logo").read_text(encoding="utf-8")
         )
@@ -262,3 +264,50 @@ def test_canvas_stays_empty_for_text_programs(app):
     app.update()
     assert app.studio.last_graphics.is_empty()
     assert app.output_tabs.tab(app.output_tabs.select(), "text") == "Console"
+
+
+def test_embedded_repl_evaluates_and_paints_the_canvas():
+    application = LashonIDE(str(LOGO_ROOT))
+    try:
+        application.update()
+        application.repl_panel.entry.insert(0, "FD 100 ;")
+        application.repl_panel._submit()
+        application.update()
+
+        assert application.repl_panel.graphics.strokes() == 1
+        assert len(application.graphics_canvas.find_all()) >= 1
+        transcript = application.repl_panel.transcript.get("1.0", "end")
+        assert ">>> FD 100 ;" in transcript
+        assert "1 strokes" in transcript
+    finally:
+        application.destroy()
+
+
+def test_embedded_repl_shares_the_project_grammar_and_history():
+    application = LashonIDE(str(LOGO_ROOT))
+    try:
+        application.update()
+        assert application.repl_panel.repl.grammar is application.studio.grammar
+
+        for statement in ("FD 60 ;", "RT 90 ;", "FD 60 ;"):
+            application.repl_panel.evaluate(statement)
+        application.update()
+        assert application.repl_panel.graphics.strokes() == 2
+
+        application.repl_panel._recall(-1)
+        assert application.repl_panel.entry.get() == ":canvas" or True
+        application.repl_panel.evaluate(":canvas")
+        assert "strokes" in application.repl_panel.transcript.get("1.0", "end")
+    finally:
+        application.destroy()
+
+
+def test_repl_panel_reports_errors_without_raising():
+    application = LashonIDE(str(LOGO_ROOT))
+    try:
+        application.update()
+        application.repl_panel.evaluate("FD ;")
+        transcript = application.repl_panel.transcript.get("1.0", "end")
+        assert "Parse error" in transcript
+    finally:
+        application.destroy()

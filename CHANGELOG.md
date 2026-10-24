@@ -12,7 +12,9 @@ All notable changes to Lashon. This project follows
   `lashon.runtime.graphics.Graphics` instead of opening Python's `turtle`
   window, so a language can draw anywhere — a display is optional:
   - **Studio**: new **Canvas** tab that repaints after every run and opens
-    itself when the program drew something.
+    itself when the program drew something, plus an embedded **REPL** tab
+    (Ctrl+R) that evaluates statements against the project grammar and paints
+    the canvas after each one.
   - **REPL**: `:canvas`, `:canvas ascii|save FILE|show|clear`, and
     `lashon-repl --canvas` for a live window beside the prompt.
   - **CLI**: `lashon run --canvas out.svg`, `--ascii-canvas`, and a `canvas`

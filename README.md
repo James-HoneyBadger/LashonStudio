@@ -86,7 +86,7 @@ Start with a grammar. Get a working language. Ship it anywhere.
 
 ```bash
 git clone https://github.com/James-HoneyBadger/LashonStudio.git
-cd Lashon
+cd LashonStudio
 pip install -e .
 ```
 

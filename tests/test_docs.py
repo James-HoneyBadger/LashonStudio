@@ -113,3 +113,38 @@ def test_aurora_samples_parse_and_run(name: str, expected: set[str]):
     ast = PEGInterpreter(grammar).parse(source)
     runtime = transpile_and_exec(ast)
     assert set(runtime) == expected
+
+
+DOCS = Path(__file__).resolve().parent.parent / "docs"
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def test_docs_state_the_current_version():
+    """A release bump must reach the pages that advertise a version."""
+    import lashon
+
+    version = lashon.__version__
+    checks = {
+        "index.md": f"> Version {version}",
+        "INSTALL.md": f"> Version {version}",
+        "QUICKSTART.md": f"Verified against Lashon {version}",
+        "USER_GUIDE.md": f"Lashon {version}",
+        "TECHNICAL_REFERENCE.md": f"`lashon` {version}",
+        "CLI_REFERENCE.md": f"lashon --version        # lashon {version}",
+    }
+    for filename, needle in checks.items():
+        text = (DOCS / filename).read_text(encoding="utf-8")
+        assert needle in text, f"{filename} is missing {needle!r}"
+
+
+def test_docs_do_not_reference_removed_codex_ide():
+    for path in [DOCS / "INSTALL.md", DOCS / "PACKAGING.md", ROOT / "README.md"]:
+        text = path.read_text(encoding="utf-8")
+        assert "codex" not in text.lower(), path.name
+
+
+def test_clone_instructions_use_the_renamed_directory():
+    for name in ("docs/INSTALL.md", "docs/QUICKSTART.md", "README.md"):
+        text = (ROOT / name).read_text(encoding="utf-8")
+        assert "cd LashonStudio" in text, name
+        assert "\ncd Lashon\n" not in text, name

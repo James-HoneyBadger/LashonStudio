@@ -135,6 +135,7 @@ LSP only handles a subset of requests); see
 
 ## Versioning
 
-Documents track the `4.x` line. Breaking API changes are recorded in
-[CHANGELOG.md](https://github.com/James-HoneyBadger/LashonStudio/blob/main/CHANGELOG.md). The `4.0.0` documentation set was regenerated
-alongside the Studio release.
+Documents track the `5.x` line. Breaking API changes are recorded in
+[CHANGELOG.md](https://github.com/James-HoneyBadger/LashonStudio/blob/main/CHANGELOG.md).
+The `5.0.0` set was regenerated for the Lashon Studio rename and the drawing
+canvas; the `4.x` pages remain in the changelog for history.

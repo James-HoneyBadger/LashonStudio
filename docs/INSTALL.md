@@ -1,6 +1,6 @@
 # Lashon — Installation & Setup
 
-> Version 4.0.0 · Python 3.10+
+> Version 5.0.0 · Python 3.10+
 
 ---
 
@@ -39,13 +39,13 @@ Clone the repository and install in editable mode so changes to source files tak
 
 ```bash
 git clone https://github.com/James-HoneyBadger/LashonStudio.git
-cd Lashon
+cd LashonStudio
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"     # includes pytest + ruff
 ```
 
-This installs the `lashon`, `lashon-ide`, `lashon-repl`, and
-`codex` entry-point commands. `pip install -e .` (without `[dev]`) is enough to
+This installs the `lashon`, `lashon-ide`, and `lashon-repl` entry-point
+commands. `pip install -e .` (without `[dev]`) is enough to
 run the CLI, Studio, and REPL; the tests can also run from a checkout without
 installing because `pyproject.toml` sets `pythonpath = ["src"]`.
 
@@ -127,7 +127,7 @@ After installation, confirm the entry points are available:
 
 ```bash
 lashon --version
-# lashon 4.0.0
+# lashon 5.0.0
 
 lashon list-presets
 # Lists: python_like, js_like, ruby_like, ...

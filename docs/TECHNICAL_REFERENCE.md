@@ -1,6 +1,6 @@
 # Lashon — Technical Reference
 
-API reference for `lashon` 4.0.0. Signatures are copied from the installed
+API reference for `lashon` 5.0.0. Signatures are copied from the installed
 package; examples are executed while writing this reference.
 
 - Task-oriented usage: [USER_GUIDE.md](USER_GUIDE.md)

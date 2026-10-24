@@ -47,6 +47,11 @@ All notable changes to Lashon. This project follows
   program-counter loop, and `IF … THEN GOTO` becomes a branch that sets it.
   All three BASIC samples now print identical output from the interpreter,
   compiled C, and compiled LLVM IR.
+- Documentation catches up with the rename: INSTALL/PACKAGING no longer mention
+  a `codex` entry point, `cd Lashon` became `cd LashonStudio`, and the version
+  headers on INSTALL, QUICKSTART, USER_GUIDE, CLI_REFERENCE,
+  TECHNICAL_REFERENCE, and the docs index read 5.0.0. A docs test now fails if
+  a release bump leaves them behind.
 - Added `projects/basic/language.yaml` (grammar + `.bas` samples) so the BASIC
   project opens in the Studio like the others, and the REPL now supplies a
   line number for line-oriented grammars, so `LET X = 1` works in a BASIC

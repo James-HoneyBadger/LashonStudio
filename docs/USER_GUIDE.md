@@ -1,6 +1,6 @@
 # Lashon — User Guide
 
-Task-oriented guide to building and running languages with Lashon 4.0.0.
+Task-oriented guide to building and running languages with Lashon 5.0.0.
 For exhaustive references, follow the links to the dedicated pages.
 
 - New here? Start with [QUICKSTART.md](QUICKSTART.md).
@@ -46,7 +46,7 @@ does exactly that.
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 
-lashon --version          # lashon 4.0.0
+lashon --version          # lashon 5.0.0
 python -m pytest -q            # 368 passed
 ```
 

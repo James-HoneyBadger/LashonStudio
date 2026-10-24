@@ -5,7 +5,7 @@ generation, modules, types, editor tooling, and packaging helpers.
 
 ```bash
 lashon <command> [options]
-lashon --version        # lashon 4.0.0
+lashon --version        # lashon 5.0.0
 lashon --help
 ```
 

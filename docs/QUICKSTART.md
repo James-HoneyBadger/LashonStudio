@@ -2,7 +2,7 @@
 
 Get from “nothing installed” to a running custom language in about ten minutes.
 
-> Verified against Lashon 4.0.0. For alternate installs, see
+> Verified against Lashon 5.0.0. For alternate installs, see
 > [INSTALL.md](INSTALL.md).
 
 ---
@@ -11,7 +11,7 @@ Get from “nothing installed” to a running custom language in about ten minut
 
 ```bash
 git clone https://github.com/James-HoneyBadger/LashonStudio.git
-cd Lashon
+cd LashonStudio
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
@@ -21,7 +21,7 @@ Check it:
 
 ```bash
 lashon --version
-# lashon 4.0.0
+# lashon 5.0.0
 ```
 
 ---

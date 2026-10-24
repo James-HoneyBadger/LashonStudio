@@ -294,6 +294,10 @@ Command sets differ (`:` for grammar, `.` for config):
 | `:load FILE` / `:save FILE` | `.save FILE` | read or write a source file |
 | `:time` | `.time` | toggle per-line timing |
 | `:canvas` | — | drawing surface: `:canvas`, `ascii`, `save FILE`, `show`, `clear` |
+
+Line-oriented grammars (`program <- line+`, like BASIC) accept entries with
+or without the line number: `LET X = 1` and `10 LET X = 1` both work.
+
 | `:vars` / `:reset` | `.vars` / `.clear` | inspect or clear the namespace |
 
 Both REPLs keep history between sessions, and the grammar REPL completes

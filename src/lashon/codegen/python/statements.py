@@ -76,8 +76,11 @@ class StatementEmitter:
             for index, (number, statement, _) in enumerate(entries)
         ]
 
+        assigned = sorted(self._assigned_names(lines))
         self._line("def _lashon_numbered_program():")
         self.indent_level += 1
+        if assigned:
+            self._line(f"global {', '.join(assigned)}")
         self._line(f"_pc = {numbered[0][0]}")
         self._line("while _pc is not None:")
         self.indent_level += 1
@@ -92,12 +95,8 @@ class StatementEmitter:
         self._line("_pc = None")
         self.indent_level -= 1
         self.indent_level -= 1
-        self._line(
-            "return {name: value for name, value in locals().items() "
-            "if not name.startswith('_')}"
-        )
         self.indent_level -= 1
-        self._line("globals().update(_lashon_numbered_program())")
+        self._line("_lashon_numbered_program()")
 
     def _emit_numbered_statement(self, statement: Optional[SourceAST],
                                  next_number: Optional[int]) -> None:
@@ -159,6 +158,43 @@ class StatementEmitter:
         else:
             self._line(self._advance(next_number))
         self.indent_level -= 1
+
+
+    @classmethod
+    def _assigned_names(cls, nodes) -> set[str]:
+        """Identifiers the program assigns, for the generated ``global`` line."""
+        names: set[str] = set()
+        for node in nodes:
+            names |= cls._assigned_names_in(node)
+        return names
+
+    @classmethod
+    def _assigned_names_in(cls, node: SourceAST) -> set[str]:
+        names: set[str] = set()
+        if node.node_type in ("let_stmt", "LetStmt", "assign_stmt",
+                              "AssignStmt"):
+            for child in node.children:
+                if child.node_type in ("Identifier", "IDENT"):
+                    names.add(str(child.value))
+                    break
+        elif node.node_type in ("statement", "Statement"):
+            parts = [
+                child for child in node.children
+                if child.node_type != "Operator"
+            ]
+            operators = [
+                child.value for child in node.children
+                if child.node_type == "Operator"
+            ]
+            if (
+                len(parts) == 2
+                and parts[0].node_type in ("Identifier", "IDENT")
+                and any(op in ("=", ":=") for op in operators)
+            ):
+                names.add(str(parts[0].value))
+        for child in node.children:
+            names |= cls._assigned_names_in(child)
+        return names
 
     @staticmethod
     def _advance(next_number: Optional[int]) -> str:

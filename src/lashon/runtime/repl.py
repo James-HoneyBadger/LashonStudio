@@ -276,6 +276,10 @@ class REPL:
         candidates = [text]
         if not text.endswith(";"):
             candidates.append(text + " ;")
+        # Line-oriented grammars (`program <- line+`) need a number in front;
+        # typing `LET X = 1` in a BASIC session should still work.
+        candidates.append(f"10 {text}")
+        candidates.append(f"10 {text} ;")
         error: Optional[Exception] = None
         for candidate in candidates:
             try:

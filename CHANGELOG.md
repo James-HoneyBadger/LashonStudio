@@ -48,7 +48,9 @@ All notable changes to Lashon. This project follows
   All three BASIC samples now print identical output from the interpreter,
   compiled C, and compiled LLVM IR.
 - Added `projects/basic/language.yaml` (grammar + `.bas` samples) so the BASIC
-  project opens in the Studio like the others.
+  project opens in the Studio like the others, and the REPL now supplies a
+  line number for line-oriented grammars, so `LET X = 1` works in a BASIC
+  session instead of demanding `10 LET X = 1`.
 - The Rust evaluator implements `break` and `continue` (loops already handled
   them, but nothing ever produced the flow), which also clears the last
   compiler warning.

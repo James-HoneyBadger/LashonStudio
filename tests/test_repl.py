@@ -173,3 +173,31 @@ class TestReplTerminators:
     def test_parse_error_is_reported(self):
         repl = REPL()
         assert "Parse error" in repl.eval_line("this is not a statement")
+
+
+class TestLineOrientedGrammars:
+    """BASIC-style grammars need a line number; the REPL supplies one."""
+
+    @staticmethod
+    def _basic_repl():
+        from pathlib import Path
+
+        from lashon.parser import GrammarParser
+
+        root = Path(__file__).resolve().parent.parent / "projects" / "basic"
+        grammar = GrammarParser().parse(
+            (root / "grammar.peg").read_text(encoding="utf-8")
+        )
+        return REPL(grammar=grammar)
+
+    def test_statement_without_a_line_number_still_runs(self):
+        repl = self._basic_repl()
+        repl.eval_line("LET Y = 7")
+        assert repl.namespace["Y"] == 7
+        repl.eval_line("LET Y = Y + 1")
+        assert repl.namespace["Y"] == 8
+
+    def test_explicit_line_numbers_are_honoured(self):
+        repl = self._basic_repl()
+        repl.eval_line("10 PRINT 42")
+        assert repl.namespace.get("Y") is None

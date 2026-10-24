@@ -120,6 +120,7 @@ class ReplPanel(tk.Frame):
 
     def evaluate(self, source: str) -> None:
         """Run one entry and report what it printed."""
+        before = self.repl.graphics.strokes()
         stdout, stderr = io.StringIO(), io.StringIO()
         if source.startswith(":"):
             with redirect_stdout(stdout), redirect_stderr(stderr):
@@ -135,13 +136,8 @@ class ReplPanel(tk.Frame):
         if errors:
             self._write(errors.rstrip("\n"), "error")
 
-        if not printed and not errors:
-            surface = self.repl.graphics
-            summary = surface.summary()
-            if summary == "canvas empty":
-                self._write("(no output)", "result")
-            else:
-                self._write(summary, "result")
+        if not printed and not errors and self.repl.graphics.strokes() > before:
+            self._write(self.repl.graphics.summary(), "result")
 
         if self._on_draw is not None:
             self._on_draw(self.repl.graphics)

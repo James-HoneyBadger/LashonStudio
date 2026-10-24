@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Language Validator for HB Language Construction Set
+Language validator for Lashon Studio
 
 Provides comprehensive validation for language configurations:
 - Detects ambiguous grammars

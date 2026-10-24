@@ -1,7 +1,7 @@
 """
 Language Runtime Integration
 
-This module integrates the Language Construction Set with the interpreter,
+This module wires a language configuration into the interpreter,
 allowing custom language configurations to be applied at runtime.
 
 Features:

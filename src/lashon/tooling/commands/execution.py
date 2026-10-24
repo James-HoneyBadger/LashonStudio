@@ -354,7 +354,7 @@ def _run_repl_session(config: LanguageConfig, debug: bool) -> int:
     variables: dict[str, Any] = {}
 
     print("=" * 70)
-    print("HB Language Construction Set - REPL Mode")
+    print("Lashon Studio - REPL Mode")
     print(f"Language: {config.name} v{config.version}")
     print("=" * 70)
     print("\nCommands:")

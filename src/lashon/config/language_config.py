@@ -1,5 +1,5 @@
 """
-Language Construction Set
+Lashon Studio
 
 This module provides a comprehensive configuration system that allows users to:
     - Rename commands and keywords

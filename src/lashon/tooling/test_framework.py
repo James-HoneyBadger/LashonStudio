@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Testing Framework for HB Language Construction Set
+Testing framework for Lashon Studio
 
 Provides automated testing capabilities for custom languages including:
 - Unit test generation

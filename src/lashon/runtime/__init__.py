@@ -43,11 +43,26 @@ ModuleManager
     before executing any code if a cycle is found.
 """
 
+from typing import Any
+
 from .ffi import FFIBinding, FFIBridge
 from .language_runtime import LanguageRuntime
 from .module_system import ModuleLoader, ModuleManager
-from .repl import REPL
 from .stdlib import StdConstant, StdFunction, StdLib, StdModule
+
+
+def __getattr__(name: str) -> Any:
+    """Import the REPL on first use.
+
+    Keeping it out of module import means ``python -m lashon.runtime.repl``
+    runs cleanly instead of re-executing a module that is already in
+    ``sys.modules``.
+    """
+    if name == "REPL":
+        from .repl import REPL
+
+        return REPL
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
     "LanguageRuntime",

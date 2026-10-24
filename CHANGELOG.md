@@ -47,6 +47,11 @@ All notable changes to Lashon. This project follows
   program-counter loop, and `IF … THEN GOTO` becomes a branch that sets it.
   All three BASIC samples now print identical output from the interpreter,
   compiled C, and compiled LLVM IR.
+- Rename leftovers in the runtime output: the config-driven REPL banner,
+  `ParserGenerator` output, and several module docstrings still said
+  "HB Language Construction Set". They now say Lashon Studio, and
+  `from lashon.runtime import REPL` is a lazy export so
+  `python -m lashon.runtime.repl` no longer trips a re-execution warning.
 - Documentation catches up with the rename: INSTALL/PACKAGING no longer mention
   a `codex` entry point, `cd Lashon` became `cd LashonStudio`, and the version
   headers on INSTALL, QUICKSTART, USER_GUIDE, CLI_REFERENCE,

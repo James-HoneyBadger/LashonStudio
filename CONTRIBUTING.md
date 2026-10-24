@@ -83,12 +83,17 @@ python -m pytest tests/ --cov=src/parsercraft --cov-report=term-missing
 
 ## Branch protection and CI gates
 
-`main` is protected. Ten status checks are required (`lint`, `native`,
-`package`, `test (3.10)` … `test (3.14)`, both `cross-platform` jobs),
-force pushes and branch deletion are blocked, and unresolved review threads
-block a merge. Auto-merge is enabled on the repository.
+`main` is protected by two repository rulesets, because they need different
+bypass rules:
 
-Maintainers may push directly; contributors should open a pull request:
+| Ruleset | Rules | Bypass |
+|---|---|---|
+| `protect-main-destructive` | block deletion, block force pushes (`non_fast_forward`) | **none** — binds everyone, including maintainers |
+| `protect-main-checks` | 10 required status checks (strict), pull requests must resolve review threads | repository admins |
+
+That arrangement is deliberate: force-pushing or deleting `main` is never
+allowed, while maintainers can still land a change directly. Contributors
+should open a pull request:
 
 ```bash
 git switch -c feat/my-change

@@ -1,6 +1,7 @@
 """Tests for the code-generation CLI commands."""
 
 import sys
+from pathlib import Path
 
 from lashon.tooling.cli import main
 
@@ -82,3 +83,23 @@ def test_codegen_requires_a_grammar_section(tmp_path, monkeypatch, capsys):
 
     assert exit_code == 1
     assert "grammar.rules" in capsys.readouterr().out
+
+
+BASIC_ROOT = Path(__file__).resolve().parent.parent / "projects" / "basic"
+
+
+def test_codegen_accepts_a_grammar_file_without_a_config(tmp_path, monkeypatch,
+                                                         capsys):
+    """`codegen-c` should accept --grammar the way `run` does."""
+    target = tmp_path / "hello.c"
+    monkeypatch.setattr(
+        sys, "argv",
+        [
+            "lashon", "codegen-c",
+            str(BASIC_ROOT / "samples" / "hello.bas"),
+            "--grammar", str(BASIC_ROOT / "grammar.peg"),
+            "--output", str(target),
+        ],
+    )
+    assert main() == 0
+    assert "int main" in target.read_text(encoding="utf-8")

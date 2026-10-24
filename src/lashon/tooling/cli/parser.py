@@ -539,6 +539,9 @@ Examples:
         "--config", "-c", help="Language configuration file (grammar)"
     )
     codegen_c_parser.add_argument(
+        "--grammar", "-g", help="PEG grammar file (overrides --config)"
+    )
+    codegen_c_parser.add_argument(
         "--output", "-o", help="Output C file"
     )
     codegen_c_parser.add_argument(
@@ -556,6 +559,9 @@ Examples:
         "--config", "-c", help="Language configuration file (grammar)"
     )
     codegen_wasm_parser.add_argument(
+        "--grammar", "-g", help="PEG grammar file (overrides --config)"
+    )
+    codegen_wasm_parser.add_argument(
         "--output", "-o", help="Output WAT file"
     )
 
@@ -567,6 +573,9 @@ Examples:
     codegen_llvm_parser.add_argument("file", help="Source file")
     codegen_llvm_parser.add_argument(
         "--config", "-c", help="Language configuration file (grammar)"
+    )
+    codegen_llvm_parser.add_argument(
+        "--grammar", "-g", help="PEG grammar file (overrides --config)"
     )
     codegen_llvm_parser.add_argument(
         "--output", "-o", help="Output LLVM IR file"

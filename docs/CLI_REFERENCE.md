@@ -391,13 +391,14 @@ lashon translate --config espanol.yaml --input program.txt
 ## Code generation
 
 ```bash
-lashon codegen-c    FILE [--config CONFIG] [--output FILE]
-lashon codegen-wasm  FILE [--config CONFIG] [--output FILE]
-lashon codegen-llvm  FILE [--config CONFIG] [--output FILE]
+lashon codegen-c    FILE [--config CONFIG | --grammar GRAMMAR] [--output FILE]
+lashon codegen-wasm  FILE [--config CONFIG | --grammar GRAMMAR] [--output FILE]
+lashon codegen-llvm  FILE [--config CONFIG | --grammar GRAMMAR] [--output FILE]
 ```
 
-- `--config` must point to a language config containing `grammar.rules`.
-- Without `--config`, the built-in default grammar is used.
+- `--config` must point to a language config containing `grammar.rules`;
+  `--grammar` takes a `.peg` file and works without a config.
+- Without either flag, the built-in default grammar is used.
 - Default outputs: `.c`, `.wat`, `.ll`.
 
 ```bash

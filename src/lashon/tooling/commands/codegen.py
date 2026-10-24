@@ -6,20 +6,26 @@ from pathlib import Path
 from typing import Optional
 
 
-def _load_grammar_from_config(config_path: Optional[str]):
-    """Build a Grammar from a raw language config file."""
+def _load_grammar_from_config(config_path: Optional[str],
+                              grammar_path: Optional[str] = None):
+    """Build a Grammar from a language config or a PEG file."""
     from lashon.tooling.commands.common import load_grammar
 
-    return load_grammar(config_path=config_path, require_rules=bool(config_path))
+    return load_grammar(
+        config_path=config_path,
+        grammar_path=grammar_path,
+        require_rules=bool(config_path or grammar_path),
+    )
 
 
-def _parse_source_file(source_path: Path, config_path: Optional[str]):
-    """Parse ``source_path`` using the grammar from ``config_path``."""
+def _parse_source_file(source_path: Path, config_path: Optional[str],
+                       grammar_path: Optional[str] = None):
+    """Parse ``source_path`` with the grammar from ``config_path``/``grammar_path``."""
     from lashon.parser.grammar import PEGInterpreter
 
     if not source_path.exists():
         raise FileNotFoundError(f"Source file not found: {source_path}")
-    grammar = _load_grammar_from_config(config_path)
+    grammar = _load_grammar_from_config(config_path, grammar_path)
     return PEGInterpreter(grammar).parse(
         source_path.read_text(encoding="utf-8")
     )
@@ -31,7 +37,8 @@ def cmd_codegen_c(args):
 
     try:
         source_path = Path(args.file)
-        ast = _parse_source_file(source_path, args.config)
+        ast = _parse_source_file(source_path, args.config,
+                                    getattr(args, "grammar", None))
         generator = CCodeGenerator(
             source_map=getattr(args, "source_map", False),
             source_file=source_path.name,
@@ -61,7 +68,8 @@ def cmd_codegen_wasm(args):
 
     try:
         source_path = Path(args.file)
-        ast = _parse_source_file(source_path, args.config)
+        ast = _parse_source_file(source_path, args.config,
+                                    getattr(args, "grammar", None))
         module = WasmGenerator().translate_source_ast(ast)
 
         output_file = (
@@ -88,7 +96,8 @@ def cmd_codegen_llvm(args):
 
     try:
         source_path = Path(args.file)
-        ast = _parse_source_file(source_path, args.config)
+        ast = _parse_source_file(source_path, args.config,
+                                    getattr(args, "grammar", None))
         llvm_ir = LLVMIRGenerator().translate_source_ast(ast)
 
         output_file = (

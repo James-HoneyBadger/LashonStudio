@@ -20,9 +20,15 @@ from typing import Any, Callable, Dict, List, Optional
 class LineNumbers(tk.Canvas):
     """Line number margin for the code editor."""
 
-    def __init__(self, parent: tk.Widget, text_widget: tk.Text, **kwargs):
-        super().__init__(parent, width=50, bg="#2b2b2b", highlightthickness=0, **kwargs)
+    def __init__(self, parent: tk.Widget, text_widget: tk.Text,
+                 colors: Optional[Dict[str, str]] = None, **kwargs):
+        super().__init__(
+            parent, width=50,
+            bg=(colors or CodeEditor.DEFAULT_COLORS)["gutter_bg"],
+            highlightthickness=0, **kwargs,
+        )
         self.text_widget = text_widget
+        self._colors = colors or CodeEditor.DEFAULT_COLORS
         self._font = tkfont.Font(family="Courier New", size=11)
 
     def redraw(self, _event: Any = None) -> None:
@@ -36,7 +42,7 @@ class LineNumbers(tk.Canvas):
             self.create_text(
                 45, dline[1] + 2,
                 anchor="ne", text=str(line_num),
-                fill="#888888", font=self._font,
+                fill=self._colors["gutter_fg"], font=self._font,
             )
             i = self.text_widget.index(f"{i}+1line")
 
@@ -59,6 +65,8 @@ class CodeEditor(tk.Frame):
         "cursor": "#ffffff",
         "selection": "#264f78",
         "current_line": "#2a2d2e",
+        "gutter_bg": "#2b2b2b",
+        "gutter_fg": "#888888",
     }
 
     def __init__(self, parent: tk.Widget, keywords: Optional[List[str]] = None,
@@ -101,7 +109,7 @@ class CodeEditor(tk.Frame):
         )
 
         # Line numbers
-        self.line_numbers = LineNumbers(self, self.text)
+        self.line_numbers = LineNumbers(self, self.text, self.colors)
         self.line_numbers.pack(side="left", fill="y")
         self.text.pack(side="left", fill="both", expand=True)
 

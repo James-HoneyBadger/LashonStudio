@@ -15,6 +15,7 @@ from __future__ import annotations
 # ---------------------------------------------------------------------------
 import os
 import re
+import sys
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
@@ -31,10 +32,13 @@ from lashon.ide.studio import (
 )
 from lashon.ide.theme import (
     MONO_FONT,
+    SECTION_FONT,
     TITLE_FONT,
     UI_FONT,
     UI_FONT_BOLD,
+    editor_colors,
     get_palette,
+    rule,
 )
 from lashon.ide.theme import (
     names as theme_names,
@@ -80,7 +84,9 @@ class LashonIDE(tk.Tk):
                  source_path: Optional[str] = None):
         super().__init__()
         self.title("Lashon Studio")
-        self.geometry("1440x900")
+        self._window_height = max(720, min(900, self.winfo_screenheight() - 96))
+        width = max(1120, min(1440, self.winfo_screenwidth() - 96))
+        self.geometry(f"{width}x{self._window_height}+40+24")
         self.minsize(1120, 720)
         self.configure(bg=BG)
 
@@ -129,15 +135,23 @@ class LashonIDE(tk.Tk):
         style.configure("Treeview.Heading", background=PANEL_ALT,
                         foreground=MUTED, borderwidth=0)
         style.map("Treeview",
-                  background=[("selected", "#1f6feb")],
-                  foreground=[("selected", "#ffffff")])
+                  background=[("selected", PANEL_ALT)],
+                  foreground=[("selected", ACCENT)])
         style.configure("Vertical.TScrollbar", background=PANEL_ALT,
                         troughcolor=BG, borderwidth=0, arrowcolor=MUTED)
 
-    def _build_menu(self) -> None:
-        menubar = tk.Menu(self, tearoff=0)
+    def _menu(self, parent: tk.Misc) -> tk.Menu:
+        """A menu that matches the tube instead of the desktop theme."""
+        return tk.Menu(
+            parent, tearoff=0, bg=PANEL, fg=FG,
+            activebackground=ACCENT, activeforeground=BG,
+            bd=0, relief="flat",
+        )
 
-        file_menu = tk.Menu(menubar, tearoff=0)
+    def _build_menu(self) -> None:
+        menubar = self._menu(self)
+
+        file_menu = self._menu(menubar)
         file_menu.add_command(label="New Project…", accelerator="Ctrl+N",
                               command=self._new_project)
         file_menu.add_command(label="Open Project…", accelerator="Ctrl+O",
@@ -151,7 +165,7 @@ class LashonIDE(tk.Tk):
         file_menu.add_command(label="Exit", command=self.destroy)
         menubar.add_cascade(label="File", menu=file_menu)
 
-        edit_menu = tk.Menu(menubar, tearoff=0)
+        edit_menu = self._menu(menubar)
         edit_menu.add_command(label="Undo", accelerator="Ctrl+Z",
                               command=lambda: self._edit_event("<<Undo>>"))
         edit_menu.add_command(label="Redo", accelerator="Ctrl+Y",
@@ -165,7 +179,7 @@ class LashonIDE(tk.Tk):
                               command=lambda: self._edit_event("<<Paste>>"))
         menubar.add_cascade(label="Edit", menu=edit_menu)
 
-        run_menu = tk.Menu(menubar, tearoff=0)
+        run_menu = self._menu(menubar)
         run_menu.add_command(label="Validate Grammar", accelerator="Ctrl+Shift+V",
                              command=self._validate_grammar)
         run_menu.add_command(label="Parse Source", accelerator="F6",
@@ -177,12 +191,12 @@ class LashonIDE(tk.Tk):
                              command=self._generate_all)
         menubar.add_cascade(label="Run", menu=run_menu)
 
-        sample_menu = tk.Menu(menubar, tearoff=0)
+        sample_menu = self._menu(menubar)
         sample_menu.add_command(label="Open Aurora Reference Project",
                                 command=self._load_sample_project)
         menubar.add_cascade(label="Samples", menu=sample_menu)
 
-        help_menu = tk.Menu(menubar, tearoff=0)
+        help_menu = self._menu(menubar)
         help_menu.add_command(label="About Lashon Studio",
                               command=self._show_about)
         menubar.add_cascade(label="Help", menu=help_menu)
@@ -195,18 +209,29 @@ class LashonIDE(tk.Tk):
 
         brand = tk.Frame(header, bg=BG)
         brand.pack(side="left")
-        tk.Label(brand, text="◆ Lashon Studio", bg=BG, fg=ACCENT,
-                 font=TITLE_FONT).pack(anchor="w")
+        title = tk.Canvas(brand, bg=BG, highlightthickness=0, bd=0, height=26)
+        title.pack(anchor="w")
+        title.create_text(2, 2, text="◆ LASHON STUDIO", fill=BORDER,
+                          font=TITLE_FONT, anchor="nw")
+        glow = title.create_text(0, 0, text="◆ LASHON STUDIO", fill=ACCENT,
+                                 font=TITLE_FONT, anchor="nw")
+        left, top, right, bottom = title.bbox(glow)
+        title.configure(width=right + 6, height=bottom + 6)
         tk.Label(
             brand,
-            text="Design a grammar · parse source · run it · emit four backends",
-            bg=BG, fg=MUTED, font=UI_FONT,
+            text="design a grammar · parse source · run it · emit four backends",
+            bg=BG, fg=MUTED, font=MONO_FONT,
         ).pack(anchor="w")
 
         self.project_label = tk.Label(
             header, text="No project", bg=BG, fg=FG, font=UI_FONT_BOLD
         )
         self.project_label.pack(side="right", anchor="e")
+        tk.Label(
+            header,
+            text=f"CRT · {PALETTE.title.upper()}",
+            bg=BG, fg=MUTED, font=SECTION_FONT,
+        ).pack(side="right", anchor="e", padx=(0, 16))
 
         toolbar = tk.Frame(self, bg=PANEL, highlightthickness=1,
                            highlightbackground=BORDER)
@@ -257,7 +282,7 @@ class LashonIDE(tk.Tk):
         body.add(right, minsize=700)
 
         self.editor_tabs = ttk.Notebook(right)
-        right.add(self.editor_tabs, height=560)
+        right.add(self.editor_tabs, height=self._pane_heights()[0])
 
         self.source_editor = self._create_editor("Source", [])
         self.grammar_editor = self._create_editor(
@@ -290,12 +315,18 @@ class LashonIDE(tk.Tk):
         )
 
         self.output_tabs = ttk.Notebook(right)
-        right.add(self.output_tabs, height=260)
+        right.add(self.output_tabs, height=self._pane_heights()[1])
+        right.paneconfigure(self.output_tabs, minsize=150)
         self._build_output_tabs()
 
+    def _pane_heights(self) -> tuple[int, int]:
+        """Split the work area between editor and output, screen permitting."""
+        available = max(420, self._window_height - 210)
+        return int(available * 0.63), int(available * 0.34)
+
     def _build_sidebar(self, parent: tk.Widget) -> None:
-        tk.Label(parent, text="PROJECT", bg=PANEL, fg=MUTED,
-                 font=("DejaVu Sans", 9, "bold"), anchor="w").pack(
+        tk.Label(parent, text=rule("PROJECT"), bg=PANEL, fg=MUTED,
+                 font=SECTION_FONT, anchor="w").pack(
             fill="x", padx=14, pady=(14, 6)
         )
         self.project_tree = ttk.Treeview(parent, show="tree",
@@ -305,8 +336,8 @@ class LashonIDE(tk.Tk):
 
         tk.Frame(parent, bg=BORDER, height=1).pack(fill="x", padx=12,
                                                   pady=10)
-        tk.Label(parent, text="PIPELINE", bg=PANEL, fg=MUTED,
-                 font=("DejaVu Sans", 9, "bold"), anchor="w").pack(
+        tk.Label(parent, text=rule("PIPELINE"), bg=PANEL, fg=MUTED,
+                 font=SECTION_FONT, anchor="w").pack(
             fill="x", padx=14, pady=(0, 6)
         )
         self.pipeline_labels: Dict[str, tk.Label] = {}
@@ -331,7 +362,8 @@ class LashonIDE(tk.Tk):
     def _create_editor(self, title: str, keywords: list[str]) -> CodeEditor:
         frame = tk.Frame(self.editor_tabs, bg=BG)
         self.editor_tabs.add(frame, text=title)
-        editor = CodeEditor(frame, keywords=keywords)
+        editor = CodeEditor(frame, keywords=keywords,
+                            colors=editor_colors(PALETTE))
         editor.pack(fill="both", expand=True)
         return editor
 
@@ -418,6 +450,19 @@ class LashonIDE(tk.Tk):
             font=UI_FONT, padx=12, pady=4,
         )
         self.detail_label.pack(side="right")
+        self.clock_label = tk.Label(
+            status, text="", bg=PANEL, fg=ACCENT, anchor="e",
+            font=MONO_FONT, padx=12, pady=4,
+        )
+        self.clock_label.pack(side="right")
+        self._tick_clock()
+
+    def _tick_clock(self) -> None:
+        try:
+            self.clock_label.configure(text=datetime.now().strftime("%H:%M:%S"))
+            self.after(1000, self._tick_clock)
+        except tk.TclError:  # pragma: no cover - window already destroyed
+            pass
 
     def _bind_shortcuts(self) -> None:
         self.bind("<Control-Shift-P>", lambda _e: self._show_palette())
@@ -439,6 +484,7 @@ class LashonIDE(tk.Tk):
 
     def _initial_load(self, project_path: Optional[str],
                       source_path: Optional[str]) -> None:
+        self._boot_sequence()
         loaded = False
         if project_path:
             loaded = self._load_project(project_path)
@@ -455,6 +501,16 @@ class LashonIDE(tk.Tk):
 
         if source_path:
             self._load_source_file(Path(source_path))
+
+    def _boot_sequence(self) -> None:
+        """Print the power-on banner, the way a CRT workstation would."""
+        from lashon import __version__
+
+        self._log(f"LASHON STUDIO {__version__} · CRT SERIES", "command")
+        self._log(f"PHOSPHOR ............ {PALETTE.title.upper()}", "info")
+        self._log("GRAMMAR ENGINE ...... READY", "info")
+        self._log("BACKENDS ............ PYTHON · C · WASM · LLVM IR", "info")
+        self._log("READY.", "success")
 
     def _load_project(self, path: str | Path) -> bool:
         try:
@@ -1120,8 +1176,32 @@ def main() -> None:
     if args.theme:
         os.environ["LASHON_THEME"] = args.theme
 
+    if not _display_available():
+        print(
+            "Lashon Studio needs a graphical display (X11/Wayland on Linux,\n"
+            "Aqua on macOS, Win32 on Windows) and a Python build with tkinter.\n"
+            "\n"
+            "Headless alternatives with the same engine:\n"
+            "  lashon run <file> --config <language.yaml>   run a program\n"
+            "  lashon validate <language.yaml>              check a language\n"
+            "  lashon lsp --config <language.yaml> --stdio  editor integration\n"
+            "  lashon-rs run <grammar.peg> <program>        native, no Python\n",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+
     app = LashonIDE(args.project, args.source)
     app.mainloop()
+
+
+def _display_available() -> bool:
+    """True when Tk can open a window on this machine."""
+    try:
+        probe = tk.Tk()
+    except tk.TclError:
+        return False
+    probe.destroy()
+    return True
 
 
 if __name__ == "__main__":  # pragma: no cover - GUI entry point

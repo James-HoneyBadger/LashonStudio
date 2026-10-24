@@ -10,8 +10,24 @@ lashon-ide projects/aurora      # open a project directory
 lashon-ide path/to/language.yaml prog.aur
 ```
 
-Requires `tkinter` (bundled with most CPython builds). On headless machines use
-the `LanguageStudio` API or the CLI instead.
+Requires `tkinter` (bundled with most CPython builds) **and a graphical
+display** — an X11/Wayland session on Linux, Aqua on macOS, or the Win32
+desktop. Without a display `lashon-ide` exits with a message pointing at the
+headless equivalents instead of raising a Tcl traceback:
+
+```
+Lashon Studio needs a graphical display (X11/Wayland on Linux,
+Aqua on macOS, Win32 on Windows) and a Python build with tkinter.
+
+Headless alternatives with the same engine:
+  lashon run <file> --config <language.yaml>   run a program
+  lashon validate <language.yaml>              check a language
+  lashon lsp --config <language.yaml> --stdio  editor integration
+  lashon-rs run <grammar.peg> <program>        native, no Python
+```
+
+On a headless server use those commands, the `LanguageStudio` controller
+(`src/lashon/ide/studio.py`), or forward a display (`ssh -X`).
 
 ---
 
@@ -29,14 +45,30 @@ lashon-ide projects/aurora --theme dark     # neutral, for long sessions
 
 `LASHON_THEME=amber` does the same from the environment.
 
+The palette drives everything the window paints — editors, gutter, syntax
+colours, tree selections, menus, buttons — so a theme switch is a global
+change, not a coat of paint on one panel:
+
+| Element | Treatment |
+|---|---|
+| Banner | Uppercase `◆ LASHON STUDIO` with a faint phosphor shadow, monospace subtitle |
+| Section headers | Box-drawn rules: `── PIPELINE ─────────────` |
+| Editors | Tube-black background, accent keywords, amber literals, dim comments, phosphor caret |
+| Console | Timestamped boot banner (`LASHON STUDIO 5.0.0 · CRT SERIES`) then `READY.` |
+| Status bar | Current state on the left, live clock on the right |
+
+The window sizes itself to the display (up to 1440×900, never taller than the
+screen) and keeps a minimum output pane of 150 px, so the console stays usable
+on a small laptop screen.
+
 ## 1. Layout
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ ◆ Lashon Studio            Design a grammar · parse · run …     │
+│ ◆ LASHON STUDIO                design a grammar · parse · run …     │
 │ [＋ New] [⌂ Open] [▣ Save] │ [✓ Validate] [◈ Parse] [▶ Run] [⇩ Gen] │
 ├──────────────┬──────────────────────────────────────────────────────┤
-│ PROJECT      │  Source │ grammar.peg │ language.yaml               │
+│ ── PROJECT ─ │  Source │ grammar.peg │ language.yaml                 │
 │ ◆ Aurora     │                                                      │
 │  ⚙ lang.yaml │        syntax-highlighted editors                    │
 │  λ grammar   │                                                      │
@@ -44,9 +76,12 @@ lashon-ide projects/aurora --theme dark     # neutral, for long sessions
 │   • hello    │  Console │ Variables │ Python │ C │ WASM │ LLVM │ AST │
 │   • fibonacci│                                                      │
 │   • fizzbuzz │  Console │ Variables │ … │ Problems │ AST            │
-│              │        output / tree views / problem list            │
+│ ── PIPELINE  │        output / tree views / problem list            │
+│ ✓ Grammar    │                                                      │
+│ ○ Parse      │                                                      │
+│ ○ Run        │                                                      │
 ├──────────────┴──────────────────────────────────────────────────────┤
-│ Grammar OK — 3.2 ms               rules 18 · samples 3 · Ln 4, Col 9│
+│ Grammar OK — 3.2 ms               rules 18 · samples 3 · Ln 4 · 20:30│
 └─────────────────────────────────────────────────────────────────────┘
 ```
 

@@ -193,3 +193,21 @@ def test_packaged_sample_loads_and_runs():
     assert project.name == "Aurora"
     assert control.validate_grammar().ok
     assert "Hello, Aurora!" in control.run().text
+
+
+def test_ide_entry_point_explains_missing_display(monkeypatch, capsys):
+    """A headless machine gets a pointer to the CLI, not a Tcl traceback."""
+    import sys
+
+    from lashon.ide import studio_app
+
+    monkeypatch.setattr(studio_app, "_display_available", lambda: False)
+    monkeypatch.setattr(sys, "argv", ["lashon-ide", str(PROJECT_ROOT)])
+
+    with pytest.raises(SystemExit) as exit_info:
+        studio_app.main()
+
+    assert exit_info.value.code == 1
+    message = capsys.readouterr().err
+    assert "needs a graphical display" in message
+    assert "lashon run" in message

@@ -10,8 +10,22 @@ All notable changes to Lashon. This project follows
 - **CRT-styled Studio** with three palettes (green phosphor, amber, neutral
   dark) selected with `--theme` or `LASHON_THEME`, modelled on the retro
   workbench look of Time Warp Studio but scaled to a language workbench.
+  The palette now reaches every surface: editors and gutter, syntax colours,
+  menus, tree selections, and the tool bar.
 - **Pipeline panel** in the sidebar tracking Grammar → Parse → Run →
   Python/C/WASM/LLVM with live `○ / ✓ / ✗` state.
+- **Power-on banner** in the console (`LASHON STUDIO 5.0.0 · CRT SERIES`,
+  phosphor, engine, backend list, `READY.`) and a live clock in the status bar.
+- **Phosphor page furniture**: box-drawn section rules (`── PIPELINE ───`),
+  a shadowed uppercase banner, and monospace subtitles.
+
+### Fixed
+
+- The Studio window now sizes itself to the display (capped at 1440×900) and
+  keeps a 150 px minimum output pane, so the console and status bar stay
+  visible on smaller screens.
+- `lashon-ide` on a machine without a display exits with a clear message and
+  headless alternatives instead of a Tcl traceback.
 
 ## [5.0.0] - renamed to Lashon Studio
 

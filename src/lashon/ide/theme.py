@@ -89,6 +89,7 @@ DEFAULT = "green"
 
 UI_FONT = ("DejaVu Sans", 10)
 UI_FONT_BOLD = ("DejaVu Sans", 10, "bold")
+SECTION_FONT = ("DejaVu Sans Mono", 9, "bold")
 TITLE_FONT = ("DejaVu Sans", 17, "bold")
 MONO_FONT = ("Courier New", 10)
 MONO_FONT_BOLD = ("Courier New", 10, "bold")
@@ -102,3 +103,36 @@ def get_palette(name: str | None = None) -> Palette:
 def names() -> list[str]:
     """Palette names, in menu order."""
     return list(PALETTES)
+
+
+def rule(title: str, width: int = 27) -> str:
+    """A CRT-style section header, e.g. ``── PROJECT ─────────``."""
+    head = f"── {title} "
+    return head + "─" * max(0, width - len(head))
+
+
+def editor_colors(palette: Palette) -> dict[str, str]:
+    """Syntax colours for :class:`lashon.ide.editor.CodeEditor`.
+
+    Everything stays within the tube's own hue family: the accent marks
+    structure, muted phosphor carries comments and punctuation, and amber is
+    reserved for literals so they pop the way a vintage terminal highlighted
+    strings.
+    """
+    return {
+        "background": palette.bg,
+        "foreground": palette.fg,
+        "keyword": palette.accent,
+        "string": palette.yellow,
+        "number": palette.fg,
+        "comment": palette.muted,
+        "operator": palette.muted,
+        "function": palette.accent,
+        "type": palette.yellow,
+        "error": palette.red,
+        "cursor": palette.accent,
+        "selection": palette.panel_alt,
+        "current_line": palette.panel,
+        "gutter_bg": palette.panel,
+        "gutter_fg": palette.muted,
+    }

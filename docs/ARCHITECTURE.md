@@ -284,7 +284,8 @@ crates/parsercraft-cli/     `parsercraft-rs` binary
 | C backend | Rust (`backends/c.rs`), output verified against the Python backend | done |
 | Python backend | Rust (`backends/python.rs`), emit-only; output verified by execution | done |
 | WASM/LLVM backends | Python only | **not ported** |
-| CLI, LSP, DAP, Studio, packaging | Python only | **not ported** |
+| LSP server | Rust (`crates/parsercraft-cli/src/lsp.rs`), stdio + grammar intelligence | done |
+| CLI, DAP, Studio, packaging | Python only | **not ported** |
 
 That split is deliberate: the core is where a native implementation pays for
 itself, and everything above it is I/O and glue that gains little from Rust.

@@ -6,6 +6,7 @@ Skipped when the Rust workspace has not been built
 
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -221,3 +222,151 @@ def test_llvm_backend_matches_python_backend(sample, tmp_path):
         ).stdout
 
     assert compile_and_run(rust_ir) == compile_and_run(python_ir)
+
+
+class LspClient:
+    """Minimal LSP client speaking JSON-RPC to the Rust server over stdio."""
+
+    def __init__(self, grammar: Path):
+        self.process = subprocess.Popen(
+            [str(BINARY), "lsp", "--grammar", str(grammar)],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        self.sequence = 0
+
+    def send(self, method: str, params=None, request_id=None):
+        message = {"jsonrpc": "2.0", "method": method}
+        if params is not None:
+            message["params"] = params
+        if request_id is not None:
+            message["id"] = request_id
+        body = json.dumps(message).encode()
+        self.process.stdin.write(
+            f"Content-Length: {len(body)}\r\n\r\n".encode() + body
+        )
+        self.process.stdin.flush()
+
+    def read(self):
+        headers = {}
+        while True:
+            line = self.process.stdout.readline()
+            assert line, "server closed the connection"
+            if line in (b"\r\n", b"\n"):
+                break
+            key, _, value = line.decode().partition(":")
+            headers[key.lower()] = value.strip()
+        return json.loads(self.process.stdout.read(int(headers["content-length"])))
+
+    def request(self, method: str, params=None):
+        self.sequence += 1
+        self.send(method, params, self.sequence)
+        while True:
+            message = self.read()
+            if message.get("id") == self.sequence:
+                return message
+
+    def close(self):
+        self.send("shutdown", request_id=999)
+        self.send("exit")
+        self.process.wait(timeout=5)
+
+
+@pytest.fixture
+def lsp():
+    client = LspClient(GRAMMAR)
+    try:
+        yield client
+    finally:
+        client.close()
+
+
+def test_lsp_initializes_with_editing_capabilities(lsp):
+    result = lsp.request("initialize", {"processId": None, "rootUri": None})
+    capabilities = result["result"]["capabilities"]
+    assert capabilities["textDocumentSync"] == 1
+    assert capabilities["hoverProvider"] is True
+    assert capabilities["renameProvider"] is True
+    assert capabilities["documentSymbolProvider"] is True
+
+
+def test_lsp_publishes_parse_diagnostics(lsp):
+    lsp.request("initialize", {"processId": None, "rootUri": None})
+    lsp.send(
+        "textDocument/didOpen",
+        {
+            "textDocument": {
+                "uri": "file:///tmp/bad.aur",
+                "languageId": "aurora",
+                "version": 1,
+                "text": "x = ;\n",
+            }
+        },
+    )
+    notification = lsp.read()
+    assert notification["method"] == "textDocument/publishDiagnostics"
+    diagnostics = notification["params"]["diagnostics"]
+    assert diagnostics
+
+    from parsercraft.parser import GrammarParser, PEGInterpreter
+
+    grammar = GrammarParser().parse(GRAMMAR.read_text(encoding="utf-8"))
+    try:
+        PEGInterpreter(grammar).parse("x = ;\n")
+        raise AssertionError("expected a parse error")
+    except SyntaxError as error:
+        message = str(error).splitlines()[0]
+    expected_line = int(message.split("line ")[1].split(",")[0])
+    expected_column = int(message.split("column ")[1].split(" ")[0])
+
+    first = diagnostics[0]
+    assert first["code"] == "parse-error"
+    assert first["range"]["start"] == {
+        "line": expected_line - 1,
+        "character": expected_column - 1,
+    }
+
+
+def test_lsp_grammar_intelligence(lsp):
+    lsp.request("initialize", {"processId": None, "rootUri": None})
+    grammar_uri = "file:///tmp/grammar.peg"
+    lsp.send(
+        "textDocument/didOpen",
+        {
+            "textDocument": {
+                "uri": grammar_uri,
+                "languageId": "peg",
+                "version": 1,
+                "text": GRAMMAR.read_text(encoding="utf-8"),
+            }
+        },
+    )
+    lsp.read()  # publishDiagnostics
+
+    symbols = lsp.request(
+        "textDocument/documentSymbol", {"textDocument": {"uri": grammar_uri}}
+    )["result"]
+    names = [symbol["name"] for symbol in symbols]
+    assert names[0] == "program"
+    assert "while_stmt" in names
+
+    hover = lsp.request(
+        "textDocument/hover",
+        {
+            "textDocument": {"uri": grammar_uri},
+            "position": {"line": 3, "character": 0},
+        },
+    )["result"]
+    assert "program <- statement+" in hover["contents"]["value"]
+
+    completion = lsp.request(
+        "textDocument/completion",
+        {
+            "textDocument": {"uri": grammar_uri},
+            "position": {"line": 3, "character": 0},
+        },
+    )["result"]
+    labels = [item["label"] for item in completion["items"]]
+    assert "program" in labels
+    assert "IDENT" in labels

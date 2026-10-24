@@ -7,6 +7,8 @@
 use std::path::Path;
 use std::process::ExitCode;
 
+mod lsp;
+
 use parsercraft_core::{
     generate_c, generate_llvm, generate_python, generate_wasm, parse_document,
     parse_peg_text,
@@ -24,6 +26,7 @@ usage:
   parsercraft-rs codegen-py <grammar.peg> <program> [-o out.py] [--run]
   parsercraft-rs codegen-wasm <grammar.peg> <program> [-o out.wat]
   parsercraft-rs codegen-llvm <grammar.peg> <program> [-o out.ll] [--compile] [--run]
+  parsercraft-rs lsp [--grammar grammar.peg]
   parsercraft-rs version
 ";
 
@@ -44,6 +47,7 @@ fn main() -> ExitCode {
         "codegen-py" => codegen_py(&args[1..]),
         "codegen-wasm" => codegen_wasm(&args[1..]),
         "codegen-llvm" => codegen_llvm(&args[1..]),
+        "lsp" => lsp_command(&args[1..]),
         "help" | "--help" | "-h" | "" => {
             print!("{USAGE}");
             Ok(())
@@ -363,4 +367,25 @@ fn codegen_llvm(args: &[String]) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+fn lsp_command(args: &[String]) -> Result<(), String> {
+    let mut grammar: Option<String> = None;
+    let mut index = 0;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--grammar" | "-g" => {
+                index += 1;
+                grammar = Some(
+                    args.get(index)
+                        .ok_or("missing value for --grammar")?
+                        .clone(),
+                );
+            }
+            "--stdio" => {}
+            other => return Err(format!("unknown option '{other}'")),
+        }
+        index += 1;
+    }
+    lsp::run(grammar.as_ref())
 }

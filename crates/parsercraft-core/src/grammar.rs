@@ -528,3 +528,42 @@ term      <- NUMBER / IDENT
         assert_eq!(restored.rules[3].pattern, grammar.rules[3].pattern);
     }
 }
+
+impl Grammar {
+    /// Return `(rule, missing_rule)` pairs for references to undefined rules.
+    pub fn undefined_references(&self) -> Vec<(String, String)> {
+        fn walk(
+            pattern: &Pattern,
+            owner: &str,
+            grammar: &Grammar,
+            out: &mut Vec<(String, String)>,
+        ) {
+            match pattern {
+                Pattern::Rule(name) => {
+                    if grammar.rule(name).is_none()
+                        && !SUPPORTED_TOKENS.contains(&name.as_str())
+                    {
+                        out.push((owner.to_string(), name.clone()));
+                    }
+                }
+                Pattern::Seq(items) | Pattern::Choice(items) => {
+                    for item in items {
+                        walk(item, owner, grammar, out);
+                    }
+                }
+                Pattern::Star(inner)
+                | Pattern::Plus(inner)
+                | Pattern::Opt(inner)
+                | Pattern::And(inner)
+                | Pattern::Not(inner) => walk(inner, owner, grammar, out),
+                Pattern::Lit(_) | Pattern::Class(_) | Pattern::Any | Pattern::Token(_) => {}
+            }
+        }
+
+        let mut out = vec![];
+        for rule in &self.rules {
+            walk(&rule.pattern, &rule.name, self, &mut out);
+        }
+        out
+    }
+}

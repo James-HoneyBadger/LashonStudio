@@ -136,7 +136,9 @@ parsercraft lint FILE [--source FILE] [--json]
 ```
 
 One command for CI: validates the config, parses every grammar rule, and
-optionally type-checks a source file. Exits 1 when anything fails.
+optionally type-checks a source file. Exits 1 when anything fails. `FILE` is a
+language config; to lint a bare `.peg` grammar use
+`parsercraft-rs lint grammar.peg` instead.
 
 ### `config`
 

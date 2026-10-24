@@ -508,6 +508,9 @@ fn class_matches(class: &str, ch: char) -> bool {
                 'd' => ch.is_ascii_digit(),
                 'w' => ch.is_alphanumeric() || ch == '_',
                 's' => ch.is_whitespace(),
+                'n' => ch == '\n',
+                't' => ch == '\t',
+                'r' => ch == '\r',
                 other => ch == other,
             };
             if matched {

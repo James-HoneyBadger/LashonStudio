@@ -29,6 +29,12 @@ All notable changes to ParserCraft. This project follows
 
 ### Added
 
+- **BASIC sample project** (`projects/basic`): a line-numbered dialect defined
+  only by a grammar — `LET`, `PRINT`, `IF/THEN/ELSE`, `GOTO`, `WHILE/WEND`,
+  `REM`, `END`. The Rust evaluator gained a program counter for numbered
+  programs, `GOTO`, single-statement `IF` branches, and the `= <>` comparison
+  operators, so the dialect actually runs.
+
 - **Python backend in Rust** (`backends/python.rs`): emit-only Python source
   for assignments, prints, functions, `if`/`else`, `while`, returns, and
   arithmetic; `parsercraft-rs codegen-py ... [--run]`. Generated code executes

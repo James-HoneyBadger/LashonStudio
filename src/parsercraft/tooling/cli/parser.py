@@ -655,7 +655,8 @@ Examples:
     )
     lint_parser.add_argument("config", help="Language configuration file")
     lint_parser.add_argument(
-        "--input", "-i", help="Optional source file to type-check"
+        "--input", "--source", "-i", dest="input",
+        help="Optional source file to validate too",
     )
     lint_parser.add_argument("--json", action="store_true", help="Emit JSON")
 

@@ -530,3 +530,40 @@ def test_lint_checks_a_source_file(tmp_path):
     completed = run("lint", str(GRAMMAR), "--source", str(program))
     assert completed.returncode == 1
     assert "line 1" in completed.stdout
+
+
+BASIC = ROOT / "projects" / "basic"
+
+
+@pytest.mark.parametrize(
+    ("sample", "expected"),
+    [
+        ("hello.bas", "HELLO, BASIC!\nTHE ANSWER IS 42\n"),
+        ("countdown.bas", "3\n2\n1\nLIFTOFF!\n"),
+        (
+            "fizzbuzz.bas",
+            "1\n2\nFIZZ\n4\nBUZZ\nFIZZ\n7\n8\nFIZZ\nBUZZ\n11\nFIZZ\n13\n14\nFIZZBUZZ\n",
+        ),
+    ],
+)
+def test_basic_interpreter_runs_its_own_language(sample, expected):
+    """A language defined only by a grammar is parsed and executed."""
+    completed = run(
+        "run", str(BASIC / "grammar.peg"), str(BASIC / "samples" / sample)
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout == expected
+
+
+def test_basic_project_lints_clean():
+    completed = run("lint", str(BASIC / "grammar.peg"))
+    assert completed.returncode == 0, completed.stderr
+    assert "no problems" in completed.stdout
+
+
+def test_basic_reports_undefined_goto_targets(tmp_path):
+    program = tmp_path / "broken.bas"
+    program.write_text("10 GOTO 999\n", encoding="utf-8")
+    completed = run("run", str(BASIC / "grammar.peg"), str(program))
+    assert completed.returncode == 1
+    assert "undefined line 999" in completed.stderr

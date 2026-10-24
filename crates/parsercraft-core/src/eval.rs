@@ -104,6 +104,7 @@ enum Flow {
     Return(Value),
     Break,
     Continue,
+    Goto(i64),
 }
 
 pub struct Machine<'a> {
@@ -152,6 +153,9 @@ impl<'a> Machine<'a> {
     }
 
     pub fn run(&mut self, ast: &'a Ast) -> Result<(), RuntimeError> {
+        if ast.children.iter().any(|child| child.node_type == "line") {
+            return self.run_numbered(ast);
+        }
         let mut locals = std::mem::take(&mut self.globals);
         match self.execute_children(&ast.children, &mut locals)? {
             Flow::Normal | Flow::Return(_) => {}
@@ -159,6 +163,61 @@ impl<'a> Machine<'a> {
                 return Err(RuntimeError::Message(
                     "break/continue outside a loop".to_string(),
                 ))
+            }
+            Flow::Goto(_) => {
+                return Err(RuntimeError::Message(
+                    "GOTO outside a line-numbered program".to_string(),
+                ))
+            }
+        }
+        self.globals = locals;
+        Ok(())
+    }
+
+    /// Execute a line-numbered program: line numbers double as GOTO labels.
+    fn run_numbered(&mut self, ast: &'a Ast) -> Result<(), RuntimeError> {
+        let mut labels: HashMap<i64, usize> = HashMap::new();
+        for (index, child) in ast.children.iter().enumerate() {
+            if child.node_type != "line" {
+                continue;
+            }
+            if let Some(label) = child
+                .children
+                .iter()
+                .find(|node| node.node_type == "Number")
+                .and_then(|node| node.value.as_ref().and_then(Json::as_i64))
+            {
+                labels.insert(label, index);
+            }
+        }
+
+        let mut locals = std::mem::take(&mut self.globals);
+        let mut pc = 0usize;
+        while pc < ast.children.len() {
+            let node = &ast.children[pc];
+            let statement = if node.node_type == "line" {
+                node.children
+                    .iter()
+                    .find(|child| child.node_type != "Number")
+            } else {
+                Some(node)
+            };
+            let flow = match statement {
+                Some(statement) => self.execute(statement, &mut locals)?,
+                None => Flow::Normal,
+            };
+            self.globals = locals.clone();
+            match flow {
+                Flow::Normal | Flow::Break | Flow::Continue => pc += 1,
+                Flow::Return(_) => break,
+                Flow::Goto(target) => match labels.get(&target) {
+                    Some(index) => pc = *index,
+                    None => {
+                        return Err(RuntimeError::Message(format!(
+                            "GOTO to undefined line {target}"
+                        )))
+                    }
+                },
             }
         }
         self.globals = locals;
@@ -276,6 +335,17 @@ impl<'a> Machine<'a> {
                     .filter(|child| matches!(child.node_type.as_str(), "block" | "Block"))
                     .copied()
                     .collect();
+                if blocks.is_empty() {
+                    let branch = if condition {
+                        children.get(1)
+                    } else {
+                        children.get(2)
+                    };
+                    if let Some(statement) = branch {
+                        return self.execute(statement, locals);
+                    }
+                    return Ok(Flow::Normal);
+                }
                 if condition {
                     if let Some(block) = blocks.first() {
                         return self.execute_children(&block.children, locals);
@@ -303,11 +373,38 @@ impl<'a> Machine<'a> {
                         Flow::Normal | Flow::Continue => {}
                         Flow::Break => break,
                         Flow::Return(value) => return Ok(Flow::Return(value)),
+                        flow @ Flow::Goto(_) => return Ok(flow),
                     }
                 }
                 Ok(Flow::Normal)
             }
             "function_def" | "FunctionDef" => Ok(Flow::Normal),
+            "line" => match node.children.iter().find(|child| child.node_type != "Number") {
+                Some(statement) => self.execute(statement, locals),
+                None => Ok(Flow::Normal),
+            },
+            "rem_stmt" | "RemStmt" => Ok(Flow::Normal),
+            "end_stmt" | "EndStmt" => Ok(Flow::Return(Value::Int(0))),
+            "goto_stmt" | "GotoStmt" => {
+                let target = node
+                    .children
+                    .iter()
+                    .find(|child| child.node_type == "Number")
+                    .and_then(|child| child.value.as_ref().and_then(Json::as_i64))
+                    .ok_or_else(|| RuntimeError::Message("GOTO without a line".to_string()))?;
+                Ok(Flow::Goto(target))
+            }
+            "let_stmt" | "LetStmt" | "assign_stmt" | "AssignStmt" => {
+                let children: Vec<&Ast> = node
+                    .children
+                    .iter()
+                    .filter(|child| !is_operator(child))
+                    .collect();
+                if children.len() >= 2 {
+                    self.assign(children[0], children[1], locals)?;
+                }
+                Ok(Flow::Normal)
+            }
             "expr_stmt" | "ExprStmt" => {
                 if let Some(expression) = node
                     .children
@@ -498,8 +595,8 @@ fn apply(operator: &str, left: &Value, right: &Value) -> Result<Value, RuntimeEr
             }
             Value::Int(a as i64 % b as i64)
         }
-        "==" => Value::Bool(a == b),
-        "!=" => Value::Bool(a != b),
+        "==" | "=" => Value::Bool(a == b),
+        "!=" | "<>" => Value::Bool(a != b),
         "<" => Value::Bool(a < b),
         "<=" => Value::Bool(a <= b),
         ">" => Value::Bool(a > b),

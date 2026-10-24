@@ -1,0 +1,23 @@
+// ParserCraft BASIC — a line-numbered BASIC dialect
+//
+// Every line starts with a line number, which also acts as its label for GOTO.
+// Statements are newline-insensitive beyond that, so a line number is the only
+// delimiter the parser needs.
+
+program     <- line+
+line        <- NUMBER !'WEND' statement
+statement   <- rem_stmt / let_stmt / print_stmt / if_stmt / goto_stmt / while_stmt / end_stmt / assign_stmt
+
+rem_stmt    <- 'REM' [^\n]*
+let_stmt    <- 'LET' IDENT '=' expr
+assign_stmt <- IDENT '=' expr
+print_stmt  <- 'PRINT' expr ((',' / ';') expr)*
+if_stmt     <- 'IF' comparison 'THEN' statement ('ELSE' statement)?
+goto_stmt   <- 'GOTO' NUMBER
+while_stmt  <- 'WHILE' comparison line* NUMBER? 'WEND'
+end_stmt    <- 'END'
+
+comparison  <- expr (('=' / '<>' / '<=' / '>=' / '<' / '>') expr)?
+expr        <- term (('+' / '-') term)*
+term        <- factor (('*' / '/' / '%') factor)*
+factor      <- NUMBER / STRING / IDENT / '(' expr ')'

@@ -15,6 +15,14 @@ from parsercraft.types import TypeChecker
 def cmd_lint(args) -> int:
     """Run configuration, grammar, and optional type checks."""
     config_path = Path(args.config)
+    if config_path.suffix == ".peg":
+        print(
+            "Error: lint expects a language config (YAML/JSON). "
+            "For a .peg grammar use: parsercraft-rs lint <grammar.peg> "
+            "[--source FILE]",
+            file=sys.stderr,
+        )
+        return 1
     if not config_path.exists():
         print(f"Error: File not found: {config_path}", file=sys.stderr)
         return 1

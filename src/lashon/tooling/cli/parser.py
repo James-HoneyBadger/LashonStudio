@@ -438,7 +438,10 @@ Examples:
         "init",
         help="Scaffold a new language project",
     )
-    init_parser.add_argument("name", help="Language name")
+    init_parser.add_argument(
+        "name",
+        help="Language name (becomes the directory name; no path separators)",
+    )
     init_parser.add_argument(
         "--directory", "-d", default=".",
         help="Parent directory (default: current directory)",

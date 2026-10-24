@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -248,6 +249,15 @@ def _project_slug(name: str) -> str:
 
 def cmd_init(args) -> int:
     """Create a language project with config, grammar, sample, and tests."""
+    if any(separator in args.name for separator in ("/", "\\", os.sep)):
+        print(
+            f"Error: '{args.name}' looks like a path. Pass the language name "
+            "and the parent directory separately:\n"
+            f"  lashon init my-lang --directory {Path(args.name).parent}",
+            file=sys.stderr,
+        )
+        return 1
+
     parent = Path(args.directory).expanduser()
     if not parent.exists():
         print(f"Error: Directory not found: {parent}", file=sys.stderr)
@@ -289,7 +299,7 @@ def cmd_init(args) -> int:
         encoding="utf-8",
     )
 
-    print(f"✓ Created {args.name} in {project.root} (template: {template})")
+    print(f"✓ Created {project.root} — {args.name} (template: {template})")
     print(f"  {project.config_path.name}  language configuration + grammar")
     print(f"  {project.sample_path.name}  first sample program")
     print("  tests/                    grammar, run, and backend checks")

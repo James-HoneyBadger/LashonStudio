@@ -33,7 +33,7 @@ def test_init_creates_a_runnable_project(tmp_path, monkeypatch, capsys):
     assert studio.run(
         project.sample_path.read_text(encoding="utf-8")
     ).ok
-    assert "Created Tiny Lang" in capsys.readouterr().out
+    assert "Tiny Lang" in capsys.readouterr().out
 
 
 def test_init_refuses_to_overwrite(tmp_path, monkeypatch, capsys):
@@ -123,3 +123,28 @@ def test_init_with_vscode_and_ci(tmp_path, monkeypatch):
     ).read_text(encoding="utf-8")
     assert "lashon lint" in workflow
     assert "lashon run" in workflow
+
+
+def test_init_rejects_a_path_in_the_name(tmp_path, monkeypatch, capsys):
+    """A path in the name position is a mistake, not a directory."""
+    monkeypatch.setattr(
+        sys, "argv", ["lashon", "init", str(tmp_path / "lang" / "demo")]
+    )
+    assert main() == 1
+    message = capsys.readouterr().err
+    assert "looks like a path" in message
+    assert "--directory" in message
+    assert not (tmp_path / "lang").exists()
+
+
+def test_init_scaffolds_into_the_given_directory(tmp_path, monkeypatch,
+                                                 capsys):
+    monkeypatch.setattr(
+        sys, "argv",
+        ["lashon", "init", "demo-lang", "--directory", str(tmp_path)],
+    )
+    assert main() == 0
+    root = tmp_path / "demo-lang"
+    assert (root / "language.yaml").is_file()
+    assert (root / "grammar.peg").is_file()
+    assert f"Created {root}" in capsys.readouterr().out

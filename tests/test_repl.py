@@ -146,3 +146,30 @@ class TestREPLCommandExtras:
         target = tmp_path / "saved.aur"
         assert "Saved" in repl.eval_line(f":save {target}")
         assert target.read_text(encoding="utf-8").strip() == "value = 5 ;"
+
+
+class TestReplTerminators:
+    """The auto-semicolon convenience must not break block statements."""
+
+    def test_missing_semicolon_is_added(self):
+        repl = REPL()
+        repl.eval_line("x = 10")
+        assert repl.namespace["x"] == 10
+
+    def test_block_statement_is_not_double_terminated(self):
+        from pathlib import Path
+
+        from lashon.parser import GrammarParser, PEGInterpreter  # noqa: F401
+
+        root = Path(__file__).resolve().parent.parent / "projects" / "logo"
+        grammar = GrammarParser().parse(
+            (root / "grammar.peg").read_text(encoding="utf-8")
+        )
+        repl = REPL(grammar=grammar)
+        repl.eval_line("REPEAT 4 FD 10 ; RT 90 ; END")
+
+        assert repl.graphics.strokes() == 4
+
+    def test_parse_error_is_reported(self):
+        repl = REPL()
+        assert "Parse error" in repl.eval_line("this is not a statement")

@@ -265,22 +265,33 @@ class REPL:
         except OSError:
             pass
 
+    def _parse(self, source: str) -> Optional[SourceAST]:
+        """Parse one entry, adding the statement terminator only if needed.
+
+        Block statements end with their own keyword (``END``, ``}``), so
+        appending ``;`` unconditionally would turn a valid entry into an
+        error. Try what the user typed first, then the terminated form.
+        """
+        text = source.strip()
+        candidates = [text]
+        if not text.endswith(";"):
+            candidates.append(text + " ;")
+        error: Optional[Exception] = None
+        for candidate in candidates:
+            try:
+                return self.interpreter.parse(candidate)
+            except Exception as problem:  # pylint: disable=broad-exception-caught
+                error = problem
+        print(f"Parse error: {error}", file=sys.stderr)
+        return None
+
     def _eval(self, source: str) -> None:
         """Parse, transpile, and execute source code."""
-        # Auto-add semicolon if missing (convenience)
-        if not source.endswith(";"):
-            source = source + " ;"
-
         started = time.perf_counter()
-        try:
-            ast = self.interpreter.parse(source)
-            self._last_ast = ast
-        except SyntaxError as e:
-            print(f"Parse error: {e}", file=sys.stderr)
+        ast = self._parse(source)
+        if ast is None:
             return
-        except Exception as e:
-            print(f"Parse error: {e}", file=sys.stderr)
-            return
+        self._last_ast = ast
 
         try:
             python_code = self.transpiler.transpile(ast)

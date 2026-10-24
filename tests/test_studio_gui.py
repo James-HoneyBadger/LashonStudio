@@ -174,3 +174,58 @@ def test_theme_palettes_are_distinct():
     accents = {theme.get_palette(name).accent for name in theme.names()}
     assert len(accents) == 3
     assert theme.get_palette("nonsense").name == "green"
+
+
+def test_env_theme_repaints_the_window(tmp_path, monkeypatch):
+    from lashon.ide import studio_app, theme
+
+    monkeypatch.setenv("LASHON_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("LASHON_THEME", "amber")
+    application = LashonIDE(str(PROJECT_ROOT))
+    try:
+        application.update()
+        assert studio_app.PALETTE.name == "amber"
+        assert application.cget("bg") == theme.get_palette("amber").bg
+        assert application.theme_var.get() == "amber"
+    finally:
+        application.destroy()
+        monkeypatch.delenv("LASHON_THEME")
+        studio_app._apply_palette(theme.DEFAULT)
+
+
+def test_saved_theme_is_used_when_no_env_is_set(tmp_path, monkeypatch):
+    from lashon.ide import settings, studio_app, theme
+
+    monkeypatch.setenv("LASHON_CONFIG_DIR", str(tmp_path))
+    monkeypatch.delenv("LASHON_THEME", raising=False)
+    settings.save(theme="dark")
+    application = LashonIDE(str(PROJECT_ROOT))
+    try:
+        application.update()
+        assert application.cget("bg") == theme.get_palette("dark").bg
+        assert application.theme_var.get() == "dark"
+    finally:
+        application.destroy()
+        studio_app._apply_palette(theme.DEFAULT)
+
+
+def test_theme_menu_persists_the_choice(tmp_path, monkeypatch):
+    from lashon.ide import settings, studio_app, theme
+
+    monkeypatch.setenv("LASHON_CONFIG_DIR", str(tmp_path))
+    monkeypatch.delenv("LASHON_THEME", raising=False)
+    application = LashonIDE(str(PROJECT_ROOT))
+    restarts = []
+    try:
+        application.update()
+        application._restart_with_theme = restarts.append
+        application._choose_theme("dark")
+        assert restarts == ["dark"]
+        assert settings.get("theme") == "dark"
+        assert application.theme_var.get() == "dark"
+
+        application._choose_theme(studio_app.PALETTE.name)
+        assert restarts == ["dark"], "re-picking the active theme must not restart"
+    finally:
+        application.destroy()
+        studio_app._apply_palette(theme.DEFAULT)

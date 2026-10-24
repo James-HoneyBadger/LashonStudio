@@ -226,3 +226,40 @@ def test_theme_feeds_the_editor_and_headers():
     header = theme.rule("PIPELINE", width=24)
     assert header.startswith("── PIPELINE ")
     assert len(header) == 24
+
+
+def test_settings_round_trip(tmp_path, monkeypatch):
+    from lashon.ide import settings
+
+    monkeypatch.setenv("LASHON_CONFIG_DIR", str(tmp_path))
+    assert settings.load() == {}
+    settings.save(theme="amber", other=1)
+    assert settings.get("theme") == "amber"
+    assert settings.load() == {"other": 1, "theme": "amber"}
+    assert settings.settings_path() == tmp_path / "studio.json"
+
+    monkeypatch.delenv("LASHON_CONFIG_DIR")
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg"))
+    assert settings.settings_path() == (
+        tmp_path / "xdg" / "lashon" / "studio.json"
+    )
+
+
+def test_palette_can_be_switched_before_building_widgets(tmp_path, monkeypatch):
+    from lashon.ide import settings, studio_app, theme
+
+    monkeypatch.setenv("LASHON_CONFIG_DIR", str(tmp_path))
+    try:
+        studio_app._apply_palette("amber")
+        assert studio_app.PALETTE.name == "amber"
+        assert studio_app.BG == theme.get_palette("amber").bg
+        assert studio_app.ACCENT == theme.get_palette("amber").accent
+
+        studio_app._apply_palette(None)
+        assert studio_app.PALETTE.name == theme.DEFAULT
+
+        settings.save(theme="dark")
+        studio_app._apply_palette(settings.get("theme"))
+        assert studio_app.PALETTE.name == "dark"
+    finally:
+        studio_app._apply_palette(theme.DEFAULT)

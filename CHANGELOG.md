@@ -18,9 +18,15 @@ All notable changes to Lashon. This project follows
   phosphor, engine, backend list, `READY.`) and a live clock in the status bar.
 - **Phosphor page furniture**: box-drawn section rules (`── PIPELINE ───`),
   a shadowed uppercase banner, and monospace subtitles.
+- **View → Theme** menu and a persisted `studio.json` preference, so the chosen
+  phosphor survives restarts.
 
 ### Fixed
 
+- **`--theme` now takes effect.** The palette used to be resolved at import
+  time, so the flag set the environment variable but the window still opened in
+  green. Palettes are resolved per window now, and the choice can also be made
+  from **View → Theme** (persisted in `~/.config/lashon/studio.json`).
 - The Studio window now sizes itself to the display (capped at 1440×900) and
   keeps a 150 px minimum output pane, so the console and status bar stay
   visible on smaller screens.

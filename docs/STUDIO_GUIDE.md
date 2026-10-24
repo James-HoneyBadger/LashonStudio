@@ -43,7 +43,11 @@ lashon-ide projects/aurora --theme amber
 lashon-ide projects/aurora --theme dark     # neutral, for long sessions
 ```
 
-`LASHON_THEME=amber` does the same from the environment.
+`LASHON_THEME=amber` does the same from the environment, and **View → Theme**
+switches live: the choice is saved to `~/.config/lashon/studio.json` (or
+`$XDG_CONFIG_HOME/lashon/studio.json`) and the Studio restarts into it with the
+current project and saved documents. Precedence is
+`--theme` → `LASHON_THEME` → saved preference → green.
 
 The palette drives everything the window paints — editors, gutter, syntax
 colours, tree selections, menus, buttons — so a theme switch is a global

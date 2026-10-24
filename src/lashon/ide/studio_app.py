@@ -24,6 +24,7 @@ from typing import Any, Dict, Optional
 
 import yaml
 
+from lashon.ide import settings
 from lashon.ide.editor import CodeEditor
 from lashon.ide.studio import (
     LanguageStudio,
@@ -56,6 +57,24 @@ GREEN = PALETTE.green
 RED = PALETTE.red
 YELLOW = PALETTE.yellow
 
+
+def _apply_palette(name: Optional[str]) -> None:
+    """Select the palette used by everything built from here on."""
+    global PALETTE, BG, PANEL, PANEL_ALT, BORDER, FG, MUTED
+    global ACCENT, GREEN, RED, YELLOW
+
+    PALETTE = get_palette(name)
+    BG = PALETTE.bg
+    PANEL = PALETTE.panel
+    PANEL_ALT = PALETTE.panel_alt
+    BORDER = PALETTE.border
+    FG = PALETTE.fg
+    MUTED = PALETTE.muted
+    ACCENT = PALETTE.accent
+    GREEN = PALETTE.green
+    RED = PALETTE.red
+    YELLOW = PALETTE.yellow
+
 STAGES = ("Grammar", "Parse", "Run", "Python", "C", "WASM", "LLVM IR")
 BACKENDS = ("python", "c", "wasm", "llvm")
 BACKEND_TITLES = {
@@ -83,6 +102,9 @@ class LashonIDE(tk.Tk):
     def __init__(self, project_path: Optional[str] = None,
                  source_path: Optional[str] = None):
         super().__init__()
+        _apply_palette(
+            os.environ.get("LASHON_THEME") or settings.get("theme")
+        )
         self.title("Lashon Studio")
         self._window_height = max(720, min(900, self.winfo_screenheight() - 96))
         width = max(1120, min(1440, self.winfo_screenwidth() - 96))
@@ -196,12 +218,43 @@ class LashonIDE(tk.Tk):
                                 command=self._load_sample_project)
         menubar.add_cascade(label="Samples", menu=sample_menu)
 
+        view_menu = self._menu(menubar)
+        self.theme_var = tk.StringVar(value=PALETTE.name)
+        for name in theme_names():
+            view_menu.add_radiobutton(
+                label=get_palette(name).title,
+                value=name,
+                variable=self.theme_var,
+                command=lambda chosen=name: self._choose_theme(chosen),
+            )
+        menubar.add_cascade(label="View", menu=view_menu)
+
         help_menu = self._menu(menubar)
         help_menu.add_command(label="About Lashon Studio",
                               command=self._show_about)
         menubar.add_cascade(label="Help", menu=help_menu)
 
         self.config(menu=menubar)
+
+    def _choose_theme(self, name: str) -> None:
+        """Remember a palette and restart into it."""
+        self.theme_var.set(name)
+        if name == PALETTE.name:
+            return
+        settings.save(theme=name)
+        self._log(f"Phosphor set to {name}; restarting to repaint…",
+                  "command")
+        self.update_idletasks()
+        self._restart_with_theme(name)
+
+    def _restart_with_theme(self, name: str) -> None:  # pragma: no cover - GUI
+        self._sync_documents()
+        command = [sys.executable, "-m", "lashon.ide.app"]
+        if self.project is not None:
+            command.append(str(self.project.root))
+        command += ["--theme", name]
+        self.destroy()
+        os.execv(sys.executable, command)
 
     def _build_header(self) -> None:
         header = tk.Frame(self, bg=BG)

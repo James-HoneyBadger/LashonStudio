@@ -4,9 +4,9 @@ import math
 
 import pytest
 
-from parsercraft.runtime.ffi import FFIBinding, FFIBridge
-from parsercraft.runtime.stdlib import StdFunction, StdLib, StdModule
-from parsercraft.tooling.error_localization import ErrorLocalizer
+from lashon.runtime.ffi import FFIBinding, FFIBridge
+from lashon.runtime.stdlib import StdFunction, StdLib, StdModule
+from lashon.tooling.error_localization import ErrorLocalizer
 
 
 class TestStdLib:

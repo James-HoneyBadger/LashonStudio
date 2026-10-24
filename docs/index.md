@@ -1,9 +1,9 @@
-# ParserCraft Documentation
+# Lashon Studio Documentation
 
-> Version 4.0.0 · Python 3.10+ · [Project README](https://github.com/James-HoneyBadger/ParserCraft/blob/main/README.md)
+> Version 4.0.0 · Python 3.10+ · [Project README](https://github.com/James-HoneyBadger/LashonStudioStudio/blob/main/README.md)
 
-ParserCraft is a programming-language construction framework. You define a PEG
-grammar, ParserCraft builds a packrat parser and AST, and code generators emit
+Lashon is a programming-language construction framework. You define a PEG
+grammar, Lashon builds a packrat parser and AST, and code generators emit
 Python, C, WebAssembly, or LLVM IR. A headless Studio controller, a Tkinter
 workbench, a REPL, an LSP analyzer, a DAP debugger, and packaging tools complete
 the lifecycle.
@@ -19,7 +19,7 @@ not runnable programs.
 
 | If you want to… | Read |
 |---|---|
-| Install ParserCraft | [INSTALL.md](INSTALL.md) |
+| Install Lashon | [INSTALL.md](INSTALL.md) |
 | Build a working language in ten minutes | [QUICKSTART.md](QUICKSTART.md) |
 | Follow a task-by-task guide | [USER_GUIDE.md](USER_GUIDE.md) |
 | Learn the platform progressively | [TUTORIAL.md](TUTORIAL.md) |
@@ -45,7 +45,7 @@ not runnable programs.
 
 1. [QUICKSTART.md](QUICKSTART.md) — grammar → parse → execute.
 2. [TUTORIAL.md § Tutorial 1](TUTORIAL.md).
-3. Launch the Studio: `parsercraft-ide projects/aurora`.
+3. Launch the Studio: `lashon-ide projects/aurora`.
 
 ### Path 2 — “I want to design a language” (a weekend)
 
@@ -56,7 +56,7 @@ not runnable programs.
 5. [RUNTIME_GUIDE.md](RUNTIME_GUIDE.md) — give the language a runtime.
 6. [PACKAGING.md](PACKAGING.md) — ship it.
 
-### Path 3 — “I want to integrate ParserCraft” (an afternoon)
+### Path 3 — “I want to integrate Lashon” (an afternoon)
 
 1. [TECHNICAL_REFERENCE.md](TECHNICAL_REFERENCE.md) — public API.
 2. [LSP_AND_DEBUGGING.md](LSP_AND_DEBUGGING.md) — editor and debugger hooks.
@@ -64,7 +64,7 @@ not runnable programs.
 
 ### Path 4 — “I want to contribute”
 
-1. [CONTRIBUTING.md](https://github.com/James-HoneyBadger/ParserCraft/blob/main/CONTRIBUTING.md) — setup, tests, style, PRs.
+1. [CONTRIBUTING.md](https://github.com/James-HoneyBadger/LashonStudioStudio/blob/main/CONTRIBUTING.md) — setup, tests, style, PRs.
 2. [ARCHITECTURE.md](ARCHITECTURE.md) — module boundaries.
 3. [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — known failure modes.
 
@@ -111,9 +111,9 @@ Source text ─────────────────► PEGInterprete
 
 ## Conventions used in these documents
 
-- **`parsercraft …`** — the installed console entry point. From a source checkout
-  without installation, prefix with `python -m parsercraft.tooling.cli`.
-- **`python`** code blocks assume `parsercraft` is importable (`pip install -e .`).
+- **`lashon …`** — the installed console entry point. From a source checkout
+  without installation, prefix with `python -m lashon.tooling.cli`.
+- **`python`** code blocks assume `lashon` is importable (`pip install -e .`).
 - **File paths** are relative to the repository root unless stated otherwise.
 - **“Verified”** examples are exercised by the test suite or were executed while
   writing these documents against v4.0.0.
@@ -128,12 +128,12 @@ implementation wins — please open an issue or a PR with the correction. The
 suite is intentionally explicit about **limitations** (for example, the stdio
 LSP only handles a subset of requests); see
 [TROUBLESHOOTING.md](TROUBLESHOOTING.md) and
-[PROJECT_ANALYSIS.md](https://github.com/James-HoneyBadger/ParserCraft/blob/main/PROJECT_ANALYSIS.md).
+[PROJECT_ANALYSIS.md](https://github.com/James-HoneyBadger/LashonStudioStudio/blob/main/PROJECT_ANALYSIS.md).
 
 ---
 
 ## Versioning
 
 Documents track the `4.x` line. Breaking API changes are recorded in
-[CHANGELOG.md](https://github.com/James-HoneyBadger/ParserCraft/blob/main/CHANGELOG.md). The `4.0.0` documentation set was regenerated
+[CHANGELOG.md](https://github.com/James-HoneyBadger/LashonStudioStudio/blob/main/CHANGELOG.md). The `4.0.0` documentation set was regenerated
 alongside the Studio release.

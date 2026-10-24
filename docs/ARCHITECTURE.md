@@ -1,6 +1,6 @@
 # Architecture
 
-ParserCraft is a Python framework for defining languages with PEG grammars,
+Lashon is a Python framework for defining languages with PEG grammars,
 parsing source into an AST, and generating output for several targets. This
 page describes how the pieces fit together so you can extend them safely.
 
@@ -59,10 +59,10 @@ ones, never the reverse.
   `tooling → packaging`);
 - `tooling` may not import Tk modules, so the CLI and LSP stay headless;
 - no import cycles between top-level packages (a cycle between `parser` and
-  `codegen` is what motivated moving `SourceAST` into `parsercraft.ast`);
+  `codegen` is what motivated moving `SourceAST` into `lashon.ast`);
 - every public package declares `__all__`.
 
-`import parsercraft` is lazy: the root package exposes `LanguageConfig` and
+`import lashon` is lazy: the root package exposes `LanguageConfig` and
 `LanguageRuntime` through `__getattr__`, so a CLI start no longer pays for the
 whole runtime and backend stack (~5 ms instead of ~70-115 ms).
 
@@ -94,7 +94,7 @@ whole runtime and backend stack (~5 ms instead of ~70-115 ms).
 | `codegen/codegen_c.py` | `CCodeGenerator` (AST → C) |
 | `codegen/codegen_wasm.py` | `WasmGenerator`, `WasmModule`, WAT serialization |
 | `codegen/llvm_ir.py` | `LLVMIRGenerator` (AST → SSA IR text) |
-| `runtime/repl.py` | PEG REPL (`REPL`), `parsercraft-repl` entry point |
+| `runtime/repl.py` | PEG REPL (`REPL`), `lashon-repl` entry point |
 | `runtime/language_runtime.py` | `LanguageRuntime` singleton, keyword/function mapping, feature flags |
 | `runtime/stdlib.py` | `StdLib`, `StdModule`, builtins and module tables |
 | `runtime/ffi.py` | `FFIBridge` (ctypes + Python bindings) |
@@ -126,10 +126,10 @@ whole runtime and backend stack (~5 ms instead of ~70-115 ms).
 | `packaging/package_registry.py` | `Package`, `Version`, `VersionConstraint`, `PackageRegistry` |
 | `ide/config_editor.py` | Tkinter keyword/function editor |
 | `ide/studio.py` | headless `LanguageStudio`, `StudioProject` |
-| `crates/parsercraft-core/` | Rust core: grammar model, PEG text parser, packrat engine, AST JSON, PyO3 bindings |
-| `crates/parsercraft-cli/` | `parsercraft-rs` binary: `validate`, `rules`, `ast`, `parse`, `version` |
+| `crates/lashon-core/` | Rust core: grammar model, PEG text parser, packrat engine, AST JSON, PyO3 bindings |
+| `crates/lashon-cli/` | `lashon-rs` binary: `validate`, `rules`, `ast`, `parse`, `version` |
 | `ide/studio_app.py` | Tkinter Studio UI |
-| `ide/app.py` | compatibility shim (`ParserCraftIDE`) |
+| `ide/app.py` | compatibility shim (`LashonIDE`) |
 | `ide/editor.py`, `ide/project.py` | editor widget and project files |
 
 ---
@@ -258,7 +258,7 @@ the widgets when a display is available.
 | Bind native code | `FFIBridge.bind` / `register_python` |
 | Add diagnostics | extend `ErrorLocalizer` catalog or `TypeChecker` |
 | Customize grammar nodes | use fragments with `node_type=...` |
-| Add sample projects | put a directory under `projects/` and mirror it into `parsercraft/ide/samples/` if it should ship |
+| Add sample projects | put a directory under `projects/` and mirror it into `lashon/ide/samples/` if it should ship |
 
 ---
 
@@ -271,22 +271,22 @@ self-sufficient (it parses PEG text itself, so it needs no Python to run).
 
 ```
 Cargo.toml                  workspace
-crates/parsercraft-core/    grammar model · PEG text parser · packrat engine · AST JSON
+crates/lashon-core/    grammar model · PEG text parser · packrat engine · AST JSON
                             PyO3 bindings behind the optional `python` feature
-crates/parsercraft-cli/     `parsercraft-rs` binary
+crates/lashon-cli/     `lashon-rs` binary
 ```
 
 | Surface | Implementation | Status |
 |---|---|---|
-| PEG text parsing, matching, AST | Rust (`parsercraft-core`) | done, conformance-checked |
-| Python bindings | PyO3, loaded by `parsercraft.parser.native` | done, opt-in via `backend="auto"` |
-| `parsercraft-rs validate / rules / ast / parse` | Rust | done |
+| PEG text parsing, matching, AST | Rust (`lashon-core`) | done, conformance-checked |
+| Python bindings | PyO3, loaded by `lashon.parser.native` | done, opt-in via `backend="auto"` |
+| `lashon-rs validate / rules / ast / parse` | Rust | done |
 | C backend | Rust (`backends/c.rs`), output verified against the Python backend | done |
 | Python backend | Rust (`backends/python.rs`), emit-only; output verified by execution | done |
 | WASM/LLVM backends | Python only | **not ported** |
 | Program execution (evaluator) | Rust (`eval.rs`), observer hook ready for debugging | done |
-| Debug adapter (DAP) | Rust (`crates/parsercraft-cli/src/dap.rs`) over the native evaluator | done |
-| LSP server | Rust (`crates/parsercraft-cli/src/lsp.rs`), stdio + grammar intelligence | done |
+| Debug adapter (DAP) | Rust (`crates/lashon-cli/src/dap.rs`) over the native evaluator | done |
+| LSP server | Rust (`crates/lashon-cli/src/lsp.rs`), stdio + grammar intelligence | done |
 | Rust CLI: validate, rules, ast, parse, run, codegen-*, lsp, dap, init, lint, demo | Rust | done |
 | Python-only CLI verbs (`config`, `format`, `package-*`), Studio, packaging | Python | **not ported** |
 
@@ -305,7 +305,7 @@ numbers honest. Reference machine, Aurora grammar, 2,000 lines (35 KB):
 
 | Measurement | Result |
 |---|---|
-| `import parsercraft` | ~5 ms (was ~70-115 ms before lazy exports) |
+| `import lashon` | ~5 ms (was ~70-115 ms before lazy exports) |
 | Python engine, full parse | ~110-125 ms → **~300 KB/s** |
 | Native engine, match + JSON | ~24 ms → **~1.4 MB/s** (about 5× Python) |
 | Native engine, end to end | ~61-69 ms → **~520 KB/s** (about 1.8× Python) |
@@ -316,14 +316,14 @@ algorithm: comment patterns are compiled once per parse and matched with
 was an O(n) copy on every whitespace skip), and the whitespace loop skips the
 regex path entirely unless the next character can start a comment.
 
-The optional native engine ([`crates/parsercraft-core`](../crates/parsercraft-core))
+The optional native engine ([`crates/lashon-core`](../crates/lashon-core))
 ports the same packrat algorithm to Rust and is behind a PyO3 extension:
 
 ```bash
 scripts/build_native.sh                     # builds and installs the .so
 python benchmarks/parse_bench.py            # compare both engines
-parsercraft run prog.aur -c lang.yaml       # unchanged: Python by default
-cargo run -p parsercraft-cli -- parse g.peg prog.aur   # pure Rust, no Python
+lashon run prog.aur -c lang.yaml       # unchanged: Python by default
+cargo run -p lashon-cli -- parse g.peg prog.aur   # pure Rust, no Python
 ```
 
 ```python

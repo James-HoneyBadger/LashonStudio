@@ -1,6 +1,6 @@
 # Aurora
 
-Aurora is the reference language project for **ParserCraft Studio**. It is a
+Aurora is the reference language project for **Lashon Studio**. It is a
 small, complete language that demonstrates the whole pipeline:
 
 ```
@@ -36,7 +36,7 @@ print fib(10) ;
 ## Open it in the Studio
 
 ```bash
-parsercraft-ide projects/aurora
+lashon-ide projects/aurora
 ```
 
 The Studio loads the grammar, samples, and language metadata. Press **F5** to
@@ -45,6 +45,6 @@ run the current sample, or use **Generate** to emit Python, C, WASM, or LLVM IR.
 ## Run from the CLI
 
 ```bash
-parsercraft codegen-c projects/aurora/samples/fibonacci.aur \
+lashon codegen-c projects/aurora/samples/fibonacci.aur \
   --config projects/aurora/language.yaml --output /tmp/fibonacci.c
 ```

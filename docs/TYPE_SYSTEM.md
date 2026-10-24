@@ -1,16 +1,16 @@
 # Type System
 
-ParserCraft ships a small, dependency-free type model plus a line-oriented
+Lashon ships a small, dependency-free type model plus a line-oriented
 checker and separate generic/protocol/narrowing helpers. It is a **heuristic
 analyzer**, not a full type checker: it recognises simple annotations and
 literals, records function signatures you give it, and reports obvious
 mismatches. Use it for editor feedback and quick sanity checks, not as a proof
 of type safety.
 
-Everything lives in `parsercraft.types`:
+Everything lives in `lashon.types`:
 
 ```python
-from parsercraft.types import (
+from lashon.types import (
     Type, TypeKind, TypeEnvironment, TypeChecker, AnalysisLevel,
     GenericChecker, GenericsTypeChecker, GenericType, TypeParameter,
     Protocol, ProtocolChecker, ProtocolTypeChecker, ProtocolTypeIntegration,
@@ -23,7 +23,7 @@ from parsercraft.types import (
 ## `Type` and `TypeKind`
 
 ```python
-from parsercraft.types import Type, TypeKind
+from lashon.types import Type, TypeKind
 
 Type.int()                          # int
 Type.float()                        # float
@@ -69,7 +69,7 @@ assert not Type.str().is_compatible_with(Type.int())
 optional parent for nested scopes.
 
 ```python
-from parsercraft.types import TypeEnvironment, Type
+from lashon.types import TypeEnvironment, Type
 
 env = TypeEnvironment()
 env.define_variable("count", Type.int())
@@ -89,8 +89,8 @@ calls; `create_child_scope()` is the only scoping primitive (no block analysis).
 ## `TypeChecker`
 
 ```python
-from parsercraft.types import TypeChecker, AnalysisLevel
-from parsercraft.config import LanguageConfig
+from lashon.types import TypeChecker, AnalysisLevel
+from lashon.config import LanguageConfig
 
 checker = TypeChecker(LanguageConfig.load("my_lang.yaml"), AnalysisLevel.STRICT)
 errors = checker.check_file("program.src")
@@ -140,8 +140,8 @@ Numeric literals are recognised as literals, not as variable names.
 ### Checking a specific assignment
 
 ```python
-from parsercraft.types import TypeChecker, TypeEnvironment
-from parsercraft.config import LanguageConfig
+from lashon.types import TypeChecker, TypeEnvironment
+from lashon.config import LanguageConfig
 
 env = TypeEnvironment()
 checker = TypeChecker(LanguageConfig())
@@ -178,8 +178,8 @@ Two layers exist:
 ### `GenericChecker` (constraint checks)
 
 ```python
-from parsercraft.types import GenericChecker, GenericType, TypeParameter
-from parsercraft.types.type_system_generics import GenericClass, GenericFunction
+from lashon.types import GenericChecker, GenericType, TypeParameter
+from lashon.types.type_system_generics import GenericClass, GenericFunction
 
 checker = GenericChecker()
 
@@ -209,8 +209,8 @@ does not enforce variance, so treat its result as a structural name check.
 ### `GenericsTypeChecker` (file-level)
 
 ```python
-from parsercraft.types import GenericsTypeChecker
-from parsercraft.types.type_system_generics import Variance
+from lashon.types import GenericsTypeChecker
+from lashon.types.type_system_generics import Variance
 
 checker = GenericsTypeChecker(config)
 checker.check_file("program.src")                        # list of messages
@@ -228,9 +228,9 @@ instantiation/variance checks succeed; unknown names return
 `GenericType(name, parameters, arguments)` describes a generic; `TypeParameter`
 carries `constraint`, `bound`, `variance`, and `default`. Variance values:
 `INVARIANT`, `COVARIANT`, `CONTRAVARIANT` (from
-`parsercraft.types.type_system_generics`).
+`lashon.types.type_system_generics`).
 
-`parsercraft generics FILE` scans `class Name[T]` / `def Name[T]` declarations
+`lashon generics FILE` scans `class Name[T]` / `def Name[T]` declarations
 and `Name[...]` instantiations for duplicate/empty parameters and arity
 mismatches. `--infer` prints parameter bindings; `--check-variance` flags
 variance markers on functions. It is a lightweight source checker, not a
@@ -241,8 +241,8 @@ replacement for the classes below.
 ## Protocols (structural typing)
 
 ```python
-from parsercraft.types import Protocol, ProtocolChecker
-from parsercraft.types.protocols import StructuralType, MethodSignature
+from lashon.types import Protocol, ProtocolChecker
+from lashon.types.protocols import StructuralType, MethodSignature
 
 printable = Protocol(
     name="Printable",
@@ -266,7 +266,7 @@ checker.check_protocol_composition(["Printable", "Comparable"])
 for inheritance.
 
 `ProtocolTypeChecker` and `ProtocolTypeIntegration` bridge protocols into the
-main checker; the `parsercraft check-protocol` CLI command is a placeholder.
+main checker; the `lashon check-protocol` CLI command is a placeholder.
 
 ---
 
@@ -275,7 +275,7 @@ main checker; the `parsercraft check-protocol` CLI command is a placeholder.
 `TypeNarrowingPass` tracks per-variable narrowings:
 
 ```python
-from parsercraft.types import TypeNarrowingPass
+from lashon.types import TypeNarrowingPass
 
 pass_ = TypeNarrowingPass()
 pass_.narrow_by_isinstance("value", "int")
@@ -301,7 +301,7 @@ details:
 
 1. Generate Python with `PythonTranspiler` — type annotations in your source can
    be preserved as Python annotations by your grammar and codegen choices.
-2. Run `parsercraft type-check --config lang.yaml --input program.src` for a
+2. Run `lashon type-check --config lang.yaml --input program.src` for a
    quick report.
 3. For editor integration, call `TypeChecker.check_file`/`check_expression`
    from your LSP analyzer and surface `TypeError.message` as diagnostics.
@@ -309,7 +309,7 @@ details:
    this checker as advisory.
 
 ```python
-from parsercraft.types import TypeChecker, AnalysisLevel
+from lashon.types import TypeChecker, AnalysisLevel
 
 def diagnostics_for(path: str, config) -> list[str]:
     checker = TypeChecker(config, AnalysisLevel.STRICT)

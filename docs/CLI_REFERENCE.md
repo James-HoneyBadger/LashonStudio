@@ -1,18 +1,18 @@
 # CLI Reference
 
-The `parsercraft` command covers language configuration, execution, code
+The `lashon` command covers language configuration, execution, code
 generation, modules, types, editor tooling, and packaging helpers.
 
 ```bash
-parsercraft <command> [options]
-parsercraft --version        # parsercraft 4.0.0
-parsercraft --help
+lashon <command> [options]
+lashon --version        # lashon 4.0.0
+lashon --help
 ```
 
 Without installation, run the module form:
 
 ```bash
-python -m parsercraft.tooling.cli <command> [options]
+python -m lashon.tooling.cli <command> [options]
 ```
 
 Exit codes: `0` success, `1` failure (the message is printed to stdout/stderr).
@@ -54,7 +54,7 @@ Many commands accept `--debug` (`-d`) to print tracebacks.
 ### `init`
 
 ```bash
-parsercraft init NAME [--directory DIR] [--force]
+lashon init NAME [--directory DIR] [--force]
                      [--template aurora|calculator|minimal]
                      [--with-vscode] [--with-ci]
 ```
@@ -79,21 +79,21 @@ Scaffolds a runnable language project:
 | `--with-ci` | add a GitHub Actions workflow that lints, validates, and runs the sample |
 
 ```bash
-parsercraft init "Pocket Calc" -t calculator --with-vscode --with-ci
+lashon init "Pocket Calc" -t calculator --with-vscode --with-ci
 ```
 
 The generated test file validates the grammar, runs the sample, and generates
 every backend, so `python -m pytest tests -q` is the first thing to run.
 
 ```bash
-parsercraft init "Tiny Lang" --directory ./languages
+lashon init "Tiny Lang" --directory ./languages
 cd languages/tiny-lang && python -m pytest tests -q
 ```
 
 ### `create`
 
 ```bash
-parsercraft create [--preset PRESET] [--interactive] [--output FILE]
+lashon create [--preset PRESET] [--interactive] [--output FILE]
 ```
 
 | Option | Description |
@@ -103,14 +103,14 @@ parsercraft create [--preset PRESET] [--interactive] [--output FILE]
 | `--output`, `-o` | output file (default `language_config.yaml`) |
 
 ```bash
-parsercraft create --preset python_like --output my_lang.yaml
-parsercraft create --interactive
+lashon create --preset python_like --output my_lang.yaml
+lashon create --interactive
 ```
 
 ### `edit`
 
 ```bash
-parsercraft edit FILE
+lashon edit FILE
 ```
 
 Opens the config in `$EDITOR`/platform default.
@@ -118,7 +118,7 @@ Opens the config in `$EDITOR`/platform default.
 ### `validate`
 
 ```bash
-parsercraft validate FILE [--grammar] [--json]
+lashon validate FILE [--grammar] [--json]
 ```
 
 Loads the config, runs `LanguageConfig.validate()`, prints errors and alias
@@ -126,39 +126,39 @@ warnings, and exits non-zero on hard errors. `--grammar` also parses the PEG
 rules. `--json` emits a machine-readable report for CI:
 
 ```bash
-parsercraft validate language.yaml --grammar --json | jq .ok
+lashon validate language.yaml --grammar --json | jq .ok
 ```
 
 ### `lint`
 
 ```bash
-parsercraft lint FILE [--source FILE] [--json]
+lashon lint FILE [--source FILE] [--json]
 ```
 
 One command for CI: validates the config, parses every grammar rule, and
 optionally type-checks a source file. Exits 1 when anything fails. `FILE` is a
 language config; to lint a bare `.peg` grammar use
-`parsercraft-rs lint grammar.peg` instead.
+`lashon-rs lint grammar.peg` instead.
 
 ### `config`
 
 ```bash
-parsercraft config get FILE KEY [--output FILE]
-parsercraft config set FILE KEY VALUE [--output FILE]
+lashon config get FILE KEY [--output FILE]
+lashon config set FILE KEY VALUE [--output FILE]
 ```
 
 Reads or changes a single dotted key without hand-editing YAML. Values are
 parsed as JSON when possible, otherwise stored as strings.
 
 ```bash
-parsercraft config get language.yaml grammar.start
-parsercraft config set language.yaml syntax_options.require_semicolons false
+lashon config get language.yaml grammar.start
+lashon config set language.yaml syntax_options.require_semicolons false
 ```
 
 ### `doctor`
 
 ```bash
-parsercraft doctor [--json] [--strict]
+lashon doctor [--json] [--strict]
 ```
 
 Checks the environment: Python version, PyYAML, console entry points,
@@ -169,20 +169,20 @@ warnings fail the command, which is useful in CI.
 ### `demo`
 
 ```bash
-parsercraft demo [--no-backends]
+lashon demo [--no-backends]
 ```
 
 Runs a guided tour on a built-in grammar: parse → AST → Python → C → WASM →
 LLVM IR → execution. Ideal for a first look without creating files.
 
 ```bash
-parsercraft validate projects/aurora/language.yaml
+lashon validate projects/aurora/language.yaml
 ```
 
 ### `info`
 
 ```bash
-parsercraft info [FILE]
+lashon info [FILE]
 ```
 
 Without a file, shows the current runtime configuration. With a file, shows
@@ -191,17 +191,17 @@ metadata, counts, keywords, functions, and operators.
 ### `export`
 
 ```bash
-parsercraft export FILE [--format {markdown,json,yaml}] [--output FILE]
+lashon export FILE [--format {markdown,json,yaml}] [--output FILE]
 ```
 
 ```bash
-parsercraft export my_lang.yaml --format markdown --output reference.md
+lashon export my_lang.yaml --format markdown --output reference.md
 ```
 
 ### `import`
 
 ```bash
-parsercraft import FILE [--scope {runtime,project,user}]
+lashon import FILE [--scope {runtime,project,user}]
 ```
 
 Applies a config to the runtime, a project `.langconfig`, or the user config at
@@ -210,17 +210,17 @@ Applies a config to the runtime, a project `.langconfig`, or the user config at
 ### `convert`
 
 ```bash
-parsercraft convert FILE --to {json,yaml} [--from FORMAT] [--output FILE]
+lashon convert FILE --to {json,yaml} [--from FORMAT] [--output FILE]
 ```
 
 ```bash
-parsercraft convert my_lang.yaml --to json
+lashon convert my_lang.yaml --to json
 ```
 
 ### `diff`
 
 ```bash
-parsercraft diff FILE1 FILE2 [--exit-code]
+lashon diff FILE1 FILE2 [--exit-code]
 ```
 
 `--exit-code` exits 1 when the two configurations differ, so the command can
@@ -229,27 +229,27 @@ gate a pipeline. Output lists added, removed, and changed keys and mappings.
 ### `update`
 
 ```bash
-parsercraft update FILE [--set KEY VALUE]... [--merge FILE] [--output FILE]
+lashon update FILE [--set KEY VALUE]... [--merge FILE] [--output FILE]
 ```
 
 `KEY` is dotted (`metadata.author`, `syntax_options.single_line_comment`).
 Values are parsed as JSON when possible, and `--set` may be repeated.
 
 ```bash
-parsercraft update my_lang.yaml --set metadata.author "Your Name"
-parsercraft update my_lang.yaml --merge overrides.yaml --output merged.yaml
+lashon update my_lang.yaml --set metadata.author "Your Name"
+lashon update my_lang.yaml --merge overrides.yaml --output merged.yaml
 ```
 
 ### `delete`
 
 ```bash
-parsercraft delete FILE [--keyword KW ...] [--function FN ...] [--operator OP ...] [--output FILE]
+lashon delete FILE [--keyword KW ...] [--function FN ...] [--operator OP ...] [--output FILE]
 ```
 
 ### `list-presets`
 
 ```bash
-parsercraft list-presets
+lashon list-presets
 ```
 
 Current presets:
@@ -264,7 +264,7 @@ Current presets:
 ### `play`
 
 ```bash
-parsercraft play [PROJECT] [--port 8000] [--host 127.0.0.1] [--open]
+lashon play [PROJECT] [--port 8000] [--host 127.0.0.1] [--open]
 ```
 
 Serves a browser playground for a project: edit source on the left, press
@@ -275,7 +275,7 @@ readiness checks.
 ### `run`
 
 ```bash
-parsercraft run FILE [--config CONFIG | --grammar GRAMMAR]
+lashon run FILE [--config CONFIG | --grammar GRAMMAR]
                      [--json] [--show-python] [--watch]
 ```
 
@@ -295,13 +295,13 @@ A grammar is required; without `--config`/`--grammar` the command exits 1.
 Exit code is 1 for parse, IO, and runtime errors.
 
 ```bash
-parsercraft run projects/aurora/samples/fibonacci.aur \
+lashon run projects/aurora/samples/fibonacci.aur \
   --config projects/aurora/language.yaml
 
-parsercraft run program.aur --grammar grammar.peg --json
+lashon run program.aur --grammar grammar.peg --json
 # {"variables": {"x": 21, "y": 42}}
 
-parsercraft run program.aur --config lang.yaml --sandbox
+lashon run program.aur --config lang.yaml --sandbox
 ```
 
 `--watch` polls file modification times every 0.5 s and re-runs on change;
@@ -315,7 +315,7 @@ files and open sockets. `--json` is rejected in sandbox mode.
 ### `repl`
 
 ```bash
-parsercraft repl [FILE] [--grammar GRAMMAR] [--debug]
+lashon repl [FILE] [--grammar GRAMMAR] [--debug]
 ```
 
 | Mode | Behaviour |
@@ -331,50 +331,50 @@ Command sets differ:
 - **Grammar REPL (`--grammar`):** `:help`, `:ast`, `:py`, `:vars`, `:grammar`,
   `:load`, `:save`, `:doc RULE`, `:backends`, `:time`, `:reset`, `:quit`.
 
-Both REPLs persist history (`~/.parsercraft_repl_history`,
-`~/.parsercraft_history`). The grammar REPL also offers tab completion for
+Both REPLs persist history (`~/.lashon_repl_history`,
+`~/.lashon_history`). The grammar REPL also offers tab completion for
 commands, rule names, and common builtins. `:backends` prints C, WASM, and
 LLVM IR for the last successful parse.
 
 ```bash
-parsercraft repl --grammar mini.peg
-parsercraft repl configs/examples/pascal_like.yaml
+lashon repl --grammar mini.peg
+lashon repl configs/examples/pascal_like.yaml
 ```
 
 ### `batch`
 
 ```bash
-parsercraft batch CONFIG [--script FILE] [--input-dir DIR] [--output-dir DIR]
+lashon batch CONFIG [--script FILE] [--input-dir DIR] [--output-dir DIR]
                  [--pattern GLOB] [--show-translation] [--show-vars] [--debug]
 ```
 
 Runs a script or processes matching files through the config-driven translator.
 
 ```bash
-parsercraft batch my_lang.yaml --input-dir ./programs --pattern "*.txt" \
+lashon batch my_lang.yaml --input-dir ./programs --pattern "*.txt" \
   --output-dir ./out --show-vars
 ```
 
 ### `test`
 
 ```bash
-parsercraft test --config CONFIG --tests CASES [--show-translation]
+lashon test --config CONFIG --tests CASES [--show-translation]
                  [--stop-on-fail] [--debug]
 ```
 
 `CASES` is a YAML/JSON list of test cases consumed by the built-in harness.
-See `parsercraft.tooling.test_framework.TestCase` for the schema.
+See `lashon.tooling.test_framework.TestCase` for the schema.
 
 ### `translate`
 
 ```bash
-parsercraft translate --config CONFIG --input SRC [--output FILE]
+lashon translate --config CONFIG --input SRC [--output FILE]
 ```
 
 Translates custom keywords back to their originals (one pass).
 
 ```bash
-parsercraft translate --config espanol.yaml --input program.txt
+lashon translate --config espanol.yaml --input program.txt
 ```
 
 ---
@@ -382,9 +382,9 @@ parsercraft translate --config espanol.yaml --input program.txt
 ## Code generation
 
 ```bash
-parsercraft codegen-c    FILE [--config CONFIG] [--output FILE]
-parsercraft codegen-wasm  FILE [--config CONFIG] [--output FILE]
-parsercraft codegen-llvm  FILE [--config CONFIG] [--output FILE]
+lashon codegen-c    FILE [--config CONFIG] [--output FILE]
+lashon codegen-wasm  FILE [--config CONFIG] [--output FILE]
+lashon codegen-llvm  FILE [--config CONFIG] [--output FILE]
 ```
 
 - `--config` must point to a language config containing `grammar.rules`.
@@ -392,7 +392,7 @@ parsercraft codegen-llvm  FILE [--config CONFIG] [--output FILE]
 - Default outputs: `.c`, `.wat`, `.ll`.
 
 ```bash
-parsercraft codegen-c projects/aurora/samples/fibonacci.aur \
+lashon codegen-c projects/aurora/samples/fibonacci.aur \
   --config projects/aurora/language.yaml --output /tmp/fib.c
 ```
 
@@ -403,9 +403,9 @@ These commands emit source; they do not invoke a C/WASM/LLVM toolchain.
 ## Modules
 
 ```bash
-parsercraft module-info   MODULE [--module-dir DIR]
-parsercraft module-deps   MODULE [--module-dir DIR]
-parsercraft module-cycles [--module-dir DIR]
+lashon module-info   MODULE [--module-dir DIR]
+lashon module-deps   MODULE [--module-dir DIR]
+lashon module-cycles [--module-dir DIR]
 ```
 
 Module files are discovered by name with extensions `.teach`, `.lang`,
@@ -414,9 +414,9 @@ Module files are discovered by name with extensions `.teach`, `.lang`,
 "^1.0.0"`, and `export function|const|class name`.
 
 ```bash
-parsercraft module-info utils --module-dir ./modules
-parsercraft module-deps main --module-dir ./modules
-parsercraft module-cycles --module-dir ./modules
+lashon module-info utils --module-dir ./modules
+lashon module-deps main --module-dir ./modules
+lashon module-cycles --module-dir ./modules
 ```
 
 Full semantics: [RUNTIME_GUIDE.md](RUNTIME_GUIDE.md#module-system).
@@ -428,7 +428,7 @@ Full semantics: [RUNTIME_GUIDE.md](RUNTIME_GUIDE.md#module-system).
 ### `type-check`
 
 ```bash
-parsercraft type-check --config CONFIG --input SRC
+lashon type-check --config CONFIG --input SRC
                        [--level {lenient,moderate,strict,very-strict}]
                        [--warnings-as-errors] [--json] [--debug]
 ```
@@ -449,15 +449,15 @@ full static type checker.
 Exit code is 1 when diagnostics are reported.
 
 ```bash
-parsercraft type-check --config my_lang.yaml --input program.src --level strict
-parsercraft type-check -c my_lang.yaml -i program.src --json
+lashon type-check --config my_lang.yaml --input program.src --level strict
+lashon type-check -c my_lang.yaml -i program.src --json
 ```
 
 ### `generics` and `check-protocol`
 
 ```bash
-parsercraft generics FILE [--check-variance] [--infer]
-parsercraft check-protocol FILE [--list-protocols] [--protocol NAME]
+lashon generics FILE [--check-variance] [--infer]
+lashon check-protocol FILE [--list-protocols] [--protocol NAME]
 ```
 
 `generics` scans declarations (`class Box[T]`, `def identity[T]`) and
@@ -477,7 +477,7 @@ model. Use `ProtocolChecker` directly.
 ### `lsp`
 
 ```bash
-parsercraft lsp --config CONFIG [--grammar GRAMMAR] [--port PORT] [--stdio]
+lashon lsp --config CONFIG [--grammar GRAMMAR] [--port PORT] [--stdio]
 ```
 
 Starts the LSP server. `--stdio` is the supported transport; socket mode exits
@@ -495,15 +495,15 @@ go-to-definition, references, rename, rule completion, and undefined-rule
 warnings.
 
 ```bash
-parsercraft lsp --config my_lang.yaml --stdio
-parsercraft lsp --config projects/aurora/language.yaml \
+lashon lsp --config my_lang.yaml --stdio
+lashon lsp --config projects/aurora/language.yaml \
   --grammar projects/aurora/grammar.peg --stdio
 ```
 
 ### `extension`
 
 ```bash
-parsercraft extension --config CONFIG [--output DIR]
+lashon extension --config CONFIG [--output DIR]
                      [--publisher NAME] [--version VERSION]
 ```
 
@@ -513,22 +513,22 @@ Generates a buildable VS Code extension: `package.json` (with
 `language.yaml` (shipped so the server can start), README, and
 `.vscodeignore`.
 
-The generated client launches `parsercraft lsp --config language.yaml --stdio`,
-so install ParserCraft wherever the extension runs. Build it with:
+The generated client launches `lashon lsp --config language.yaml --stdio`,
+so install Lashon wherever the extension runs. Build it with:
 
 ```bash
 cd <output> && npm install && npm run compile && npx vsce package
 ```
 
 ```bash
-parsercraft extension --config projects/aurora/language.yaml \
+lashon extension --config projects/aurora/language.yaml \
   --output ./aurora-vscode --publisher my-org --version 1.0.0
 ```
 
 ### `refactor-rename`
 
 ```bash
-parsercraft refactor-rename FILE OLD NEW [--output FILE]
+lashon refactor-rename FILE OLD NEW [--output FILE]
 ```
 
 Renames identifiers using the refactoring engine; writes in place unless
@@ -537,7 +537,7 @@ Renames identifiers using the refactoring engine; writes in place unless
 ### `format`
 
 ```bash
-parsercraft format FILE [--output FILE] [--tab-size N] [--in-place] [--check]
+lashon format FILE [--output FILE] [--tab-size N] [--in-place] [--check]
 ```
 
 Minimal formatter (indentation/whitespace). Without `--output` or `--in-place`,
@@ -547,7 +547,7 @@ change, which makes it usable as a CI gate.
 ### `debug-launch`
 
 ```bash
-parsercraft debug-launch FILE [--port PORT] [-b/--breakpoint LINE]...
+lashon debug-launch FILE [--port PORT] [-b/--breakpoint LINE]...
                             [--config CONFIG | --grammar GRAMMAR]
 ```
 
@@ -560,7 +560,7 @@ stepping, expandable variables, watch expressions, and evaluation.
 ### `test-run`
 
 ```bash
-parsercraft test-run [PATH] [--verbose] [--coverage]
+lashon test-run [PATH] [--verbose] [--coverage]
 ```
 
 Runs `pytest` on `PATH` (default `tests`). `--verbose` adds `-v`;
@@ -568,7 +568,7 @@ Runs `pytest` on `PATH` (default `tests`). `--verbose` adds `-v`;
 The command returns pytest's exit code.
 
 ```bash
-parsercraft test-run tests -v
+lashon test-run tests -v
 ```
 
 ---
@@ -578,16 +578,16 @@ parsercraft test-run tests -v
 ### `package-search`
 
 ```bash
-parsercraft package-search QUERY [--registry REGISTRY]
+lashon package-search QUERY [--registry REGISTRY]
 ```
 
 Exits 2: there is no remote registry backend. Use
-`parsercraft.packaging.PackageRegistry` with locally registered packages.
+`lashon.packaging.PackageRegistry` with locally registered packages.
 
 ### `package-install`
 
 ```bash
-parsercraft package-install PACKAGE[@VERSION] [--registry REGISTRY] [--save]
+lashon package-install PACKAGE[@VERSION] [--registry REGISTRY] [--save]
 ```
 
 Exits 2: packages are resolved from a local `PackageRegistry` only. Use
@@ -596,23 +596,23 @@ directly; see [PACKAGING.md](PACKAGING.md).
 
 ---
 
-## Rust front end (`parsercraft-rs`)
+## Rust front end (`lashon-rs`)
 
-A second, dependency-free binary built from `crates/parsercraft-cli`. It runs
+A second, dependency-free binary built from `crates/lashon-cli`. It runs
 with no Python installed and covers the commands that only need the grammar
 engine:
 
 ```bash
-cargo build --workspace --release      # or: cargo install --path crates/parsercraft-cli
+cargo build --workspace --release      # or: cargo install --path crates/lashon-cli
 
-parsercraft-rs validate grammar.peg     # rules, start rule, undefined-rule warnings
-parsercraft-rs rules grammar.peg        # one rule name per line
-parsercraft-rs ast grammar.peg prog.aur # pretty JSON AST
-parsercraft-rs parse grammar.peg prog.aur  # exit 0/1, prints the first error
-parsercraft-rs run grammar.peg prog.aur    # executes natively, prints program output
-parsercraft-rs codegen-c grammar.peg prog.aur -o prog.c [--compile] [--run]
-parsercraft-rs codegen-py grammar.peg prog.aur -o prog.py [--run]
-parsercraft-rs version
+lashon-rs validate grammar.peg     # rules, start rule, undefined-rule warnings
+lashon-rs rules grammar.peg        # one rule name per line
+lashon-rs ast grammar.peg prog.aur # pretty JSON AST
+lashon-rs parse grammar.peg prog.aur  # exit 0/1, prints the first error
+lashon-rs run grammar.peg prog.aur    # executes natively, prints program output
+lashon-rs codegen-c grammar.peg prog.aur -o prog.c [--compile] [--run]
+lashon-rs codegen-py grammar.peg prog.aur -o prog.py [--run]
+lashon-rs version
 ```
 
 `codegen-c` is a full AST → C generator (assignments, prints, functions,
@@ -620,7 +620,7 @@ parsercraft-rs version
 `--run` executes the binary, so a project can be built with no Python:
 
 ```bash
-parsercraft-rs codegen-c grammar.peg samples/fizzbuzz.aur -o fizzbuzz.c --run
+lashon-rs codegen-c grammar.peg samples/fizzbuzz.aur -o fizzbuzz.c --run
 ```
 
 `validate` exits 1 when the grammar cannot be parsed; `parse` exits 1 on a
@@ -637,22 +637,22 @@ The WASM and LLVM backends and the editor tooling are still Python-only.
 
 | Task | Command |
 |---|---|
-| Scaffold a language project | `parsercraft init "My Lang"` |
-| Create a Spanish Python | `parsercraft create --preset python_like` then `rename_keyword` in Python or edit YAML |
-| Check a config | `parsercraft validate my_lang.yaml` |
-| Lint config + grammar + source | `parsercraft lint lang.yaml --source prog.aur` |
-| Diagnose the environment | `parsercraft doctor` |
-| See the whole pipeline | `parsercraft demo` |
-| Open a browser playground | `parsercraft play . --open` |
-| Change one setting | `parsercraft config set lang.yaml grammar.start program` |
-| Explore presets | `parsercraft list-presets` |
-| Run a program | `parsercraft run program.aur -g grammar.peg` |
-| Run a grammar REPL | `parsercraft repl --grammar my.peg` |
-| Run a config REPL | `parsercraft repl my_lang.yaml` |
-| Emit C from a grammar config | `parsercraft codegen-c src.aur --config lang.yaml` |
-| Generate a VS Code extension | `parsercraft extension --config lang.yaml` |
-| Inspect module dependencies | `parsercraft module-deps main --module-dir ./lib` |
-| Start the LSP (stdio) | `parsercraft lsp --config lang.yaml --stdio` |
+| Scaffold a language project | `lashon init "My Lang"` |
+| Create a Spanish Python | `lashon create --preset python_like` then `rename_keyword` in Python or edit YAML |
+| Check a config | `lashon validate my_lang.yaml` |
+| Lint config + grammar + source | `lashon lint lang.yaml --source prog.aur` |
+| Diagnose the environment | `lashon doctor` |
+| See the whole pipeline | `lashon demo` |
+| Open a browser playground | `lashon play . --open` |
+| Change one setting | `lashon config set lang.yaml grammar.start program` |
+| Explore presets | `lashon list-presets` |
+| Run a program | `lashon run program.aur -g grammar.peg` |
+| Run a grammar REPL | `lashon repl --grammar my.peg` |
+| Run a config REPL | `lashon repl my_lang.yaml` |
+| Emit C from a grammar config | `lashon codegen-c src.aur --config lang.yaml` |
+| Generate a VS Code extension | `lashon extension --config lang.yaml` |
+| Inspect module dependencies | `lashon module-deps main --module-dir ./lib` |
+| Start the LSP (stdio) | `lashon lsp --config lang.yaml --stdio` |
 
 ---
 

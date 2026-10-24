@@ -2,7 +2,7 @@
 
 ## Our Commitment
 
-We are committed to providing a welcoming and inspiring community for all. We pledge that everyone participating in the ParserCraft project and its communities will experience an environment free from harassment and discrimination based on identity and expression.
+We are committed to providing a welcoming and inspiring community for all. We pledge that everyone participating in the Lashon project and its communities will experience an environment free from harassment and discrimination based on identity and expression.
 
 ## Our Standards
 

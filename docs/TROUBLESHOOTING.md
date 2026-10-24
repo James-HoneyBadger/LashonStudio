@@ -7,14 +7,14 @@ what the message means and the smallest fix.
 
 ## Installation and environment
 
-### `ModuleNotFoundError: No module named 'parsercraft'`
+### `ModuleNotFoundError: No module named 'lashon'`
 
 Not installed, or the wrong interpreter.
 
 ```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
-python -c "import parsercraft; print(parsercraft.__version__)"
+python -c "import lashon; print(lashon.__version__)"
 ```
 
 Running tests without installing also works because `pyproject.toml` sets
@@ -44,10 +44,10 @@ The Studio needs Tkinter:
 - macOS/Windows python.org installers: bundled
 - pyenv: rebuild after installing Tcl/Tk
 
-### `parsercraft: command not found`
+### `lashon: command not found`
 
 The console script is not on `PATH`. Either activate the venv, or use
-`python -m parsercraft.tooling.cli`. If you used `pip install --user`, add the
+`python -m lashon.tooling.cli`. If you used `pip install --user`, add the
 user scripts directory to `PATH`.
 
 ### `error: externally-managed-environment` (PEP 668)
@@ -72,7 +72,7 @@ headless controller (`LanguageStudio`) instead.
 `python_like`, `js_like`, `minimal`, `ruby_like`, `golang_like`, `rust_like`,
 `clike`, `functional`, `lisp_like`, `basic_like`.
 
-Run `parsercraft list-presets` to see them with descriptions.
+Run `lashon list-presets` to see them with descriptions.
 
 ### `Keyword '<x>' not found` / `Function '<x>' not found`
 
@@ -80,8 +80,8 @@ You asked to rename or remove a mapping that does not exist. Check the exact
 source spelling:
 
 ```bash
-parsercraft info my_lang.yaml
-parsercraft export my_lang.yaml --format markdown
+lashon info my_lang.yaml
+lashon export my_lang.yaml --format markdown
 ```
 
 Keyword keys are the **source** names; values are the Python targets.
@@ -89,7 +89,7 @@ Keyword keys are the **source** names; values are the Python targets.
 ### A YAML key like `true:` or `yes:` behaves strangely
 
 YAML 1.1 parses bare `true`, `false`, `yes`, `no`, `on`, `off` as booleans.
-ParserCraft normalises boolean keys back to their string form (`True` →
+Lashon normalises boolean keys back to their string form (`True` →
 `"true"`), but the safest fix is to quote them:
 
 ```yaml
@@ -104,7 +104,7 @@ keywords:
 are separate. Run:
 
 ```bash
-parsercraft validate my_lang.yaml
+lashon validate my_lang.yaml
 ```
 
 and read the first error — later errors are often cascades. Common causes: an
@@ -115,7 +115,7 @@ side.
 
 The loader normalises `metadata`/top-level fields and ignores unknown ones for
 forward compatibility. Typos therefore do not fail loudly — validate after
-editing, and check `parsercraft info` for what was actually loaded.
+editing, and check `lashon info` for what was actually loaded.
 
 ---
 
@@ -198,7 +198,7 @@ These tokens are recognised but not supported by the interpreter. Use braces,
 
 ### Semantic actions `{ ... }` are rejected
 
-ParserCraft does not execute grammar actions. Put semantics in the backend or
+Lashon does not execute grammar actions. Put semantics in the backend or
 post-process the AST yourself.
 
 ---
@@ -247,7 +247,7 @@ Python may shadow a mapping if it appears in an unexpected position. Use
 stdlib = StdLib(); stdlib.register_builtins(); stdlib.inject(namespace)
 ```
 
-The config REPL (`parsercraft repl config.yaml`) runs with a restricted
+The config REPL (`lashon repl config.yaml`) runs with a restricted
 `SAFE_BUILTINS` set — `abs`, `all`, `any`, `bool`, `enumerate`, `filter`,
 `float`, `int`, `len`, `list`, `map`, `max`, `min`, `print`, `range`, `round`,
 `sorted`, `str`, `sum`, `tuple`, `zip`, plus `pi` and `e` — not the full
@@ -272,7 +272,7 @@ The config REPL (`parsercraft repl config.yaml`) runs with a restricted
 
 Likely a loop variable that is never updated, or a `while` condition using a
 value the body does not change. Inspect the generated C (the Studio C pane or
-`parsercraft codegen-c`), since indentation there is cosmetic and can hide a
+`lashon codegen-c`), since indentation there is cosmetic and can hide a
 dropped statement.
 
 ### LLVM IR fails to verify
@@ -434,7 +434,7 @@ and `last_parse_ms` — use it to confirm the fast path is actually taken.
 
 ## FAQ
 
-**Can ParserCraft parse Python/C/JavaScript?** Not as shipped. The grammar engine
+**Can Lashon parse Python/C/JavaScript?** Not as shipped. The grammar engine
 is general, but you would need to write (or generate) the grammar; PEG cannot
 handle left recursion, so expression grammars must be written iteratively.
 
@@ -454,7 +454,7 @@ calls native code. See
 during review. Run `python -m pytest -q`; all should pass.
 
 **Where do I report bugs?** Open an issue at
-`https://github.com/James-HoneyBadger/ParserCraft/issues` with the grammar, a
+`https://github.com/James-HoneyBadger/LashonStudioStudio/issues` with the grammar, a
 minimal source file, the command, and the full message.
 
 ---

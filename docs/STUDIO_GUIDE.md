@@ -1,13 +1,13 @@
-# ParserCraft Studio Guide
+# Lashon Studio Guide
 
-ParserCraft Studio is the graphical language-design workbench. It wraps the
-headless `LanguageStudio` (`src/parsercraft/ide/studio.py`) controller in a
+Lashon Studio is the graphical language-design workbench. It wraps the
+headless `LanguageStudio` (`src/lashon/ide/studio.py`) controller in a
 Tkinter shell.
 
 ```bash
-parsercraft-ide                      # opens the bundled Aurora project
-parsercraft-ide projects/aurora      # open a project directory
-parsercraft-ide path/to/language.yaml prog.aur
+lashon-ide                      # opens the bundled Aurora project
+lashon-ide projects/aurora      # open a project directory
+lashon-ide path/to/language.yaml prog.aur
 ```
 
 Requires `tkinter` (bundled with most CPython builds). On headless machines use
@@ -19,7 +19,7 @@ the `LanguageStudio` API or the CLI instead.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ ◆ ParserCraft Studio            Design a grammar · parse · run …     │
+│ ◆ Lashon Studio            Design a grammar · parse · run …     │
 │ [＋ New] [⌂ Open] [▣ Save] │ [✓ Validate] [◈ Parse] [▶ Run] [⇩ Gen] │
 ├──────────────┬──────────────────────────────────────────────────────┤
 │ PROJECT      │  Source │ grammar.peg │ language.yaml               │
@@ -59,7 +59,7 @@ selecting a problem moves the caret to its position in the right editor
 
 On startup the Studio tries to open the bundled Aurora project. You should see:
 
-- title `ParserCraft Studio — Aurora`,
+- title `Lashon Studio — Aurora`,
 - `hello.aur` in the source tab,
 - the project tree populated,
 - `Grammar OK — 18 rules` in the status bar.
@@ -69,7 +69,7 @@ Press **F5**. The console shows:
 ```
 [14:39:02] ▶ Running program…
 [14:39:02] Hello, Aurora!
-[14:39:02] Designed in ParserCraft Studio.
+[14:39:02] Designed in Lashon Studio.
 [14:39:02] Finished in 0.9 ms
 ```
 
@@ -115,7 +115,7 @@ my-language/
 └── README.md
 ```
 
-`language.yaml` is a normal ParserCraft language config, so the CLI can read it:
+`language.yaml` is a normal Lashon language config, so the CLI can read it:
 
 ```yaml
 name: Aurora
@@ -198,7 +198,7 @@ the console lists which backends failed.
 Everything the GUI does is available without Tkinter:
 
 ```python
-from parsercraft.ide.studio import LanguageStudio
+from lashon.ide.studio import LanguageStudio
 
 studio = LanguageStudio()
 project = studio.open_project("projects/aurora")

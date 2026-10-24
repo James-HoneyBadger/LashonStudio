@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from parsercraft.tooling.debug.dap_server import DAPServer
+from lashon.tooling.debug.dap_server import DAPServer
 
 PROGRAM = """\
 i = 0 ;
@@ -82,7 +82,7 @@ class DAPClient:
         raise AssertionError("expected message not received")
 
     def initialize(self):
-        self.send("initialize", {"adapterID": "parsercraft"})
+        self.send("initialize", {"adapterID": "lashon"})
         self.wait_for(lambda m: m.get("type") == "response")
         self.wait_for(lambda m: m.get("event") == "initialized")
 
@@ -267,7 +267,7 @@ def test_watch_scope_and_container_expansion(dap):
 
 
 def test_initialize_advertises_conditional_breakpoints(dap):
-    dap.send("initialize", {"adapterID": "parsercraft"})
+    dap.send("initialize", {"adapterID": "lashon"})
     response = dap.wait_for(lambda m: m.get("type") == "response")
     capabilities = response["body"]
     assert capabilities["supportsConditionalBreakpoints"] is True

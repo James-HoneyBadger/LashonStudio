@@ -1,7 +1,7 @@
 """Tests for the REPL."""
 
 
-from parsercraft.runtime.repl import REPL
+from lashon.runtime.repl import REPL
 
 
 class TestREPL:

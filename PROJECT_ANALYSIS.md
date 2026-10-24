@@ -1,14 +1,14 @@
-# ParserCraft Project Analysis
+# Lashon Project Analysis
 
 **Date**: February 2026
 **Version**: 4.0.0
-**Project**: ParserCraft — Custom Programming Language Construction Framework
+**Project**: Lashon — Custom Programming Language Construction Framework
 
 ---
 
 ## Executive Summary
 
-ParserCraft is a **well-implemented language construction framework** with a clean
+Lashon is a **well-implemented language construction framework** with a clean
 subpackage architecture, four code-generation backends, and 335 passing tests.
 The core pipeline (PEG grammar → AST → backend) is fully functional. The areas
 with the most limited coverage are advanced type-system generics, the debug
@@ -19,7 +19,7 @@ adapter, and partial module-system edge-case handling.
 ## Architecture Overview
 
 ```
-src/parsercraft/
+src/lashon/
 ├── config/       LanguageConfig, LanguageValidator, IdentifierValidator
 ├── parser/       GrammarParser, GrammarBuilder, PEGInterpreter, IncrementalParser
 ├── codegen/      PythonTranspiler, CCodeGenerator, WasmGenerator, LLVMIRGenerator
@@ -27,7 +27,7 @@ src/parsercraft/
 ├── tooling/      CLI (2355 lines, 40+ subcommands), ErrorLocalizer,
 │   ├── lsp/          LSP server (683 lines), advanced LSP, integration layer
 │   └── debug/        DAP debug adapter
-├── ide/          ParserCraft Studio (LanguageStudio + Tkinter shell), CodeEditor, ProjectManager
+├── ide/          Lashon Studio (LanguageStudio + Tkinter shell), CodeEditor, ProjectManager
 ├── types/        TypeChecker, generics, protocols, type_system_generics
 └── packaging/    VS Code extension gen, package registry, documentation gen
 ```
@@ -154,7 +154,7 @@ files; the localizer formats messages with named placeholders.
 
 ---
 
-## 5. ParserCraft Studio — IMPLEMENTED
+## 5. Lashon Studio — IMPLEMENTED
 
 The Studio is a full language-design workbench split into a testable
 controller and a Tkinter shell:
@@ -162,13 +162,13 @@ controller and a Tkinter shell:
 | Module | Purpose |
 |--------|---------|
 | `ide/studio.py` | `LanguageStudio`, `StudioProject`, `StudioResult` — headless pipeline, project I/O, grammar/config sync, diagnostics |
-| `ide/studio_app.py` | `ParserCraftIDE` — project tree, source/grammar/YAML editors, console, variables, backend panes, AST tree |
-| `ide/app.py` | Compatibility entry point (`parsercraft-ide`) |
+| `ide/studio_app.py` | `LashonIDE` — project tree, source/grammar/YAML editors, console, variables, backend panes, AST tree |
+| `ide/app.py` | Compatibility entry point (`lashon-ide`) |
 | `ide/editor.py` | `CodeEditor`, `LineNumbers` — syntax-aware text widget |
 | `ide/project.py` | Legacy `Project`, `ProjectManager` helpers |
 | `ide/samples/aurora/` | Packaged copy of the Aurora reference project |
 
-Launch: `parsercraft-ide [project]`
+Launch: `lashon-ide [project]`
 
 Reference project: `projects/aurora` (18 rules, 3 samples, all four backends).
 
@@ -239,7 +239,7 @@ Run: `python -m pytest tests/ -v`
 - `codegen-c`/`codegen-wasm` now translate the input program, and the
   documented `codegen-llvm` command was added.
 - `pytest` is configured to run from a clean clone, and CI runs lint + tests.
-- ParserCraft Studio: headless `LanguageStudio` controller, tabbed IDE with
+- Lashon Studio: headless `LanguageStudio` controller, tabbed IDE with
   project tree, live grammar validation, AST tree, variables, and four
   backend panes, plus the Aurora reference language project.
 - Duplicate keyword mappings are reported as aliases (warnings) rather than
@@ -271,7 +271,7 @@ Python 3.10+ required.
 
 ## Conclusion
 
-ParserCraft v4.0.0 is **production-ready** for its core use-case: defining PEG
+Lashon v4.0.0 is **production-ready** for its core use-case: defining PEG
 grammars, parsing source code, and generating output in Python, C, WebAssembly,
 or LLVM IR. All 335 tests pass. Remaining work is architectural (CLI
 decomposition and convergence of the legacy config-driven parser) rather than

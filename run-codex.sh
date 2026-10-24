@@ -51,8 +51,8 @@ source "$VENV_DIR/bin/activate"
 echo -e "${BLUE}Upgrading pip...${NC}"
 pip install --quiet --upgrade pip
 
-# Install ParserCraft in development mode
-echo -e "${BLUE}Installing ParserCraft and dependencies...${NC}"
+# Install Lashon in development mode
+echo -e "${BLUE}Installing Lashon and dependencies...${NC}"
 pip install --quiet -e "$SCRIPT_DIR"
 
 # Install development dependencies

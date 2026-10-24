@@ -45,7 +45,7 @@ python demos/pascal_like/run_pascal.py
 - [ ] Code follows the project style (line length ≤ 120, type annotations on public methods)
 - [ ] Docstrings updated for any changed public classes or functions
 - [ ] `docs/` updated if user-visible behaviour changed
-- [ ] No new lint errors (`python -m pylint src/parsercraft/` or equivalent)
+- [ ] No new lint errors (`python -m pylint src/lashon/` or equivalent)
 - [ ] `CHANGELOG.md` updated (if applicable)
 
 ## Screenshots / Output

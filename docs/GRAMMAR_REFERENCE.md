@@ -1,6 +1,6 @@
 # Grammar Reference
 
-ParserCraft grammars are parsing expression grammars (PEGs) written in a small
+Lashon grammars are parsing expression grammars (PEGs) written in a small
 text notation. This document defines the notation, its runtime semantics, the
 AST it produces, and the traps worth knowing.
 
@@ -215,7 +215,7 @@ Source positions are attached to every rule node and every token node.
 ## 6. Fragment rules and custom node types
 
 ```python
-from parsercraft.parser import GrammarBuilder, PEGNode, PEGNodeType
+from lashon.parser import GrammarBuilder, PEGNode, PEGNodeType
 
 b = GrammarBuilder("Tiny")
 b.rule("program").set_pattern(b.plus(b.ref("statement")))
@@ -228,7 +228,7 @@ grammar = b.build()
 To make a rule invisible in the AST, add it with `is_fragment=True`:
 
 ```python
-from parsercraft.parser import PEGNode, PEGNodeType
+from lashon.parser import PEGNode, PEGNodeType
 
 grammar.add_rule(
     "comma",
@@ -343,7 +343,7 @@ grammar:
 
 ```python
 import yaml
-from parsercraft.parser import grammar_from_config, PEGInterpreter
+from lashon.parser import grammar_from_config, PEGInterpreter
 
 config = yaml.safe_load(open("language.yaml"))
 grammar = grammar_from_config(config)

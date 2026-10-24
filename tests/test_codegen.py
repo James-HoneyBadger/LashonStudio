@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from parsercraft.codegen.codegen_c import CCodeGenerator
-from parsercraft.codegen.codegen_wasm import WasmGenerator
-from parsercraft.codegen.llvm_ir import LLVMIRGenerator
-from parsercraft.parser.grammar import GrammarParser, PEGInterpreter
+from lashon.codegen.codegen_c import CCodeGenerator
+from lashon.codegen.codegen_wasm import WasmGenerator
+from lashon.codegen.llvm_ir import LLVMIRGenerator
+from lashon.parser.grammar import GrammarParser, PEGInterpreter
 
 
 @pytest.fixture
@@ -271,7 +271,7 @@ class TestWasmFunctionCodegen:
         ("sample", "expected"),
         [
             ("fibonacci.aur", ["fib(10) =", "55", "10! =", "3628800"]),
-            ("hello.aur", ["Hello, Aurora!", "Designed in ParserCraft Studio."]),
+            ("hello.aur", ["Hello, Aurora!", "Designed in Lashon Studio."]),
         ],
     )
     def test_generated_wasm_executes(self, sample, expected):

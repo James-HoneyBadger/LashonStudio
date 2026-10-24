@@ -1,4 +1,4 @@
-# Contributing to ParserCraft
+# Contributing to Lashon
 
 Thanks for helping. This guide covers environment setup, standards, and the
 review checklist. For architecture and API context, see
@@ -10,8 +10,8 @@ review checklist. For architecture and API context, see
 ## Setup
 
 ```bash
-git clone https://github.com/James-HoneyBadger/ParserCraft.git
-cd ParserCraft
+git clone https://github.com/James-HoneyBadger/LashonStudioStudio.git
+cd Lashon
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 python -m pytest -q          # 430+ passing
@@ -63,7 +63,7 @@ python -m pytest -q
 
 ```bash
 pip install pytest-cov
-python -m pytest tests/ --cov=src/parsercraft --cov-report=term-missing
+python -m pytest tests/ --cov=src/lashon --cov-report=term-missing
 ```
 
 ---
@@ -138,13 +138,13 @@ fix(codegen): emit string formats and loop bodies in C
 
 Include:
 
-1. ParserCraft version (`parsercraft --version`) and Python version.
+1. Lashon version (`lashon --version`) and Python version.
 2. Minimal grammar/config plus the smallest source input that reproduces it.
 3. The exact command and full output/traceback.
 4. Expected vs actual behaviour.
 
 Open issues at
-<https://github.com/James-HoneyBadger/ParserCraft/issues>. For security reports,
+<https://github.com/James-HoneyBadger/LashonStudioStudio/issues>. For security reports,
 follow [SECURITY.md](SECURITY.md) instead of filing a public issue.
 
 ---

@@ -1,6 +1,6 @@
 # Language Development Guide
 
-This is the deep guide to designing a language with ParserCraft: deciding what
+This is the deep guide to designing a language with Lashon: deciding what
 the language *is*, encoding it as a PEG grammar, choosing an AST contract,
 mapping semantics, testing, and shipping.
 
@@ -13,7 +13,7 @@ Keep [GRAMMAR_REFERENCE.md](GRAMMAR_REFERENCE.md) open while designing rules.
 
 A language is four artifacts:
 
-| Artifact | ParserCraft representation |
+| Artifact | Lashon representation |
 |---|---|
 | **Surface syntax** | PEG rules (`grammar.peg` / `grammar.rules`) |
 | **Structure** | `SourceAST` nodes produced by the parser |
@@ -136,7 +136,7 @@ Test associativity and parentheses **before** adding statements by checking the
 AST shape:
 
 ```python
-from parsercraft.parser import GrammarParser, PEGInterpreter
+from lashon.parser import GrammarParser, PEGInterpreter
 
 expr_grammar = GrammarParser().parse(
     'program <- expr\n'
@@ -160,7 +160,7 @@ expr_stmt  <- expr ";"
 Now execution works end to end:
 
 ```python
-from parsercraft.codegen import transpile_and_exec
+from lashon.codegen import transpile_and_exec
 
 grammar = GrammarParser().parse(
     'program <- statement+\n'
@@ -281,7 +281,7 @@ first.
 Options:
 
 ```python
-from parsercraft.codegen import PythonTranspiler, TranspileOptions
+from lashon.codegen import PythonTranspiler, TranspileOptions
 
 opts = TranspileOptions(
     keyword_map={"when": "if"},
@@ -304,7 +304,7 @@ but each has a deliberately small runtime model. See
 If your language is not Python-shaped, write your own visitor:
 
 ```python
-from parsercraft.parser import SourceAST
+from lashon.parser import SourceAST
 
 def evaluate(node: SourceAST, env: dict):
     if node.node_type == "Number":
@@ -337,7 +337,7 @@ to support:
 
 ```python
 from pathlib import Path
-from parsercraft.ide.studio import LanguageStudio
+from lashon.ide.studio import LanguageStudio
 
 studio = LanguageStudio()
 studio.open_project("projects/aurora")
@@ -375,8 +375,8 @@ assert lines[-1] == "FizzBuzz"
 ### 7.5 Incremental edits (editors)
 
 ```python
-from parsercraft.parser import GrammarParser
-from parsercraft.parser.incremental import IncrementalParser
+from lashon.parser import GrammarParser
+from lashon.parser.incremental import IncrementalParser
 
 parser = IncrementalParser(GrammarParser().parse(grammar_text))
 parser.parse("x = 10 ; y = 20 ;")
@@ -397,7 +397,7 @@ most useful debugging clue.
 ### Friendly messages
 
 ```python
-from parsercraft.tooling import ErrorLocalizer
+from lashon.tooling import ErrorLocalizer
 
 loc = ErrorLocalizer()
 print(loc.format_with_context(
@@ -474,7 +474,7 @@ conditionals, loops, strings, numbers, booleans, and comments. Its design:
 Run it:
 
 ```bash
-parsercraft-ide projects/aurora
+lashon-ide projects/aurora
 ```
 
 The full build is in

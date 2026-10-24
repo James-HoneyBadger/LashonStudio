@@ -1,13 +1,13 @@
 # Code Generation Guide
 
-ParserCraft turns one `SourceAST` into several target languages. Every backend
+Lashon turns one `SourceAST` into several target languages. Every backend
 implements `translate_source_ast(ast)`; the semantics they preserve differ, and
 this guide is explicit about where each one stops.
 
 ```python
-from parsercraft.parser import GrammarParser, PEGInterpreter
-from parsercraft.codegen import PythonTranspiler, CCodeGenerator
-from parsercraft.codegen import WasmGenerator, LLVMIRGenerator
+from lashon.parser import GrammarParser, PEGInterpreter
+from lashon.codegen import PythonTranspiler, CCodeGenerator
+from lashon.codegen import WasmGenerator, LLVMIRGenerator
 
 grammar = GrammarParser().parse(peg_text)
 ast = PEGInterpreter(grammar).parse(source_code)
@@ -76,7 +76,7 @@ messages and the Studio cursor pane report.
 ### API
 
 ```python
-from parsercraft.codegen import PythonTranspiler, TranspileOptions
+from lashon.codegen import PythonTranspiler, TranspileOptions
 
 options = TranspileOptions(indent_str="    ")
 transpiler = PythonTranspiler(options)
@@ -102,7 +102,7 @@ The CLI and REPL build these maps from `LanguageConfig.keywords`,
 ### Execution helpers
 
 ```python
-from parsercraft.codegen import transpile_and_exec
+from lashon.codegen import transpile_and_exec
 
 namespace = transpile_and_exec(ast)                      # {'x': 42}
 namespace = transpile_and_exec(ast, globals_dict={"pi": 3.14159})
@@ -145,7 +145,7 @@ with `55` and `3628800` printed.
 ### API
 
 ```python
-from parsercraft.codegen import CCodeGenerator
+from lashon.codegen import CCodeGenerator
 
 gen = CCodeGenerator(config=None)
 c_source = gen.translate_source_ast(ast)
@@ -159,7 +159,7 @@ supports the legacy dictionary AST.
 ### Emitted structure
 
 ```
-// Auto-generated C code from ParserCraft
+// Auto-generated C code from Lashon
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -200,7 +200,7 @@ int main(int argc, char** argv) {
 Aurora FizzBuzz compiles and runs:
 
 ```console
-$ parsercraft codegen-c projects/aurora/samples/fizzbuzz.aur \
+$ lashon codegen-c projects/aurora/samples/fizzbuzz.aur \
     --config projects/aurora/language.yaml --output fizzbuzz.c \
     --source-map
 $ gcc -std=c99 fizzbuzz.c -o fizzbuzz && ./fizzbuzz
@@ -223,7 +223,7 @@ one basic block per line and `br label %L30`. A BASIC-style dialect therefore
 compiles as well as runs:
 
 ```bash
-parsercraft-rs codegen-c projects/basic/grammar.peg \
+lashon-rs codegen-c projects/basic/grammar.peg \
     projects/basic/samples/countdown.bas -o countdown.c --run
 ```
 
@@ -244,7 +244,7 @@ parsercraft-rs codegen-c projects/basic/grammar.peg \
 ### API
 
 ```python
-from parsercraft.codegen import LLVMIRGenerator
+from lashon.codegen import LLVMIRGenerator
 
 gen = LLVMIRGenerator()
 ir_text = gen.translate_source_ast(ast)
@@ -277,7 +277,7 @@ Python backend, including mutually recursive `fib`/`fact` calls and FizzBuzz's
 nested conditionals and loop.
 
 ```console
-$ parsercraft codegen-llvm projects/aurora/samples/fizzbuzz.aur \
+$ lashon codegen-llvm projects/aurora/samples/fizzbuzz.aur \
     --config projects/aurora/language.yaml --output fizzbuzz.ll
 $ clang fizzbuzz.ll -o fizzbuzz && ./fizzbuzz
 1
@@ -309,7 +309,7 @@ FizzBuzz
 ### API
 
 ```python
-from parsercraft.codegen import WasmGenerator
+from lashon.codegen import WasmGenerator
 
 module = WasmGenerator().translate_source_ast(ast)   # returns WasmModule
 module.to_wat()                                       # WAT text
@@ -401,7 +401,7 @@ instance.exports(store)["main"](store)
 
 ## Writing a custom backend
 
-1. Create a class in `src/parsercraft/codegen/` with
+1. Create a class in `src/lashon/codegen/` with
    `translate_source_ast(self, ast) -> str`.
 2. Dispatch on `node.node_type`, walking `node.children` in order.
 3. Skip `Operator` nodes when you need meaningful children, except where the

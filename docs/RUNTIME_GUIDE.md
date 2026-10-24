@@ -1,12 +1,12 @@
 # Runtime Guide
 
-ParserCraft has two runtimes:
+Lashon has two runtimes:
 
 1. **PEG runtime** — parse with a grammar, transpile the `SourceAST` to Python,
-   and `exec` it. Used by `parsercraft repl --grammar`, the Studio, and every
+   and `exec` it. Used by `lashon repl --grammar`, the Studio, and every
    backend.
 2. **Config runtime** — translate custom keywords/functions/operators back to
-   Python and execute. Used by `parsercraft repl <config>` and `translate`.
+   Python and execute. Used by `lashon repl <config>` and `translate`.
 
 Both execute Python, so both share the same security model (see the end of this
 page).
@@ -21,18 +21,18 @@ singleton, and module system.
 ### PEG REPL (grammar-based)
 
 ```bash
-parsercraft repl --grammar projects/aurora/grammar.peg
+lashon repl --grammar projects/aurora/grammar.peg
 # or programmatically:
-python -m parsercraft.runtime.repl --config projects/aurora/language.yaml
+python -m lashon.runtime.repl --config projects/aurora/language.yaml
 ```
 
 Note the two entry points:
 
 | Entry point | Flag | Reads |
 |---|---|---|
-| `parsercraft repl` | `--grammar FILE` | PEG text |
-| `parsercraft repl` | positional config file | YAML/JSON config (config REPL) |
-| `parsercraft-repl` | `--config FILE` | YAML/JSON config, via `REPL.from_config_file` |
+| `lashon repl` | `--grammar FILE` | PEG text |
+| `lashon repl` | positional config file | YAML/JSON config (config REPL) |
+| `lashon-repl` | `--config FILE` | YAML/JSON config, via `REPL.from_config_file` |
 
 PEG REPL commands:
 
@@ -51,8 +51,8 @@ Input ending in `\`, `{`, or `:` continues on the next line. A missing trailing
 `;` is added automatically.
 
 ```python
-from parsercraft.runtime import REPL
-from parsercraft.parser import GrammarParser
+from lashon.runtime import REPL
+from lashon.parser import GrammarParser
 
 grammar = GrammarParser().parse(open("projects/aurora/grammar.peg").read())
 repl = REPL(grammar=grammar)
@@ -69,7 +69,7 @@ and embedding. `eval_lines` returns the filtered namespace (names starting with
 ### Config REPL (keyword translation)
 
 ```bash
-parsercraft repl configs/examples/pascal_like.yaml
+lashon repl configs/examples/pascal_like.yaml
 ```
 
 Commands use a dot prefix:
@@ -96,7 +96,7 @@ Lines are translated with `LanguageRuntime` mappings before execution, so
 namespace receives nothing.
 
 ```python
-from parsercraft.runtime import StdLib
+from lashon.runtime import StdLib
 
 stdlib = StdLib()
 stdlib.register_builtins()
@@ -127,8 +127,8 @@ stdlib.inject_module("math", namespace, ["sqrt"])   # selected symbols
 ### Extending
 
 ```python
-from parsercraft.runtime import StdLib
-from parsercraft.runtime.stdlib import StdModule
+from lashon.runtime import StdLib
+from lashon.runtime.stdlib import StdModule
 
 stdlib = StdLib()
 stdlib.register_builtins()
@@ -157,7 +157,7 @@ namespace.
 ### C functions
 
 ```python
-from parsercraft.runtime import FFIBridge
+from lashon.runtime import FFIBridge
 
 ffi = FFIBridge()
 ffi.load_library("c", "libc.so.6")           # name → shared object path
@@ -207,7 +207,7 @@ FFI Bindings:
 ### Making FFI visible to a language
 
 ```python
-from parsercraft.runtime import StdLib, FFIBridge
+from lashon.runtime import StdLib, FFIBridge
 
 stdlib = StdLib(); stdlib.register_builtins()
 ffi = FFIBridge(); ffi.load_library("c", "libc.so.6")
@@ -217,7 +217,7 @@ namespace = {}
 stdlib.inject(namespace)
 ffi.inject(namespace)
 
-from parsercraft.codegen import transpile_and_exec
+from lashon.codegen import transpile_and_exec
 transpile_and_exec(ast, globals_dict=namespace)
 ```
 
@@ -229,8 +229,8 @@ transpile_and_exec(ast, globals_dict=namespace)
 keyword/function mappings.
 
 ```python
-from parsercraft.config import LanguageConfig
-from parsercraft.runtime import LanguageRuntime
+from lashon.config import LanguageConfig
+from lashon.runtime import LanguageRuntime
 
 LanguageRuntime.load_config(config_file="my_lang.yaml")
 # or: LanguageRuntime.load_config(config=LanguageConfig.load("my_lang.yaml"))
@@ -262,8 +262,8 @@ Feature flags live under `syntax_options` in the YAML; see
 resolves dependencies.
 
 ```python
-from parsercraft.runtime import ModuleManager
-from parsercraft.config import LanguageConfig
+from lashon.runtime import ModuleManager
+from lashon.config import LanguageConfig
 
 manager = ModuleManager(
     config=LanguageConfig.load("my_lang.yaml"),
@@ -330,7 +330,7 @@ parsing is line-based, not AST-based.
 
 ## Security model
 
-ParserCraft executes generated Python, so **any source you run has full Python
+Lashon executes generated Python, so **any source you run has full Python
 privileges**:
 
 - `transpile_and_exec`, the REPL, and the Studio's Run button all call `exec`.
@@ -340,7 +340,7 @@ privileges**:
 - The CLI's `lsp`, `format`, and `refactor-rename` commands read files you point
   them at; they do not sandbox paths.
 
-Treat language files as code, not data, and only run trusted input. ParserCraft
+Treat language files as code, not data, and only run trusted input. Lashon
 does not attempt a capability sandbox. If you need isolation, run the generated
 Python in a subprocess with OS-level restrictions.
 

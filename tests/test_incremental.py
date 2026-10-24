@@ -2,9 +2,9 @@
 
 import pytest
 
-from parsercraft.codegen import transpile_and_exec
-from parsercraft.parser.grammar import GrammarParser
-from parsercraft.parser.incremental import IncrementalParser, SourceEdit
+from lashon.codegen import transpile_and_exec
+from lashon.parser.grammar import GrammarParser
+from lashon.parser.incremental import IncrementalParser, SourceEdit
 
 
 @pytest.fixture

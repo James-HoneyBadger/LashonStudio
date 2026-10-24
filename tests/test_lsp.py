@@ -2,8 +2,8 @@
 
 import pytest
 
-from parsercraft.config import LanguageConfig
-from parsercraft.tooling.lsp.lsp_server import LSPServer, Position
+from lashon.config import LanguageConfig
+from lashon.tooling.lsp.lsp_server import LSPServer, Position
 
 
 @pytest.fixture
@@ -192,7 +192,7 @@ class TestGrammarDiagnostics:
 
     @staticmethod
     def _server():
-        from parsercraft.parser.grammar import GrammarParser
+        from lashon.parser.grammar import GrammarParser
 
         grammar = GrammarParser().parse(TestGrammarDiagnostics.AURORA)
         return LSPServer(LanguageConfig(), grammar=grammar)
@@ -243,10 +243,10 @@ class TestGrammarIntelligence:
 
     @pytest.fixture
     def server(self):
-        from parsercraft.tooling.lsp.grammar_index import GrammarIndex
+        from lashon.tooling.lsp.grammar_index import GrammarIndex
 
         assert GrammarIndex(self.TEXT).rules
-        from parsercraft.parser.grammar import GrammarParser
+        from lashon.parser.grammar import GrammarParser
 
         grammar = GrammarParser().parse(
             "program <- statement+\n"
@@ -296,7 +296,7 @@ class TestGrammarIntelligence:
 
 
 def test_grammar_document_reports_undefined_rules():
-    from parsercraft.parser.grammar import GrammarParser
+    from lashon.parser.grammar import GrammarParser
 
     server = LSPServer(
         LanguageConfig(),

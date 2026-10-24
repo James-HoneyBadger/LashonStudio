@@ -1,4 +1,4 @@
-"""End-to-end checks for the `parsercraft-rs` binary.
+"""End-to-end checks for the `lashon-rs` binary.
 
 Skipped when the Rust workspace has not been built
 (``cargo build --workspace --release``).
@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-BINARY = ROOT / "target" / "release" / "parsercraft-rs"
+BINARY = ROOT / "target" / "release" / "lashon-rs"
 GRAMMAR = ROOT / "projects" / "aurora" / "grammar.peg"
 CONFIG = ROOT / "projects" / "aurora" / "language.yaml"
 SAMPLES = ROOT / "projects" / "aurora" / "samples"
@@ -36,7 +36,7 @@ def run(*args: str, cwd: Path | None = None) -> subprocess.CompletedProcess:
 def test_version():
     completed = run("version")
     assert completed.returncode == 0
-    assert completed.stdout.startswith("parsercraft-rs ")
+    assert completed.stdout.startswith("lashon-rs ")
 
 
 def test_rules_and_validate():
@@ -89,8 +89,8 @@ def test_c_backend_matches_python_output(sample, tmp_path):
     import io
     from contextlib import redirect_stdout
 
-    from parsercraft.codegen.python_transpiler import PythonTranspiler
-    from parsercraft.parser import GrammarParser, PEGInterpreter
+    from lashon.codegen.python_transpiler import PythonTranspiler
+    from lashon.parser import GrammarParser, PEGInterpreter
 
     grammar = GrammarParser().parse(GRAMMAR.read_text(encoding="utf-8"))
     ast = PEGInterpreter(grammar).parse(source.read_text(encoding="utf-8"))
@@ -127,8 +127,8 @@ def test_python_backend_matches_python_pipeline(sample, tmp_path):
         [sys.executable, str(output)], capture_output=True, text=True, check=True
     ).stdout
 
-    from parsercraft.codegen.python_transpiler import PythonTranspiler
-    from parsercraft.parser import GrammarParser, PEGInterpreter
+    from lashon.codegen.python_transpiler import PythonTranspiler
+    from lashon.parser import GrammarParser, PEGInterpreter
 
     grammar = GrammarParser().parse(GRAMMAR.read_text(encoding="utf-8"))
     ast = PEGInterpreter(grammar).parse(source.read_text(encoding="utf-8"))
@@ -180,8 +180,8 @@ def test_wasm_backend_runs_like_the_python_backend(sample, tmp_path):
         instance.exports(store)["main"](store)
         return printed
 
-    from parsercraft.codegen.codegen_wasm import WasmGenerator
-    from parsercraft.parser import GrammarParser, PEGInterpreter
+    from lashon.codegen.codegen_wasm import WasmGenerator
+    from lashon.parser import GrammarParser, PEGInterpreter
 
     grammar = GrammarParser().parse(GRAMMAR.read_text(encoding="utf-8"))
     ast = PEGInterpreter(grammar).parse(source.read_text(encoding="utf-8"))
@@ -201,8 +201,8 @@ def test_llvm_backend_matches_python_backend(sample, tmp_path):
     completed = run("codegen-llvm", str(GRAMMAR), str(source), "-o", str(rust_ir))
     assert completed.returncode == 0, completed.stderr
 
-    from parsercraft.codegen.llvm_ir import LLVMIRGenerator
-    from parsercraft.parser import GrammarParser, PEGInterpreter
+    from lashon.codegen.llvm_ir import LLVMIRGenerator
+    from lashon.parser import GrammarParser, PEGInterpreter
 
     grammar = GrammarParser().parse(GRAMMAR.read_text(encoding="utf-8"))
     ast = PEGInterpreter(grammar).parse(source.read_text(encoding="utf-8"))
@@ -309,7 +309,7 @@ def test_lsp_publishes_parse_diagnostics(lsp):
     diagnostics = notification["params"]["diagnostics"]
     assert diagnostics
 
-    from parsercraft.parser import GrammarParser, PEGInterpreter
+    from lashon.parser import GrammarParser, PEGInterpreter
 
     grammar = GrammarParser().parse(GRAMMAR.read_text(encoding="utf-8"))
     try:
@@ -382,8 +382,8 @@ def test_rust_runner_matches_python_pipeline(sample):
     import io
     from contextlib import redirect_stdout
 
-    from parsercraft.codegen.python_transpiler import PythonTranspiler
-    from parsercraft.parser import GrammarParser, PEGInterpreter
+    from lashon.codegen.python_transpiler import PythonTranspiler
+    from lashon.parser import GrammarParser, PEGInterpreter
 
     grammar = GrammarParser().parse(GRAMMAR.read_text(encoding="utf-8"))
     ast = PEGInterpreter(grammar).parse(source.read_text(encoding="utf-8"))
@@ -439,7 +439,7 @@ def test_dap_breakpoint_variables_and_continue(tmp_path):
                 return message
 
     try:
-        capabilities = request("initialize", {"adapterID": "parsercraft"})
+        capabilities = request("initialize", {"adapterID": "lashon"})
         assert capabilities["success"] is True
         assert capabilities["body"]["supportsConfigurationDoneRequest"] is True
 

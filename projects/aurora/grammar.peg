@@ -1,5 +1,5 @@
 // Aurora — canonical PEG grammar
-// Edit this file in ParserCraft Studio; it is synced into language.yaml on save.
+// Edit this file in Lashon Studio; it is synced into language.yaml on save.
 
 program       <- statement+
 statement     <- function_def / if_stmt / while_stmt / return_stmt / print_stmt / assignment / expr_stmt

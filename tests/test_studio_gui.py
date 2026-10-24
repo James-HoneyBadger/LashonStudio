@@ -9,7 +9,7 @@ import pytest
 
 tk = pytest.importorskip("tkinter")
 
-from parsercraft.ide.app import ParserCraftIDE  # noqa: E402
+from lashon.ide.app import LashonIDE  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent / "projects" / "aurora"
 
@@ -30,7 +30,7 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.fixture
 def app():
-    application = ParserCraftIDE(str(PROJECT_ROOT))
+    application = LashonIDE(str(PROJECT_ROOT))
     application.update()
     yield application
     application.destroy()

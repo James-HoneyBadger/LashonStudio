@@ -2,7 +2,7 @@
 
 import pytest
 
-from parsercraft.tooling.debug.debug_adapter import Debugger, Variable
+from lashon.tooling.debug.debug_adapter import Debugger, Variable
 
 SOURCE = "program.test"
 

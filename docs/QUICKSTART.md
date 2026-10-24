@@ -2,7 +2,7 @@
 
 Get from “nothing installed” to a running custom language in about ten minutes.
 
-> Verified against ParserCraft 4.0.0. For alternate installs, see
+> Verified against Lashon 4.0.0. For alternate installs, see
 > [INSTALL.md](INSTALL.md).
 
 ---
@@ -10,8 +10,8 @@ Get from “nothing installed” to a running custom language in about ten minut
 ## 1. Install
 
 ```bash
-git clone https://github.com/James-HoneyBadger/ParserCraft.git
-cd ParserCraft
+git clone https://github.com/James-HoneyBadger/LashonStudioStudio.git
+cd Lashon
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
@@ -20,8 +20,8 @@ pip install -e ".[dev]"
 Check it:
 
 ```bash
-parsercraft --version
-# parsercraft 4.0.0
+lashon --version
+# lashon 4.0.0
 ```
 
 ---
@@ -58,7 +58,7 @@ Full reference: [GRAMMAR_REFERENCE.md](GRAMMAR_REFERENCE.md).
 ## 3. Parse source
 
 ```python
-from parsercraft.parser import GrammarParser, PEGInterpreter
+from lashon.parser import GrammarParser, PEGInterpreter
 
 grammar = GrammarParser().parse(open("mini.peg").read())
 interpreter = PEGInterpreter(grammar)
@@ -96,11 +96,11 @@ default.
 
 ## 4. Execute it
 
-ParserCraft ships a Python transpiler. It understands the AST shapes produced
+Lashon ships a Python transpiler. It understands the AST shapes produced
 by the built-in tokens and common PEG patterns:
 
 ```python
-from parsercraft.codegen import transpile_and_exec
+from lashon.codegen import transpile_and_exec
 
 result = transpile_and_exec(ast)
 print(result)
@@ -113,7 +113,7 @@ filtered out.
 Want to see the intermediate Python?
 
 ```python
-from parsercraft.codegen import transpile_to_python
+from lashon.codegen import transpile_to_python
 
 print(transpile_to_python(ast))
 # x = 2 + 3 * 4
@@ -124,7 +124,7 @@ print(transpile_to_python(ast))
 ## 5. Emit other targets
 
 ```python
-from parsercraft.codegen import CCodeGenerator, WasmGenerator, LLVMIRGenerator
+from lashon.codegen import CCodeGenerator, WasmGenerator, LLVMIRGenerator
 
 print(CCodeGenerator().translate_source_ast(ast))     # ANSI C
 print(WasmGenerator().translate_source_ast(ast).to_wat())  # WAT
@@ -134,7 +134,7 @@ print(LLVMIRGenerator().translate_source_ast(ast))    # LLVM IR
 `PythonTranspiler` also exposes the common backend method:
 
 ```python
-from parsercraft.codegen import PythonTranspiler
+from lashon.codegen import PythonTranspiler
 
 print(PythonTranspiler().translate_source_ast(ast))
 ```
@@ -166,8 +166,8 @@ arg_list      <- expr ("," expr)*
 Then rebuild the interpreter and run:
 
 ```python
-from parsercraft.parser import GrammarParser, PEGInterpreter
-from parsercraft.codegen import transpile_and_exec
+from lashon.parser import GrammarParser, PEGInterpreter
+from lashon.codegen import transpile_and_exec
 
 grammar = GrammarParser().parse(open("mini.peg").read())   # updated file
 interpreter = PEGInterpreter(grammar)
@@ -199,10 +199,10 @@ the AST *is* the contract between parsing and code generation. See
 The same workflow, generated for you:
 
 ```bash
-parsercraft init "My Lang" --directory ./languages
+lashon init "My Lang" --directory ./languages
 cd languages/my-lang
 python -m pytest tests -q
-parsercraft run samples/hello.aur --config language.yaml
+lashon run samples/hello.aur --config language.yaml
 ```
 
 `init` writes `language.yaml`, `grammar.peg`, a sample, a README, and tests that
@@ -211,7 +211,7 @@ validate the grammar, run the sample, and generate every backend.
 ## 7. Use the Studio
 
 ```bash
-parsercraft-ide projects/aurora
+lashon-ide projects/aurora
 ```
 
 The Studio opens the Aurora reference language with:
@@ -231,17 +231,17 @@ all backends. Full walkthrough: [STUDIO_GUIDE.md](STUDIO_GUIDE.md).
 
 ```bash
 # Validate a language config (grammar + metadata)
-parsercraft validate projects/aurora/language.yaml
+lashon validate projects/aurora/language.yaml
 
 # Run a program through a config that contains a PEG grammar
-parsercraft repl projects/aurora/language.yaml
+lashon repl projects/aurora/language.yaml
 
 # Generate targets
-parsercraft codegen-c    projects/aurora/samples/fibonacci.aur \
+lashon codegen-c    projects/aurora/samples/fibonacci.aur \
   --config projects/aurora/language.yaml --output /tmp/fib.c
-parsercraft codegen-wasm  projects/aurora/samples/fibonacci.aur \
+lashon codegen-wasm  projects/aurora/samples/fibonacci.aur \
   --config projects/aurora/language.yaml --output /tmp/fib.wat
-parsercraft codegen-llvm  projects/aurora/samples/fibonacci.aur \
+lashon codegen-llvm  projects/aurora/samples/fibonacci.aur \
   --config projects/aurora/language.yaml --output /tmp/fib.ll
 ```
 

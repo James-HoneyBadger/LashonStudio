@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Pascal-Like Language Demo — ParserCraft
+Pascal-Like Language Demo — Lashon
 
-Demonstrates the full ParserCraft pipeline using a Pascal-inspired
+Demonstrates the full Lashon pipeline using a Pascal-inspired
 language defined in configs/examples/pascal_like.yaml:
 
   1. Load and inspect the Pascal-like language config
@@ -18,19 +18,19 @@ language defined in configs/examples/pascal_like.yaml:
 import os
 import sys
 
-# Ensure parsercraft is importable when run directly
+# Ensure lashon is importable when run directly
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 # pylint: disable=wrong-import-position
 import yaml  # noqa: E402
 
-from parsercraft.parser import GrammarParser, PEGInterpreter  # noqa: E402
-from parsercraft.codegen import (  # noqa: E402
+from lashon.parser import GrammarParser, PEGInterpreter  # noqa: E402
+from lashon.codegen import (  # noqa: E402
     PythonTranspiler,
     LLVMIRGenerator,
 )
-from parsercraft.codegen.codegen_c import CCodeGenerator  # noqa: E402
-from parsercraft.codegen.codegen_wasm import WasmGenerator  # noqa: E402
+from lashon.codegen.codegen_c import CCodeGenerator  # noqa: E402
+from lashon.codegen.codegen_wasm import WasmGenerator  # noqa: E402
 # pylint: enable=wrong-import-position
 
 
@@ -181,7 +181,7 @@ def main() -> None:
     )
 
     # ── 1. Load and inspect config ──────────────────────────────────────────
-    banner("Pascal-Like Language — ParserCraft Demo", char="╔")
+    banner("Pascal-Like Language — Lashon Demo", char="╔")
     config = load_config(config_path)
     meta = config.get("metadata", config)       # YAML may lack 'metadata' key
 
@@ -363,9 +363,9 @@ def main() -> None:
     print("  Next steps:")
     print("    • Edit demos/pascal_like/samples/*.pas "
           "to try your own programs")
-    print("    • Run:  parsercraft repl "
+    print("    • Run:  lashon repl "
           "configs/examples/pascal_like.yaml")
-    print("    • Run:  parsercraft validate configs/examples/pascal_like.yaml")
+    print("    • Run:  lashon validate configs/examples/pascal_like.yaml")
     print()
 
 

@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from parsercraft.parser.grammar import GrammarParser, PEGInterpreter
+from lashon.parser.grammar import GrammarParser, PEGInterpreter
 
 CASES_PATH = Path(__file__).with_name("conformance") / "cases.json"
 CASES = json.loads(CASES_PATH.read_text(encoding="utf-8"))
@@ -66,7 +66,7 @@ def test_corpus_round_trips_through_json(case):
 
 
 try:  # optional dependency: a compiled accelerator
-    from parsercraft.parser import native
+    from lashon.parser import native
 except ImportError:  # pragma: no cover - not built in this checkout
     native = None
 

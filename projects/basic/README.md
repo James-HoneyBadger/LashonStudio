@@ -1,7 +1,7 @@
-# ParserCraft BASIC
+# Lashon BASIC
 
 A line-numbered BASIC dialect defined entirely by
-[`grammar.peg`](grammar.peg) — no hand-written lexer or parser. ParserCraft
+[`grammar.peg`](grammar.peg) — no hand-written lexer or parser. Lashon
 parses it and executes it.
 
 ## Dialect
@@ -25,17 +25,17 @@ literals, and parentheses.
 ## Run it
 
 ```bash
-parsercraft-rs run grammar.peg samples/hello.bas
-parsercraft-rs run grammar.peg samples/countdown.bas
-parsercraft-rs run grammar.peg samples/fizzbuzz.bas
-parsercraft-rs lint grammar.peg --source samples/fizzbuzz.bas
-parsercraft-rs ast grammar.peg samples/hello.bas
+lashon-rs run grammar.peg samples/hello.bas
+lashon-rs run grammar.peg samples/countdown.bas
+lashon-rs run grammar.peg samples/fizzbuzz.bas
+lashon-rs lint grammar.peg --source samples/fizzbuzz.bas
+lashon-rs ast grammar.peg samples/hello.bas
 ```
 
 Expected output:
 
 ```
-$ parsercraft-rs run grammar.peg samples/countdown.bas
+$ lashon-rs run grammar.peg samples/countdown.bas
 3
 2
 1
@@ -46,7 +46,7 @@ LIFTOFF!
 
 1. `grammar.peg` defines `program <- line+`, where `line <- NUMBER !'WEND' statement`.
    Line numbers delimit statements, so the grammar needs no newline handling.
-2. `parsercraft-rs run` parses with the PEG engine, then executes the AST with
+2. `lashon-rs run` parses with the PEG engine, then executes the AST with
    the tree-walking evaluator. Line numbers are collected as labels, and
    `GOTO` rewinds the program counter to the target line.
 3. The LSP and linter work on the same grammar, so diagnostics inside the
@@ -57,8 +57,8 @@ LIFTOFF!
 Line numbers become labels, so both native backends understand the dialect:
 
 ```bash
-parsercraft-rs codegen-c    grammar.peg samples/countdown.bas -o countdown.c --run
-parsercraft-rs codegen-llvm grammar.peg samples/countdown.bas -o countdown.ll --run
+lashon-rs codegen-c    grammar.peg samples/countdown.bas -o countdown.c --run
+lashon-rs codegen-llvm grammar.peg samples/countdown.bas -o countdown.ll --run
 ```
 
 C uses labels plus `goto`; LLVM IR uses one basic block per line number and

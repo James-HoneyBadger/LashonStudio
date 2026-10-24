@@ -1,4 +1,4 @@
-# ParserCraft
+# Lashon Studio
 
 > **Build real programming languages in Python — PEG grammars, packrat parsing, four production code-generation backends.**
 
@@ -7,7 +7,7 @@
 [![Tests](https://img.shields.io/badge/tests-456%20passing-brightgreen.svg)](tests/)
 [![Version](https://img.shields.io/badge/version-4.0.0-informational.svg)](pyproject.toml)
 
-ParserCraft is a full-stack programming language construction framework. Define a PEG grammar — either in text notation or via a fluent Python API — and immediately get a working parser, an abstract syntax tree, and code generators targeting Python, C, WebAssembly, and LLVM IR. Add a config-driven REPL, a Language Server Protocol implementation, a DAP debugger, and a Tkinter IDE, and you have everything needed to design, implement, and ship a custom language from a single Python package.
+Lashon is a full-stack programming language construction framework. Define a PEG grammar — either in text notation or via a fluent Python API — and immediately get a working parser, an abstract syntax tree, and code generators targeting Python, C, WebAssembly, and LLVM IR. Add a config-driven REPL, a Language Server Protocol implementation, a DAP debugger, and a Tkinter IDE, and you have everything needed to design, implement, and ship a custom language from a single Python package.
 
 ---
 
@@ -18,7 +18,7 @@ ParserCraft is a full-stack programming language construction framework. Define 
 - [Quick Start](#quick-start)
 - [Language Presets](#language-presets)
 - [Code Generation Backends](#code-generation-backends)
-- [ParserCraft Studio](#parsercraft-studio)
+- [Lashon Studio](#lashon-studio)
 - [Sample Language Project](#sample-language-project)
 - [CLI Reference](#cli-reference)
 - [REPL](#repl)
@@ -58,8 +58,8 @@ Start with a grammar. Get a working language. Ship it anywhere.
 |---|---|
 | **Grammar** | PEG with ordered choice, sequences, quantifiers (`*`,`+`,`?`), and predicate operators |
 | **Parsing** | Packrat memoization for O(n) guaranteed parse time; built-in `NUMBER`, `IDENT`, `STRING` tokens |
-| **Architecture** | Enforced layering (core → app → adapters) with import contracts, no cycles, lazy package imports, `parsercraft.ast` as the single AST contract |
-| **Rust core** | Grammar model, PEG text parser, and packrat engine also exist in Rust (`crates/`), conformance-checked against the Python engine and usable standalone via `parsercraft-rs` (`validate`, `rules`, `ast`, `parse`, `codegen-c --run`, `codegen-py --run`) |
+| **Architecture** | Enforced layering (core → app → adapters) with import contracts, no cycles, lazy package imports, `lashon.ast` as the single AST contract |
+| **Rust core** | Grammar model, PEG text parser, and packrat engine also exist in Rust (`crates/`), conformance-checked against the Python engine and usable standalone via `lashon-rs` (`validate`, `rules`, `ast`, `parse`, `codegen-c --run`, `codegen-py --run`) |
 | **Incremental** | `IncrementalParser` re-parses only changed regions — suitable for real-time IDE use |
 | **Backends** | Python transpiler, ANSI C (with `main()`), WebAssembly Text (WAT), LLVM IR (SSA) |
 | **Config** | YAML/JSON language definitions with keyword remapping, custom functions, syntax toggles |
@@ -72,7 +72,7 @@ Start with a grammar. Get a working language. Ship it anywhere.
 | **LSP** | Language Server Protocol server for IDE syntax highlighting and completion |
 | **DAP** | Debug Adapter Protocol for step-through debugging |
 | **Studio** | Tabbed language workbench: project tree, source/grammar/config editors, AST inspector, console, variables, four backend panes, Problems panel, command palette (`Ctrl+Shift+P`), and quick open (`Ctrl+P`) |
-| **Playground** | `parsercraft play` serves a browser editor that runs programs and shows every backend |
+| **Playground** | `lashon play` serves a browser editor that runs programs and shows every backend |
 | **Diagnostics** | `doctor`, `lint`, JSON `validate`, and grammar-aware LSP diagnostics with real error positions |
 | **VS Code** | Generates a buildable VS Code extension for any language config (TS scaffold, `language.yaml`, launch integration) |
 | **CLI** | 40+ subcommands covering the full language lifecycle |
@@ -85,8 +85,8 @@ Start with a grammar. Get a working language. Ship it anywhere.
 ### Installation
 
 ```bash
-git clone https://github.com/James-HoneyBadger/ParserCraft.git
-cd ParserCraft
+git clone https://github.com/James-HoneyBadger/LashonStudioStudio.git
+cd Lashon
 pip install -e .
 ```
 
@@ -97,7 +97,7 @@ See [docs/INSTALL.md](docs/INSTALL.md) for virtual-environment setup and product
 Use PEG text notation (recommended for readability):
 
 ```python
-from parsercraft.parser import GrammarParser, PEGInterpreter
+from lashon.parser import GrammarParser, PEGInterpreter
 
 grammar = GrammarParser().parse("""
     program   <- statement+
@@ -111,7 +111,7 @@ grammar = GrammarParser().parse("""
 Or build grammars programmatically with `GrammarBuilder`:
 
 ```python
-from parsercraft.parser import GrammarBuilder
+from lashon.parser import GrammarBuilder
 
 g = GrammarBuilder()
 g.rule("program").set_pattern(GrammarBuilder.plus(GrammarBuilder.ref("statement")))
@@ -137,7 +137,7 @@ print(ast)  # SourceAST tree
 
 **Execute as Python:**
 ```python
-from parsercraft.codegen import transpile_and_exec
+from lashon.codegen import transpile_and_exec
 
 result = transpile_and_exec(ast)
 print(result["x"])  # 14
@@ -146,20 +146,20 @@ print(result["y"])  # 26
 
 **Emit ANSI C:**
 ```python
-from parsercraft.codegen.codegen_c import CCodeGenerator
+from lashon.codegen.codegen_c import CCodeGenerator
 print(CCodeGenerator().translate_source_ast(ast))
 ```
 
 **Emit WebAssembly (WAT):**
 ```python
-from parsercraft.codegen.codegen_wasm import WasmGenerator
+from lashon.codegen.codegen_wasm import WasmGenerator
 module = WasmGenerator().translate_source_ast(ast)
 print(module.to_wat())
 ```
 
 **Emit LLVM IR:**
 ```python
-from parsercraft.codegen import LLVMIRGenerator
+from lashon.codegen import LLVMIRGenerator
 print(LLVMIRGenerator().translate_source_ast(ast))
 ```
 
@@ -170,7 +170,7 @@ print(LLVMIRGenerator().translate_source_ast(ast))
 Load a ready-made language archetype with a single call:
 
 ```python
-from parsercraft.config import LanguageConfig
+from lashon.config import LanguageConfig
 
 config = LanguageConfig.from_preset("python_like")
 config.rename_keyword("if", "si")         # localise a keyword
@@ -205,14 +205,14 @@ All backends share the same `translate_source_ast(ast) -> str` contract. Adding 
 
 ---
 
-## ParserCraft Studio
+## Lashon Studio
 
-`parsercraft-ide` opens a complete language-design workbench rather than a
+`lashon-ide` opens a complete language-design workbench rather than a
 single text pane.
 
 ```bash
-parsercraft-ide                     # opens the Aurora reference project
-parsercraft-ide projects/aurora     # open a project directory or config
+lashon-ide                     # opens the Aurora reference project
+lashon-ide projects/aurora     # open a project directory or config
 ```
 
 **Layout**
@@ -238,7 +238,7 @@ parsercraft-ide projects/aurora     # open a project directory or config
 6. **Ctrl+S** syncs the grammar back into `language.yaml` and saves.
 
 The Studio is a thin Tkinter shell over the headless
-[`LanguageStudio`](src/parsercraft/ide/studio.py) controller, so the whole
+[`LanguageStudio`](src/lashon/ide/studio.py) controller, so the whole
 pipeline is testable without a display.
 
 ---
@@ -263,7 +263,7 @@ fn fib(n) {
 print fib(10) ;        // 55
 ```
 
-A copy ships inside the package (`parsercraft.ide.samples.aurora`) so the
+A copy ships inside the package (`lashon.ide.samples.aurora`) so the
 sample is available after a wheel install too.
 
 ---
@@ -271,7 +271,7 @@ sample is available after a wheel install too.
 ## CLI Reference
 
 ```
-parsercraft <command> [options]
+lashon <command> [options]
 ```
 
 | Command | Purpose |
@@ -317,14 +317,14 @@ parsercraft <command> [options]
 | `package-install <pkg>` | Not implemented (exit 2) |
 
 ```bash
-parsercraft init "My Lang" --directory ./languages
-parsercraft run languages/my-lang/samples/hello.aur \
+lashon init "My Lang" --directory ./languages
+lashon run languages/my-lang/samples/hello.aur \
   --config languages/my-lang/language.yaml
 ```
 
 ```bash
-parsercraft-ide    # Open the Tkinter IDE
-parsercraft-repl   # Launch the standalone REPL
+lashon-ide    # Open the Tkinter IDE
+lashon-repl   # Launch the standalone REPL
 ```
 
 ---
@@ -332,9 +332,9 @@ parsercraft-repl   # Launch the standalone REPL
 ## REPL
 
 ```bash
-parsercraft-repl
+lashon-repl
 # or with a language config
-parsercraft repl my_lang.yaml
+lashon repl my_lang.yaml
 ```
 
 | Command | Effect |
@@ -355,7 +355,7 @@ parsercraft repl my_lang.yaml
 ### Standard Library
 
 ```python
-from parsercraft.runtime import StdLib
+from lashon.runtime import StdLib
 
 stdlib = StdLib()
 ns = {}
@@ -370,7 +370,7 @@ Six injectable modules: `io`, `math`, `string`, `collections`, `system`, `random
 
 ```python
 import ctypes
-from parsercraft.runtime import FFIBridge
+from lashon.runtime import FFIBridge
 
 ffi = FFIBridge()
 
@@ -390,13 +390,13 @@ ffi.register_c_function("libm", "sqrt", [ctypes.c_double], ctypes.c_double)
 ## Architecture
 
 ```
-src/parsercraft/
+src/lashon/
 ├── config/       LanguageConfig, LanguageValidator, IdentifierValidator
 ├── parser/       GrammarParser, GrammarBuilder, PEGInterpreter, IncrementalParser
 ├── codegen/      PythonTranspiler, CCodeGenerator, WasmGenerator, LLVMIRGenerator
 ├── runtime/      REPL, StdLib, FFIBridge, LanguageRuntime, ModuleManager
 ├── tooling/      CLI, ErrorLocalizer, LSP server, DAP debug adapter
-├── ide/          ParserCraftIDE, CodeEditor, ProjectManager
+├── ide/          LashonIDE, CodeEditor, ProjectManager
 ├── types/        TypeChecker, generics, protocols
 └── packaging/    VS Code extension generator, package registry
 ```
@@ -416,7 +416,7 @@ Start at [docs/index.md](docs/index.md) for learning paths and the full index.
 | [docs/LANGUAGE_DEVELOPMENT.md](docs/LANGUAGE_DEVELOPMENT.md) | Designing and evolving a real language |
 | [docs/GRAMMAR_REFERENCE.md](docs/GRAMMAR_REFERENCE.md) | PEG notation, semantics, and AST production rules |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Task-oriented guide — configs, parsing, execution, Studio |
-| [docs/STUDIO_GUIDE.md](docs/STUDIO_GUIDE.md) | ParserCraft Studio manual |
+| [docs/STUDIO_GUIDE.md](docs/STUDIO_GUIDE.md) | Lashon Studio manual |
 | [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md) | Every command and flag, including placeholders |
 | [docs/CODEGEN_GUIDE.md](docs/CODEGEN_GUIDE.md) | Python/C/WASM/LLVM backends, fidelity, custom backends |
 | [docs/RUNTIME_GUIDE.md](docs/RUNTIME_GUIDE.md) | REPL, stdlib, FFI, language runtime, modules |

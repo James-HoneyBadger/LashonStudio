@@ -6,7 +6,7 @@
 #  vocabulary, and PILOT's teach-and-test philosophy.
 #
 #  Target: Time Warp Classic IDE (https://github.com/James-HoneyBadger/Time_Warp_Classic)
-#  ParserCraft config v4.0
+#  Lashon config v4.0
 # ============================================================================
 
 metadata:
@@ -520,7 +520,7 @@ syntax:
   indentation_style: "free"
 
 # ── PEG Grammar ─────────────────────────────────────────────────────────────
-# This grammar is processed by ParserCraft's grammar_from_config().
+# This grammar is processed by Lashon's grammar_from_config().
 # It defines the core syntax that the PEGInterpreter can parse and
 # all code-generation backends can translate.
 grammar:

@@ -1,13 +1,13 @@
 # Pascal-Like Language Demo
 
-A sample project demonstrating how to use **ParserCraft** to define, parse,
+A sample project demonstrating how to use **Lashon** to define, parse,
 and compile programs written in a Pascal-inspired language.
 
 ## Project Structure
 
 ```
 demos/pascal_like/
-├── run_pascal.py          # Main demo — runs the full ParserCraft pipeline
+├── run_pascal.py          # Main demo — runs the full Lashon pipeline
 └── samples/
     ├── hello.pas          # "Hello, World!" — basic variables and output
     ├── fibonacci.pas      # Fibonacci sequence with a WHILE loop
@@ -63,7 +63,7 @@ configs/examples/pascal_like.yaml
 
 ```bash
 # From the project root
-cd /home/james/ParserCraft
+cd /home/james/Lashon
 source .venv/bin/activate
 
 # Full pipeline demo (parse → Python → C → WASM → LLVM IR)
@@ -74,7 +74,7 @@ python demos/pascal_like/run_pascal.py
 
 ```
 ════════════════════════════════════════════════════════════
-  Pascal-Like Language — ParserCraft Demo
+  Pascal-Like Language — Lashon Demo
 ════════════════════════════════════════════════════════════
 
   Language : Pascal-Like Language
@@ -101,7 +101,7 @@ python demos/pascal_like/run_pascal.py
 ## Using the REPL
 
 ```bash
-parsercraft repl configs/examples/pascal_like.yaml
+lashon repl configs/examples/pascal_like.yaml
 ```
 
 Inside the REPL you can type Pascal-like assignments and see results
@@ -120,21 +120,21 @@ immediately:
 
 ```bash
 # Validate the language config
-parsercraft validate configs/examples/pascal_like.yaml
+lashon validate configs/examples/pascal_like.yaml
 
 # Show all keyword/function mappings
-parsercraft info configs/examples/pascal_like.yaml
+lashon info configs/examples/pascal_like.yaml
 
 # Export mappings to Markdown
-parsercraft export configs/examples/pascal_like.yaml \
+lashon export configs/examples/pascal_like.yaml \
     --format markdown --output pascal_mappings
 
 # Generate C code from a source file
-parsercraft codegen-c demos/pascal_like/samples/hello.pas \
+lashon codegen-c demos/pascal_like/samples/hello.pas \
     --output hello.c
 
 # Generate WASM from a source file
-parsercraft codegen-wasm demos/pascal_like/samples/fibonacci.pas \
+lashon codegen-wasm demos/pascal_like/samples/fibonacci.pas \
     --output fibonacci.wat
 ```
 
@@ -187,5 +187,5 @@ functions:
 Then re-validate:
 
 ```bash
-parsercraft validate configs/examples/pascal_like.yaml
+lashon validate configs/examples/pascal_like.yaml
 ```

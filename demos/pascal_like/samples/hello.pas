@@ -1,6 +1,6 @@
-(* Hello World — Pascal-Like via ParserCraft
+(* Hello World — Pascal-Like via Lashon
    Demonstrates basic variable assignment and arithmetic.
-   Run with: parsercraft repl configs/examples/pascal_like.yaml *)
+   Run with: lashon repl configs/examples/pascal_like.yaml *)
 
 PROGRAM HelloWorld;
 
@@ -12,7 +12,7 @@ VAR
 BEGIN
   greeting := 'Hello';
   count    := 42;
-  message  := 'ParserCraft Pascal demo';
+  message  := 'Lashon Pascal demo';
 
   WriteLn(greeting, ', World!');
   WriteLn('Count = ', count);

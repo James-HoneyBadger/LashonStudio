@@ -1,4 +1,4 @@
-# ParserCraft Tutorials
+# Lashon Tutorials
 
 Eight progressive tutorials, from a five-line grammar to a packaged language.
 Each tutorial can be read independently, but they build on one another.
@@ -35,7 +35,7 @@ factor    <- NUMBER / IDENT / "(" expr ")"
 ### 1.2 Parse
 
 ```python
-from parsercraft.parser import GrammarParser, PEGInterpreter
+from lashon.parser import GrammarParser, PEGInterpreter
 
 grammar = GrammarParser().parse(open("mini.peg").read())
 assert grammar.validate() == []
@@ -51,7 +51,7 @@ Each rule becomes an AST node; literals/operators become `Operator` children;
 ### 1.3 Execute
 
 ```python
-from parsercraft.codegen import transpile_and_exec, transpile_to_python
+from lashon.codegen import transpile_and_exec, transpile_to_python
 
 print(transpile_to_python(ast))
 # x = 2 + 3 * 4
@@ -65,7 +65,7 @@ print(transpile_and_exec(ast))
 ### 1.4 Grammar-driven REPL
 
 ```bash
-parsercraft repl --grammar mini.peg
+lashon repl --grammar mini.peg
 ```
 
 ```
@@ -138,8 +138,8 @@ print fact(10) ;
 ### 2.3 Run it
 
 ```python
-from parsercraft.parser import GrammarParser, PEGInterpreter
-from parsercraft.codegen import transpile_and_exec
+from lashon.parser import GrammarParser, PEGInterpreter
+from lashon.codegen import transpile_and_exec
 
 grammar = GrammarParser().parse(open("calc.peg").read())
 ast = PEGInterpreter(grammar).parse(open("program.calc").read())
@@ -158,7 +158,7 @@ fib(10) =
 ### 2.4 Negative test
 
 ```python
-from parsercraft.parser import GrammarParser, PEGInterpreter
+from lashon.parser import GrammarParser, PEGInterpreter
 
 calc = PEGInterpreter(GrammarParser().parse(open("calc.peg").read()))
 try:
@@ -183,7 +183,7 @@ vocabulary. No PEG grammar is required.
 ### 3.1 Start from a preset
 
 ```python
-from parsercraft.config import LanguageConfig, list_presets
+from lashon.config import LanguageConfig, list_presets
 
 print(list_presets())
 # ['python_like', 'js_like', 'minimal', 'ruby_like', 'golang_like',
@@ -211,9 +211,9 @@ config.save("espanol.yaml")
 ### 3.3 Validate and inspect
 
 ```bash
-parsercraft validate espanol.yaml
-parsercraft info espanol.yaml
-parsercraft export espanol.yaml --format markdown --output espanol.md
+lashon validate espanol.yaml
+lashon info espanol.yaml
+lashon export espanol.yaml --format markdown --output espanol.md
 ```
 
 `validate` exits 0 for valid configs and prints warnings for duplicate keyword
@@ -222,7 +222,7 @@ aliases.
 ### 3.4 Runtime translation
 
 ```python
-from parsercraft.runtime.language_runtime import LanguageRuntime
+from lashon.runtime.language_runtime import LanguageRuntime
 
 LanguageRuntime.load_config(config=config)
 print(LanguageRuntime.translate_keyword("si"))        # if
@@ -232,7 +232,7 @@ print(LanguageRuntime.translate_function("imprimir")) # builtin.print
 ### 3.5 Config-driven REPL
 
 ```bash
-parsercraft repl espanol.yaml
+lashon repl espanol.yaml
 ```
 
 ```
@@ -257,7 +257,7 @@ interpreter; use `--grammar` or the Studio for grammar-driven execution.
 Using the Calc AST from Tutorial 2:
 
 ```python
-from parsercraft.codegen import (
+from lashon.codegen import (
     PythonTranspiler, CCodeGenerator, WasmGenerator, LLVMIRGenerator,
 )
 
@@ -315,9 +315,9 @@ grammar:
 ```
 
 ```bash
-parsercraft codegen-c    program.calc --config calc.yaml --output program.c
-parsercraft codegen-wasm  program.calc --config calc.yaml --output program.wat
-parsercraft codegen-llvm  program.calc --config calc.yaml --output program.ll
+lashon codegen-c    program.calc --config calc.yaml --output program.c
+lashon codegen-wasm  program.calc --config calc.yaml --output program.wat
+lashon codegen-llvm  program.calc --config calc.yaml --output program.ll
 ```
 
 Quote each YAML value so PEG operators (`*`, `?`, `"`) stay strings. Details and
@@ -337,7 +337,7 @@ backends.
 Studio: **New**, choose a folder, name the language. Or:
 
 ```python
-from parsercraft.ide.studio import LanguageStudio
+from lashon.ide.studio import LanguageStudio
 
 studio = LanguageStudio()
 project = studio.new_project("Aurora", ".")
@@ -385,8 +385,8 @@ boolean       <- "true" / "false"
 ```yaml
 name: Aurora
 version: "1.0.0"
-description: "A small, expressive teaching language built with ParserCraft."
-author: "ParserCraft Studio"
+description: "A small, expressive teaching language built with Lashon."
+author: "Lashon Studio"
 
 keywords:
   if: "if"
@@ -485,8 +485,8 @@ print({name: (r.ok, len(r.text)) for name, r in results.items()})
 ### 5.7 CLI
 
 ```bash
-parsercraft validate projects/aurora/language.yaml
-parsercraft codegen-c projects/aurora/samples/fibonacci.aur \
+lashon validate projects/aurora/language.yaml
+lashon codegen-c projects/aurora/samples/fibonacci.aur \
   --config projects/aurora/language.yaml --output /tmp/fib.c
 ```
 
@@ -499,7 +499,7 @@ parsercraft codegen-c projects/aurora/samples/fibonacci.aur \
 A backend only needs `translate_source_ast(ast) -> str`.
 
 ```python
-from parsercraft.parser import SourceAST
+from lashon.parser import SourceAST
 
 class OutlineBackend:
     """Emit an indented outline of the AST."""
@@ -522,7 +522,7 @@ class OutlineBackend:
 Use it:
 
 ```python
-from parsercraft.parser import GrammarParser, PEGInterpreter
+from lashon.parser import GrammarParser, PEGInterpreter
 
 grammar = GrammarParser().parse(
     'program <- statement+\n'
@@ -558,7 +558,7 @@ program
 ### 7.1 Standard library
 
 ```python
-from parsercraft.runtime.stdlib import StdLib
+from lashon.runtime.stdlib import StdLib
 
 stdlib = StdLib()
 stdlib.register_builtins()          # required
@@ -581,7 +581,7 @@ tables: [RUNTIME_GUIDE.md](RUNTIME_GUIDE.md#standard-library).
 ### 7.2 Custom module
 
 ```python
-from parsercraft.runtime.stdlib import StdLib, StdModule
+from lashon.runtime.stdlib import StdLib, StdModule
 
 lib = StdLib()
 lib.register_builtins()
@@ -604,7 +604,7 @@ print(ns["shout"]("hello"))  # HELLO!
 ### 7.3 Python FFI
 
 ```python
-from parsercraft.runtime.ffi import FFIBridge
+from lashon.runtime.ffi import FFIBridge
 
 ffi = FFIBridge()
 ffi.register_python("greet", lambda name: f"Hello, {name}!")
@@ -634,7 +634,7 @@ trusted programs. See [RUNTIME_GUIDE.md](RUNTIME_GUIDE.md#security-model).
 
 ```python
 from pathlib import Path
-from parsercraft.ide.studio import LanguageStudio
+from lashon.ide.studio import LanguageStudio
 
 def test_language():
     studio = LanguageStudio()
@@ -665,7 +665,7 @@ Package data (grammar, samples) is controlled by
 ### 8.3 Generate a VS Code extension
 
 ```bash
-parsercraft extension --config projects/aurora/language.yaml \
+lashon extension --config projects/aurora/language.yaml \
   --output ./aurora-vscode --publisher my-org --version 1.0.0
 cd aurora-vscode
 npm install -g @vscode/vsce
@@ -675,8 +675,8 @@ vsce package
 ### 8.4 Publish package metadata
 
 ```python
-from parsercraft.packaging import Package, PackageRegistry
-from parsercraft.packaging.package_registry import Version
+from lashon.packaging import Package, PackageRegistry
+from lashon.packaging.package_registry import Version
 
 registry = PackageRegistry()
 registry.register_package(Package("aurora", Version.parse("1.0.0")))

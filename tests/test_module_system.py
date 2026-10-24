@@ -2,10 +2,10 @@
 
 import pytest
 
-from parsercraft.config import LanguageConfig
-from parsercraft.runtime.module_system import (
+from lashon.config import LanguageConfig
+from lashon.runtime.module_system import (
+    LashonModuleNotFoundError,
     ModuleManager,
-    ParserCraftModuleNotFoundError,
 )
 
 
@@ -69,7 +69,7 @@ def test_circular_dependencies_are_detected(config, module_dir):
 
 def test_missing_module_raises(config, module_dir):
     manager = ModuleManager(config, search_paths=[str(module_dir)])
-    with pytest.raises(ParserCraftModuleNotFoundError):
+    with pytest.raises(LashonModuleNotFoundError):
         manager.load_module("does_not_exist")
 
 

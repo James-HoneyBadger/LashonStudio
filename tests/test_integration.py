@@ -2,12 +2,12 @@
 
 import json
 
-from parsercraft.codegen.codegen_c import CCodeGenerator
-from parsercraft.codegen.llvm_ir import LLVMIRGenerator
-from parsercraft.codegen.python_transpiler import PythonTranspiler, transpile_and_exec
-from parsercraft.parser.grammar import GrammarParser, PEGInterpreter, grammar_from_config
-from parsercraft.runtime.repl import REPL
-from parsercraft.runtime.stdlib import StdLib
+from lashon.codegen.codegen_c import CCodeGenerator
+from lashon.codegen.llvm_ir import LLVMIRGenerator
+from lashon.codegen.python_transpiler import PythonTranspiler, transpile_and_exec
+from lashon.parser.grammar import GrammarParser, PEGInterpreter, grammar_from_config
+from lashon.runtime.repl import REPL
+from lashon.runtime.stdlib import StdLib
 
 
 class TestFullPipeline:

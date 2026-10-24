@@ -1,0 +1,15 @@
+[package]
+name = "lashon-cli"
+description = "Command-line front end for the Lashon Rust core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "lashon-rs"
+path = "src/main.rs"
+
+[dependencies]
+lashon-core = { path = "../lashon-core", default-features = false }
+serde_json = "1"

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from parsercraft.parser import GrammarParser, PEGInterpreter, native
+from lashon.parser import GrammarParser, PEGInterpreter, native
 
 GRAMMAR = """
 program  <- statement+

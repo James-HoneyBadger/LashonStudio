@@ -1,7 +1,7 @@
 name: Aurora
 version: "1.0.0"
-description: "A small, expressive teaching language built with ParserCraft."
-author: "ParserCraft Studio"
+description: "A small, expressive teaching language built with Lashon."
+author: "Lashon Studio"
 target_interpreter: python
 
 keywords:

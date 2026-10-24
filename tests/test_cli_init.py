@@ -1,13 +1,13 @@
-"""Tests for ``parsercraft init``."""
+"""Tests for ``lashon init``."""
 
 import sys
 
-from parsercraft.ide.studio import LanguageStudio
-from parsercraft.tooling.cli import main
+from lashon.ide.studio import LanguageStudio
+from lashon.tooling.cli import main
 
 
 def _run(monkeypatch, *argv):
-    monkeypatch.setattr(sys, "argv", ["parsercraft", *argv])
+    monkeypatch.setattr(sys, "argv", ["lashon", *argv])
     return main()
 
 
@@ -115,11 +115,11 @@ def test_init_with_vscode_and_ci(tmp_path, monkeypatch):
 
     root = tmp_path / "scaffold"
     launch = (root / ".vscode" / "launch.json").read_text(encoding="utf-8")
-    assert "parsercraft.tooling.cli" in launch
+    assert "lashon.tooling.cli" in launch
     assert (root / ".vscode" / "settings.json").is_file()
 
     workflow = (
         root / ".github" / "workflows" / "language.yml"
     ).read_text(encoding="utf-8")
-    assert "parsercraft lint" in workflow
-    assert "parsercraft run" in workflow
+    assert "lashon lint" in workflow
+    assert "lashon run" in workflow

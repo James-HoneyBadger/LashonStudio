@@ -2,7 +2,7 @@
 
 import pytest
 
-from parsercraft.parser.grammar import (
+from lashon.parser.grammar import (
     Grammar,
     GrammarBuilder,
     GrammarParser,

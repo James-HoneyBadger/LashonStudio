@@ -13,7 +13,7 @@ import statistics
 import time
 from pathlib import Path
 
-from parsercraft.parser import GrammarParser, PEGInterpreter, native
+from lashon.parser import GrammarParser, PEGInterpreter, native
 
 ROOT = Path(__file__).resolve().parents[1]
 GRAMMAR = ROOT / "projects" / "aurora" / "grammar.peg"

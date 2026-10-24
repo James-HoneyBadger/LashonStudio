@@ -1,6 +1,6 @@
-# ParserCraft — Technical Reference
+# Lashon — Technical Reference
 
-API reference for `parsercraft` 4.0.0. Signatures are copied from the installed
+API reference for `lashon` 4.0.0. Signatures are copied from the installed
 package; examples are executed while writing this reference.
 
 - Task-oriented usage: [USER_GUIDE.md](USER_GUIDE.md)
@@ -12,7 +12,7 @@ package; examples are executed while writing this reference.
 
 ## Conventions
 
-- `parsercraft` is importable after `pip install -e .`; tests use
+- `lashon` is importable after `pip install -e .`; tests use
   `pythonpath = ["src"]`.
 - Type hints are shown as reported by `inspect.signature`.
 - "Stable" means covered by tests and intended for use. "Experimental" means the
@@ -25,18 +25,18 @@ package; examples are executed while writing this reference.
 
 | Package | Public exports |
 |---|---|
-| `parsercraft.parser` | `GrammarParser`, `GrammarBuilder`, `Grammar`, `GrammarRule`, `PEGNode`, `PEGNodeType`, `PEGInterpreter`, `SourceAST`, `IncrementalParser`, `grammar_from_config`, `Lexer`, `Parser`, `ParserGenerator`, `Token`, `TokenType`, `ASTNode`, `generate_parser` |
-| `parsercraft.codegen` | `PythonTranspiler`, `TranspileOptions`, `transpile_to_python`, `transpile_and_exec`, `CCodeGenerator`, `CType`, `WasmGenerator`, `WasmModule`, `WasmType`, `WasmOp`, `LLVMIRGenerator` |
-| `parsercraft.config` | `LanguageConfig`, `LanguageValidator`, `IdentifierValidator`, `KeywordMapping`, `FunctionConfig`, `OperatorConfig`, `SyntaxOptions`, `ParsingConfig`, `list_presets` |
-| `parsercraft.runtime` | `REPL`, `StdLib`, `StdModule`, `StdFunction`, `StdConstant`, `FFIBridge`, `FFIBinding`, `LanguageRuntime`, `ModuleManager`, `ModuleLoader` (dataclasses `Module`, `ModuleImport`, `ModuleExport` live in `parsercraft.runtime.module_system`) |
-| `parsercraft.tooling` | `ErrorLocalizer`, `ErrorMessage` (plus `lsp`, `debug`, `test_framework` submodules) |
-| `parsercraft.types` | `Type`, `TypeKind`, `TypeChecker`, `TypeEnvironment`, `Protocol`, `ProtocolChecker`, `GenericType`, `TypeParameter`, `GenericChecker`, `GenericsTypeChecker`, `ProtocolTypeChecker`, `TypeNarrowingPass`, `ProtocolBinding`, `ProtocolTypeIntegration`, `TypeCompatibilityResult` |
-| `parsercraft.ide` | `ParserCraftIDE` (Studio shim), `CodeEditor`, `LineNumbers`, `Project`, `ProjectManager`; `LanguageStudio`/`StudioProject` live in `parsercraft.ide.studio` |
-| `parsercraft.packaging` | `PackageRegistry`, `Package`, `DocumentationGenerator`; `Version` in `parsercraft.packaging.package_registry` |
+| `lashon.parser` | `GrammarParser`, `GrammarBuilder`, `Grammar`, `GrammarRule`, `PEGNode`, `PEGNodeType`, `PEGInterpreter`, `SourceAST`, `IncrementalParser`, `grammar_from_config`, `Lexer`, `Parser`, `ParserGenerator`, `Token`, `TokenType`, `ASTNode`, `generate_parser` |
+| `lashon.codegen` | `PythonTranspiler`, `TranspileOptions`, `transpile_to_python`, `transpile_and_exec`, `CCodeGenerator`, `CType`, `WasmGenerator`, `WasmModule`, `WasmType`, `WasmOp`, `LLVMIRGenerator` |
+| `lashon.config` | `LanguageConfig`, `LanguageValidator`, `IdentifierValidator`, `KeywordMapping`, `FunctionConfig`, `OperatorConfig`, `SyntaxOptions`, `ParsingConfig`, `list_presets` |
+| `lashon.runtime` | `REPL`, `StdLib`, `StdModule`, `StdFunction`, `StdConstant`, `FFIBridge`, `FFIBinding`, `LanguageRuntime`, `ModuleManager`, `ModuleLoader` (dataclasses `Module`, `ModuleImport`, `ModuleExport` live in `lashon.runtime.module_system`) |
+| `lashon.tooling` | `ErrorLocalizer`, `ErrorMessage` (plus `lsp`, `debug`, `test_framework` submodules) |
+| `lashon.types` | `Type`, `TypeKind`, `TypeChecker`, `TypeEnvironment`, `Protocol`, `ProtocolChecker`, `GenericType`, `TypeParameter`, `GenericChecker`, `GenericsTypeChecker`, `ProtocolTypeChecker`, `TypeNarrowingPass`, `ProtocolBinding`, `ProtocolTypeIntegration`, `TypeCompatibilityResult` |
+| `lashon.ide` | `LashonIDE` (Studio shim), `CodeEditor`, `LineNumbers`, `Project`, `ProjectManager`; `LanguageStudio`/`StudioProject` live in `lashon.ide.studio` |
+| `lashon.packaging` | `PackageRegistry`, `Package`, `DocumentationGenerator`; `Version` in `lashon.packaging.package_registry` |
 
 ---
 
-## parsercraft.parser
+## lashon.parser
 
 ### `GrammarParser`
 
@@ -50,7 +50,7 @@ nested parsers. `Grammar.validate()` reports semantic problems (undefined
 references, left recursion, unsupported tokens).
 
 ```python
-from parsercraft.parser import GrammarParser
+from lashon.parser import GrammarParser
 
 grammar = GrammarParser().parse(
     'program <- statement+\n'
@@ -135,7 +135,7 @@ class GrammarBuilder:
 ```
 
 ```python
-from parsercraft.parser import GrammarBuilder as B
+from lashon.parser import GrammarBuilder as B
 
 grammar = (
     B("mini")
@@ -244,7 +244,7 @@ These are config-driven (keyword-based) and independent of the PEG engine.
 
 ---
 
-## parsercraft.codegen
+## lashon.codegen
 
 ### `PythonTranspiler`
 
@@ -356,7 +356,7 @@ definitions, and calls. Undefined identifiers produce comments and the constant
 
 ---
 
-## parsercraft.config
+## lashon.config
 
 ### `LanguageConfig`
 
@@ -486,7 +486,7 @@ class IdentifierValidator:
 
 ---
 
-## parsercraft.runtime
+## lashon.runtime
 
 ### `REPL`
 
@@ -543,7 +543,7 @@ class FFIBridge:
 ```
 
 `bind` raises `KeyError` if the library was not loaded. Type names come from
-`parsercraft.runtime.ffi.CTYPE_MAP`.
+`lashon.runtime.ffi.CTYPE_MAP`.
 
 ### `LanguageRuntime`
 
@@ -590,7 +590,7 @@ class ModuleManager:
 
 ---
 
-## parsercraft.tooling
+## lashon.tooling
 
 ### `ErrorLocalizer`
 
@@ -632,7 +632,7 @@ class LSPServer:
     def run_stdio(self) -> None
 ```
 
-`Position` comes from `parsercraft.tooling.lsp.lsp_server`. Stdio serves a
+`Position` comes from `lashon.tooling.lsp.lsp_server`. Stdio serves a
 subset — see [LSP_AND_DEBUGGING.md](LSP_AND_DEBUGGING.md#protocol-coverage).
 
 ### Debugging
@@ -659,13 +659,13 @@ memory_reference=None)`. `DebugAdapter(debugger)` exposes DAP-shaped handling.
 
 ### Test framework
 
-`parsercraft.tooling.test_framework` provides `TestCase` and
-`LanguageTestRunner`; `parsercraft test` uses it with a YAML/JSON case file, and
+`lashon.tooling.test_framework` provides `TestCase` and
+`LanguageTestRunner`; `lashon test` uses it with a YAML/JSON case file, and
 `test-run` is a placeholder.
 
 ---
 
-## parsercraft.types
+## lashon.types
 
 ### `Type` / `TypeKind`
 
@@ -787,7 +787,7 @@ methods={}, properties={}, extends=[], is_generic=False)`,
 
 ---
 
-## parsercraft.ide
+## lashon.ide
 
 ### `LanguageStudio` (headless controller)
 
@@ -848,8 +848,8 @@ Helpers: `rules_to_peg(rules) -> str`, `peg_to_rules(text) -> Dict[str, str]`.
 
 ### Studio GUI and legacy classes
 
-`ParserCraftIDE(project=None, source=None)` is the Tkinter application exported
-by `parsercraft.ide` (implementation in `parsercraft.ide.studio_app`).
+`LashonIDE(project=None, source=None)` is the Tkinter application exported
+by `lashon.ide` (implementation in `lashon.ide.studio_app`).
 
 ```python
 class Project:
@@ -872,7 +872,7 @@ on_change` over `tk.Text`; `LineNumbers(parent, text_widget)` provides `redraw()
 
 ---
 
-## parsercraft.packaging
+## lashon.packaging
 
 ### `Package`, `Version`, `VersionConstraint`
 
@@ -930,7 +930,7 @@ class DocumentationGenerator:
 def generate_vscode_extension(
     config: LanguageConfig,
     output_dir: str = ".vscode-ext",
-    publisher: str = "parsercraft",
+    publisher: str = "lashon",
     version: str = "0.0.1",
 ) -> None
 

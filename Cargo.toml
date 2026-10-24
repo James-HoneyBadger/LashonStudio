@@ -1,12 +1,12 @@
 [workspace]
 resolver = "2"
-members = ["crates/parsercraft-core", "crates/parsercraft-cli"]
+members = ["crates/lashon-core", "crates/lashon-cli"]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/James-HoneyBadger/ParserCraft"
+repository = "https://github.com/James-HoneyBadger/Lashon"
 
 [profile.release]
 lto = true

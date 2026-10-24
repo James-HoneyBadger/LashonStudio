@@ -1,6 +1,6 @@
-# ParserCraft — User Guide
+# Lashon — User Guide
 
-Task-oriented guide to building and running languages with ParserCraft 4.0.0.
+Task-oriented guide to building and running languages with Lashon 4.0.0.
 For exhaustive references, follow the links to the dedicated pages.
 
 - New here? Start with [QUICKSTART.md](QUICKSTART.md).
@@ -12,7 +12,7 @@ For exhaustive references, follow the links to the dedicated pages.
 
 ## Contents
 
-1. [Two ways to use ParserCraft](#two-ways-to-use-parsercraft)
+1. [Two ways to use Lashon](#two-ways-to-use-lashon)
 2. [Install and verify](#install-and-verify)
 3. [Create a language configuration](#create-a-language-configuration)
 4. [Map keywords, functions, and operators](#map-keywords-functions-and-operators)
@@ -27,7 +27,7 @@ For exhaustive references, follow the links to the dedicated pages.
 
 ---
 
-## Two ways to use ParserCraft
+## Two ways to use Lashon
 
 | Approach | You provide | You get | Typical use |
 |---|---|---|---|
@@ -46,7 +46,7 @@ does exactly that.
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 
-parsercraft --version          # parsercraft 4.0.0
+lashon --version          # lashon 4.0.0
 python -m pytest -q            # 368 passed
 ```
 
@@ -59,16 +59,16 @@ Platform notes live in [INSTALL.md](INSTALL.md).
 Start a complete project (config + grammar + sample + tests):
 
 ```bash
-parsercraft init "My Lang" --directory ./languages
+lashon init "My Lang" --directory ./languages
 cd languages/my-lang && python -m pytest tests -q
 ```
 
 Or create a single config from a preset:
 
 ```bash
-parsercraft create --preset python_like --output my_lang.yaml
-parsercraft validate my_lang.yaml
-parsercraft info my_lang.yaml
+lashon create --preset python_like --output my_lang.yaml
+lashon validate my_lang.yaml
+lashon info my_lang.yaml
 ```
 
 Presets: `python_like`, `js_like`, `minimal`, `ruby_like`, `golang_like`,
@@ -105,7 +105,7 @@ syntax_options:
 Loading and saving from Python:
 
 ```python
-from parsercraft.config import LanguageConfig
+from lashon.config import LanguageConfig
 
 config = LanguageConfig.load("my_lang.yaml")   # or .json
 config.save("copy.yaml")
@@ -134,13 +134,13 @@ functions:
 ```
 
 ```bash
-parsercraft translate --config espanol.yaml --input programa.txt
+lashon translate --config espanol.yaml --input programa.txt
 ```
 
 Programmatic edits:
 
 ```python
-from parsercraft.config import LanguageConfig
+from lashon.config import LanguageConfig
 
 config = LanguageConfig.load("my_lang.yaml")
 config.rename_keyword("print", "escribir")
@@ -169,7 +169,7 @@ factor      <- NUMBER / IDENT / "(" expr ")"
 ```
 
 ```python
-from parsercraft.parser import GrammarParser, PEGInterpreter
+from lashon.parser import GrammarParser, PEGInterpreter
 
 grammar = GrammarParser().parse(open("grammar.peg").read())
 ast = PEGInterpreter(grammar).parse("x = 21 * 2 ; print x ;")
@@ -197,7 +197,7 @@ Semantics and pitfalls: [GRAMMAR_REFERENCE.md](GRAMMAR_REFERENCE.md).
 ## Execute programs
 
 ```python
-from parsercraft.codegen import PythonTranspiler, transpile_and_exec
+from lashon.codegen import PythonTranspiler, transpile_and_exec
 
 print(PythonTranspiler().translate_source_ast(ast))
 
@@ -208,7 +208,7 @@ print(namespace)
 Options:
 
 ```python
-from parsercraft.codegen import PythonTranspiler, TranspileOptions
+from lashon.codegen import PythonTranspiler, TranspileOptions
 
 transpiler = PythonTranspiler(TranspileOptions(
     indent_str="  ",
@@ -227,9 +227,9 @@ your names (plus anything passed via `globals_dict`).
 ## Generate other targets
 
 ```bash
-parsercraft codegen-c    program.src --config my_lang.yaml --output out.c
-parsercraft codegen-llvm program.src --config my_lang.yaml --output out.ll
-parsercraft codegen-wasm program.src --config my_lang.yaml --output out.wat
+lashon codegen-c    program.src --config my_lang.yaml --output out.c
+lashon codegen-llvm program.src --config my_lang.yaml --output out.ll
+lashon codegen-wasm program.src --config my_lang.yaml --output out.wat
 ```
 
 ```bash
@@ -245,7 +245,7 @@ printing for the documented AST nodes (WASM is integer-only and needs host
 From Python:
 
 ```python
-from parsercraft.codegen import CCodeGenerator, LLVMIRGenerator, WasmGenerator
+from lashon.codegen import CCodeGenerator, LLVMIRGenerator, WasmGenerator
 
 c_src = CCodeGenerator().translate_source_ast(ast)
 ir = LLVMIRGenerator().translate_source_ast(ast)
@@ -259,7 +259,7 @@ wat = WasmGenerator().translate_source_ast(ast).to_wat()   # returns WasmModule
 Grammar REPL:
 
 ```bash
-parsercraft repl --grammar grammar.peg
+lashon repl --grammar grammar.peg
 ```
 
 ```text
@@ -274,7 +274,7 @@ parsercraft repl --grammar grammar.peg
 Config REPL:
 
 ```bash
-parsercraft repl espanol.yaml
+lashon repl espanol.yaml
 ```
 
 ```text
@@ -299,8 +299,8 @@ Both REPLs keep history between sessions, and the grammar REPL completes
 commands, rule names, and common builtins with `Tab`. Programmatic use:
 
 ```python
-from parsercraft.runtime import REPL
-from parsercraft.parser import GrammarParser
+from lashon.runtime import REPL
+from lashon.parser import GrammarParser
 
 repl = REPL(grammar=GrammarParser().parse(open("grammar.peg").read()))
 repl.eval_line('print "hi" ;')            # 'hi\n'
@@ -314,8 +314,8 @@ Full REPL, stdlib, and FFI details: [RUNTIME_GUIDE.md](RUNTIME_GUIDE.md).
 ## Use the Studio
 
 ```bash
-parsercraft-ide                          # opens the Aurora sample when available
-parsercraft-ide projects/aurora          # open a project
+lashon-ide                          # opens the Aurora sample when available
+lashon-ide projects/aurora          # open a project
 ```
 
 Layout: project tree on the left, Source / Grammar / Language tabs in the middle,
@@ -342,14 +342,14 @@ validating the grammar. Manual: [STUDIO_GUIDE.md](STUDIO_GUIDE.md).
 **Modules**
 
 ```bash
-parsercraft module-info utils --module-dir ./modules
-parsercraft module-deps main --module-dir ./modules
-parsercraft module-cycles --module-dir ./modules
+lashon module-info utils --module-dir ./modules
+lashon module-deps main --module-dir ./modules
+lashon module-cycles --module-dir ./modules
 ```
 
 ```python
-from parsercraft.runtime import ModuleManager
-from parsercraft.config import LanguageConfig
+from lashon.runtime import ModuleManager
+from lashon.config import LanguageConfig
 
 manager = ModuleManager(LanguageConfig.load("my_lang.yaml"), search_paths=["modules"])
 module = manager.load_module("utils")
@@ -361,7 +361,7 @@ Syntax and limits: [RUNTIME_GUIDE.md](RUNTIME_GUIDE.md#module-system).
 **Types**
 
 ```bash
-parsercraft type-check --config my_lang.yaml --input program.src --level strict
+lashon type-check --config my_lang.yaml --input program.src --level strict
 ```
 
 The checker is line-oriented and heuristic; it understands `name: type = value`
@@ -370,9 +370,9 @@ and literal inference. See [TYPE_SYSTEM.md](TYPE_SYSTEM.md).
 **Editor and debugger**
 
 ```bash
-parsercraft lsp --config my_lang.yaml --stdio     # stdio subset
-parsercraft format program.src --in-place
-parsercraft refactor-rename program.src old new
+lashon lsp --config my_lang.yaml --stdio     # stdio subset
+lashon format program.src --in-place
+lashon refactor-rename program.src old new
 ```
 
 See [LSP_AND_DEBUGGING.md](LSP_AND_DEBUGGING.md) for capabilities and the DAP
@@ -386,8 +386,8 @@ controller.
    `samples/`, README.
 2. Generate a reference: `DocumentationGenerator().save_markdown(config, "REFERENCE.md")`.
 3. Generate a VS Code extension:
-   `parsercraft extension --config language.yaml --output ./my-lang-vscode`.
-4. Decide how users run it: `parsercraft-ide`, `parsercraft repl`, or a
+   `lashon extension --config language.yaml --output ./my-lang-vscode`.
+4. Decide how users run it: `lashon-ide`, `lashon repl`, or a
    generated backend plus your own toolchain.
 
 Packaging details, including what the extension generator does *not* produce:
@@ -414,26 +414,26 @@ Packaging details, including what the extension generator does *not* produce:
 
 | Goal | Command |
 |---|---|
-| Scaffold project | `parsercraft init "My Lang" -d ./languages` |
-| Create config | `parsercraft create --preset python_like -o lang.yaml` |
-| Validate | `parsercraft validate lang.yaml` |
-| Inspect | `parsercraft info lang.yaml` |
-| Grammar REPL | `parsercraft repl --grammar g.peg` |
-| Config REPL | `parsercraft repl lang.yaml` |
-| Run a program | `parsercraft run prog.src -g g.peg` |
-| Run a script | `parsercraft batch lang.yaml --script prog.txt --show-vars` |
-| Emit C | `parsercraft codegen-c prog.src -c lang.yaml -o prog.c` |
-| Emit LLVM | `parsercraft codegen-llvm prog.src -c lang.yaml -o prog.ll` |
-| Emit WAT | `parsercraft codegen-wasm prog.src -c lang.yaml -o prog.wat` |
-| Type check | `parsercraft type-check -c lang.yaml -i prog.src` |
-| LSP | `parsercraft lsp -c lang.yaml --stdio` |
-| Extension | `parsercraft extension -c lang.yaml -o ./ext` |
-| Studio | `parsercraft-ide projects/aurora` |
-| Browser playground | `parsercraft play projects/aurora --open` |
-| Guided demo | `parsercraft demo` |
-| Environment check | `parsercraft doctor` |
-| CI lint | `parsercraft lint lang.yaml --source prog.src` |
-| Change one setting | `parsercraft config set lang.yaml grammar.start program` |
-| Re-run on save | `parsercraft run prog.src -c lang.yaml --watch` |
+| Scaffold project | `lashon init "My Lang" -d ./languages` |
+| Create config | `lashon create --preset python_like -o lang.yaml` |
+| Validate | `lashon validate lang.yaml` |
+| Inspect | `lashon info lang.yaml` |
+| Grammar REPL | `lashon repl --grammar g.peg` |
+| Config REPL | `lashon repl lang.yaml` |
+| Run a program | `lashon run prog.src -g g.peg` |
+| Run a script | `lashon batch lang.yaml --script prog.txt --show-vars` |
+| Emit C | `lashon codegen-c prog.src -c lang.yaml -o prog.c` |
+| Emit LLVM | `lashon codegen-llvm prog.src -c lang.yaml -o prog.ll` |
+| Emit WAT | `lashon codegen-wasm prog.src -c lang.yaml -o prog.wat` |
+| Type check | `lashon type-check -c lang.yaml -i prog.src` |
+| LSP | `lashon lsp -c lang.yaml --stdio` |
+| Extension | `lashon extension -c lang.yaml -o ./ext` |
+| Studio | `lashon-ide projects/aurora` |
+| Browser playground | `lashon play projects/aurora --open` |
+| Guided demo | `lashon demo` |
+| Environment check | `lashon doctor` |
+| CI lint | `lashon lint lang.yaml --source prog.src` |
+| Change one setting | `lashon config set lang.yaml grammar.start program` |
+| Re-run on save | `lashon run prog.src -c lang.yaml --watch` |
 
 Every command and flag: [CLI_REFERENCE.md](CLI_REFERENCE.md).

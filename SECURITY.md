@@ -12,7 +12,7 @@
 Do **not** open a public issue for security problems. Report privately via
 GitHub Security Advisories:
 
-<https://github.com/James-HoneyBadger/ParserCraft/security/advisories/new>
+<https://github.com/James-HoneyBadger/LashonStudioStudio/security/advisories/new>
 
 Include:
 
@@ -26,7 +26,7 @@ before public disclosure.
 
 ## Security model
 
-ParserCraft is a **language construction framework, not a sandbox**:
+Lashon is a **language construction framework, not a sandbox**:
 
 - Generated Python is executed with `exec`; program source has full Python
   privileges.

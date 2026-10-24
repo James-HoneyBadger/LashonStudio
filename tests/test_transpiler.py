@@ -2,13 +2,13 @@
 
 import pytest
 
-from parsercraft.codegen.python_transpiler import (
+from lashon.codegen.python_transpiler import (
     PythonTranspiler,
     TranspileOptions,
     transpile_and_exec,
     transpile_to_python,
 )
-from parsercraft.parser.grammar import GrammarParser, PEGInterpreter
+from lashon.parser.grammar import GrammarParser, PEGInterpreter
 
 
 @pytest.fixture

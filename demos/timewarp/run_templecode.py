@@ -2,7 +2,7 @@
 """
 TempleCode Demo — Load and process the Time Warp language config.
 
-Demonstrates the full ParserCraft pipeline:
+Demonstrates the full Lashon pipeline:
   1. Load the TempleCode YAML config
   2. Build a PEG grammar from it
   3. Parse sample TempleCode source
@@ -14,12 +14,12 @@ import os
 import sys
 import yaml
 
-# Ensure parsercraft is importable
+# Ensure lashon is importable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from parsercraft.parser import GrammarParser, PEGInterpreter, grammar_from_config
-from parsercraft.codegen import PythonTranspiler, transpile_to_python, LLVMIRGenerator
-from parsercraft.codegen.codegen_c import CCodeGenerator
+from lashon.parser import GrammarParser, PEGInterpreter, grammar_from_config
+from lashon.codegen import PythonTranspiler, transpile_to_python, LLVMIRGenerator
+from lashon.codegen.codegen_c import CCodeGenerator
 
 
 def load_config(path: str) -> dict:
@@ -43,7 +43,7 @@ def main():
     config = load_config(config_path)
     meta = config.get("metadata", {})
 
-    banner(f"{meta.get('name', 'TempleCode')} — ParserCraft Demo")
+    banner(f"{meta.get('name', 'TempleCode')} — Lashon Demo")
     print(f"  Language : {meta.get('name')}")
     print(f"  Version  : {meta.get('version')}")
     print(f"  Style    : {meta.get('description', '').split('.')[0]}")

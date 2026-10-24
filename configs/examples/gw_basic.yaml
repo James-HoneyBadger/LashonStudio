@@ -1,8 +1,8 @@
 metadata:
   name: "GW-BASIC"
   version: "0.1"
-  description: "A GW-BASIC style configuration for ParserCraft"
-  author: "ParserCraft Team"
+  description: "A GW-BASIC style configuration for Lashon"
+  author: "Lashon Team"
   target_interpreter: "python"
 
 keywords:

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from parsercraft.ide.project import Project, ProjectManager
+from lashon.ide.project import Project, ProjectManager
 
 
 def test_project_save_and_load_json(tmp_path):

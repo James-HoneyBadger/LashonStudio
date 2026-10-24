@@ -187,14 +187,14 @@ Each language demonstrates Turing completeness through:
 
 ### Load in the IDE
 ```bash
-parsercraft-ide
+lashon-ide
 # Then: File → Open and select a config, or use the Config panel
 ```
 
 ### Load Programmatically
 ```python
-from parsercraft.config import LanguageConfig
-from parsercraft.runtime import LanguageRuntime
+from lashon.config import LanguageConfig
+from lashon.runtime import LanguageRuntime
 
 # Load a configuration
 config = LanguageConfig.load("configs/examples/lisp_like.yaml")
@@ -206,14 +206,14 @@ print(LanguageRuntime.get_info())
 
 ### Validate Configuration
 ```bash
-parsercraft validate configs/examples/forth_like.yaml
+lashon validate configs/examples/forth_like.yaml
 ```
 
 ### Create Custom Variant
 Start from any preset as a base:
 ```bash
-parsercraft create --preset ruby_like --output my_custom.yaml
-parsercraft edit my_custom.yaml          # opens in $EDITOR
+lashon create --preset ruby_like --output my_custom.yaml
+lashon edit my_custom.yaml          # opens in $EDITOR
 ```
 
 ## Computational Models
@@ -239,11 +239,11 @@ Each configuration can be extended with:
 Example:
 ```bash
 # Create a variant and open it for editing
-parsercraft create --preset basic_like --output my_basic.yaml
-parsercraft edit my_basic.yaml
+lashon create --preset basic_like --output my_basic.yaml
+lashon edit my_basic.yaml
 
 # Validate after editing
-parsercraft validate my_basic.yaml
+lashon validate my_basic.yaml
 ```
 
 ## Theoretical Background

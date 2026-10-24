@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from parsercraft.tooling.commands.playground import (
+from lashon.tooling.commands.playground import (
     create_playground_server,
     run_source,
 )
@@ -36,7 +36,7 @@ def test_index_page_serves_editor(server):
     with urllib.request.urlopen(_url(server, "/"), timeout=5) as response:
         body = response.read().decode("utf-8")
     assert response.status == 200
-    assert "ParserCraft Playground" in body
+    assert "Lashon Playground" in body
     assert 'id="source"' in body
     assert "api/run" in body
 
@@ -85,7 +85,7 @@ def test_unknown_path_returns_404(server):
 
 
 def test_run_source_without_project_is_reported():
-    from parsercraft.ide.studio import LanguageStudio
+    from lashon.ide.studio import LanguageStudio
 
     result = run_source(LanguageStudio(), "print 1 ;")
     assert result["ok"] is False

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to ParserCraft. This project follows
+All notable changes to Lashon. This project follows
 [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
@@ -12,17 +12,17 @@ All notable changes to ParserCraft. This project follows
   `codegen/python/{transpiler,statements,control_flow,expressions}`;
   `tooling/cli.py` split into `cli/{parser,dispatch}`; presets extracted to
   `config/presets.py`. Every historical import path still works.
-- **`parsercraft.ast`** now owns `SourceAST`, removing the
+- **`lashon.ast`** now owns `SourceAST`, removing the
   `parser` ⇄ `codegen` import cycle; `ast_integration` moved to
   `codegen/ast_integration.py` (shim kept).
 - **Layering is enforced** by `tests/test_architecture.py`: core may not import
   runtime/adapters, adapters may not import Tk from `tooling`, no package
   cycles, `__all__` required.
 - **Wheel contents fixed**: package discovery is restricted to
-  `parsercraft*`, so the stray top-level `codex` package (1,090 LOC) is no
+  `lashon*`, so the stray top-level `codex` package (1,090 LOC) is no
   longer shipped. It is deleted, along with the dead
   `runtime/interpreter_generator.py` and `tooling/lsp/lsp_integration.py`.
-- **`import parsercraft`** is lazy: ~70-115 ms → ~5 ms.
+- **`import lashon`** is lazy: ~70-115 ms → ~5 ms.
 - **Parser performance**: comment patterns are compiled once and matched
   in place; whitespace skipping no longer slices the source. ~146 → ~315 KB/s
   on the 2,000-line benchmark.
@@ -37,35 +37,35 @@ All notable changes to ParserCraft. This project follows
 
 - **Python backend in Rust** (`backends/python.rs`): emit-only Python source
   for assignments, prints, functions, `if`/`else`, `while`, returns, and
-  arithmetic; `parsercraft-rs codegen-py ... [--run]`. Generated code executes
+  arithmetic; `lashon-rs codegen-py ... [--run]`. Generated code executes
   with the same output as the Python transpiler on every Aurora sample.
-- **C backend in Rust** (`crates/parsercraft-core/src/backends/c.rs`): emits
+- **C backend in Rust** (`crates/lashon-core/src/backends/c.rs`): emits
   assignments, prints, functions, `if`/`else`, `while`, returns, and arithmetic;
-  `parsercraft-rs codegen-c ... [--compile] [--run]` builds and runs a program
+  `lashon-rs codegen-c ... [--compile] [--run]` builds and runs a program
   with no Python installed. All three Aurora samples produce byte-identical
   program output to the Python backend.
-- **Rust core crate** (`crates/parsercraft-core`): the PEG grammar model, PEG
+- **Rust core crate** (`crates/lashon-core`): the PEG grammar model, PEG
   text-notation parser, packrat engine, and AST JSON writer, plus PyO3
   bindings behind an optional `python` feature.
-- **`parsercraft-rs` binary** (`crates/parsercraft-cli`): `validate`, `rules`,
+- **`lashon-rs` binary** (`crates/lashon-cli`): `validate`, `rules`,
   `ast`, `parse`, and `version`, running with no Python installed. Built from
   an enforced Cargo workspace (`cargo build --workspace --release`).
 - **Conformance corpus** (`tests/conformance/cases.json`) pinning grammars,
   programs, and exact ASTs/error positions, plus `benchmarks/parse_bench.py`.
-- **Optional native PEG engine** (`native/parsercraft-native`, Rust + PyO3),
+- **Optional native PEG engine** (`native/lashon-native`, Rust + PyO3),
   built with `scripts/build_native.sh` and selected via
   `PEGInterpreter(grammar, backend="auto"|"native")`. Measured ~5x the Python
   engine for matching and ~1.8x end to end; falls back automatically for
   unsupported grammars.
 
-- **`parsercraft doctor`** — environment diagnostics (Python, PyYAML, entry
+- **`lashon doctor`** — environment diagnostics (Python, PyYAML, entry
   points, Tk/display, gcc/clang, wasmtime, writable directories) with `--json`
   and `--strict`.
-- **`parsercraft lint`** — config + grammar + optional source validation in one
+- **`lashon lint`** — config + grammar + optional source validation in one
   CI-friendly command with `--json` output.
-- **`parsercraft demo`** — guided grammar → AST → Python/C/WASM/LLVM →
+- **`lashon demo`** — guided grammar → AST → Python/C/WASM/LLVM →
   execution tour.
-- **`parsercraft play`** — local browser playground (`POST /api/run`,
+- **`lashon play`** — local browser playground (`POST /api/run`,
   `GET /api/health`) showing program output and every backend.
 - **`config get|set`** — read and change dotted config keys from the CLI.
 - **`validate --json`**, **`diff --exit-code`**, **`format --check`**, and
@@ -91,10 +91,10 @@ All notable changes to ParserCraft. This project follows
 
 - **Documentation site**: MkDocs Material configuration, a landing page, and a
   GitHub Pages workflow (`docs.yml`).
-- **`parsercraft init`** — scaffold a runnable language project (config, PEG
+- **`lashon init`** — scaffold a runnable language project (config, PEG
   grammar, sample, README, and tests that validate grammar, execution, and all
   backends).
-- **`parsercraft run`** — parse and execute a source file against a config or
+- **`lashon run`** — parse and execute a source file against a config or
   PEG grammar, with `--json` variables and `--show-python`.
 - **Real LSP stdio protocol** — document open/change/close with published
   diagnostics, hover, document symbols, formatting, signature help, and
@@ -102,7 +102,7 @@ All notable changes to ParserCraft. This project follows
 - **`generics` checker** — validates generic declarations, duplicates, variance
   markers, instantiation arity, and `--infer` bindings.
 - **pytest-backed `test-run`** — runs a project's suite with optional coverage.
-- **ParserCraft Studio**: headless `LanguageStudio` controller plus a dark,
+- **Lashon Studio**: headless `LanguageStudio` controller plus a dark,
   tabbed Tkinter workbench with project tree, source/grammar/language editors,
   console, variables, Python, C, WASM, LLVM IR, and AST panes.
 - **Aurora sample language** (`projects/aurora`) with grammar, config, three
@@ -121,7 +121,7 @@ All notable changes to ParserCraft. This project follows
 
 - **Packaging is fully PEP 621**: metadata, entry points, extras (`dev`,
   `release`), and package data live in `pyproject.toml`; the version is
-  single-sourced from `parsercraft.__version__`; `setup.py` was removed.
+  single-sourced from `lashon.__version__`; `setup.py` was removed.
 - CI now runs lint, a docs check, Python 3.10–3.14 tests, a coverage gate
   (43%), Windows/macOS smoke tests, and a build + `twine check` packaging job.
 - WASM generation now emits functions, locals, calls, `if`/`else`, `while`,

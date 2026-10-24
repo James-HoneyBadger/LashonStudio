@@ -1,4 +1,4 @@
-(* MathUtils — Pascal-Like via ParserCraft
+(* MathUtils — Pascal-Like via Lashon
    Collection of common mathematical computations.
    Demonstrates: FUNCTION declarations, local VARs, CONST blocks *)
 

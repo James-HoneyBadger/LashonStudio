@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an improvement or new capability for ParserCraft
+about: Suggest an improvement or new capability for Lashon
 title: '[FEATURE] '
 labels: enhancement
 assignees: ''
@@ -21,7 +21,7 @@ Describe how you would like the feature to work, with examples where possible:
 ```python
 # Example of the proposed API or behaviour
 
-from parsercraft.parser import GrammarParser
+from lashon.parser import GrammarParser
 
 # Proposed new usage:
 # ...
@@ -33,17 +33,17 @@ Have you tried any workarounds? Are there existing features that partially cover
 
 ## Scope
 
-Which part of ParserCraft does this affect?
+Which part of Lashon does this affect?
 
-- [ ] Grammar / parser engine (`parsercraft.parser`)
+- [ ] Grammar / parser engine (`lashon.parser`)
 - [ ] Python transpiler (`PythonTranspiler`)
 - [ ] C code generator (`CCodeGenerator`)
 - [ ] WebAssembly generator (`WasmGenerator`)
 - [ ] LLVM IR generator (`LLVMIRGenerator`)
 - [ ] Language configuration (`LanguageConfig`)
-- [ ] REPL (`parsercraft-repl`)
-- [ ] CLI (`parsercraft`)
-- [ ] IDE (`parsercraft-ide`)
+- [ ] REPL (`lashon-repl`)
+- [ ] CLI (`lashon`)
+- [ ] IDE (`lashon-ide`)
 - [ ] Standard library / FFI
 - [ ] Module system
 - [ ] Type system

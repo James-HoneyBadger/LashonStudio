@@ -1,8 +1,8 @@
-# ParserCraft AI Coding Agent Instructions
+# Lashon AI Coding Agent Instructions
 
 ## Project Overview
 
-ParserCraft is a **programming language construction framework**. Users define PEG grammars (programmatically or via text notation), parse source code into ASTs, and generate output in multiple backends (Python, C, WebAssembly, LLVM IR).
+Lashon is a **programming language construction framework**. Users define PEG grammars (programmatically or via text notation), parse source code into ASTs, and generate output in multiple backends (Python, C, WebAssembly, LLVM IR).
 
 **Core Pipeline**: Grammar → PEGInterpreter → SourceAST → Backend (transpile/compile)
 
@@ -11,13 +11,13 @@ ParserCraft is a **programming language construction framework**. Users define P
 ## Architecture: Subpackage Structure
 
 ```
-src/parsercraft/
+src/lashon/
 ├── config/       LanguageConfig, LanguageValidator, IdentifierValidator
 ├── parser/       GrammarParser, GrammarBuilder, PEGInterpreter, IncrementalParser
 ├── codegen/      PythonTranspiler, CCodeGenerator, WasmGenerator, LLVMIRGenerator
 ├── runtime/      REPL, StdLib, FFIBridge, LanguageRuntime, ModuleManager
 ├── tooling/      CLI, ErrorLocalizer, LSP (lsp/), Debug (debug/)
-├── ide/          Studio (LanguageStudio + ParserCraftIDE), CodeEditor, ProjectManager
+├── ide/          Studio (LanguageStudio + LashonIDE), CodeEditor, ProjectManager
 ├── types/        TypeChecker, generics, protocols
 └── packaging/    VS Code extension gen, package registry
 ```
@@ -26,22 +26,22 @@ src/parsercraft/
 
 | Class | Module | Purpose |
 |-------|--------|---------|
-| `GrammarParser` | `parsercraft.parser` | Parse PEG text notation into Grammar |
-| `GrammarBuilder` | `parsercraft.parser` | Fluent API for building grammars |
-| `PEGInterpreter` | `parsercraft.parser` | Parse source against grammar → SourceAST |
-| `IncrementalParser` | `parsercraft.parser` | Re-parse only changed regions |
-| `PythonTranspiler` | `parsercraft.codegen` | AST → Python source / exec() |
-| `CCodeGenerator` | `parsercraft.codegen.codegen_c` | AST → C source |
-| `WasmGenerator` | `parsercraft.codegen.codegen_wasm` | AST → WAT |
-| `LLVMIRGenerator` | `parsercraft.codegen` | AST → LLVM IR (SSA) |
-| `REPL` | `parsercraft.runtime` | Interactive eval with persistent namespace |
-| `StdLib` | `parsercraft.runtime` | Built-in modules (io, math, string, etc.) |
-| `FFIBridge` | `parsercraft.runtime` | ctypes C + Python function bindings |
-| `ErrorLocalizer` | `parsercraft.tooling` | Localized error messages with context |
-| `LanguageConfig` | `parsercraft.config` | YAML/JSON language definitions |
-| `LanguageRuntime` | `parsercraft.runtime` | Config-driven keyword remapping |
-| `LanguageStudio` | `parsercraft.ide.studio` | Headless studio controller (project, grammar, run, generate) |
-| `ParserCraftIDE` | `parsercraft.ide.studio_app` | Tkinter language-design workbench |
+| `GrammarParser` | `lashon.parser` | Parse PEG text notation into Grammar |
+| `GrammarBuilder` | `lashon.parser` | Fluent API for building grammars |
+| `PEGInterpreter` | `lashon.parser` | Parse source against grammar → SourceAST |
+| `IncrementalParser` | `lashon.parser` | Re-parse only changed regions |
+| `PythonTranspiler` | `lashon.codegen` | AST → Python source / exec() |
+| `CCodeGenerator` | `lashon.codegen.codegen_c` | AST → C source |
+| `WasmGenerator` | `lashon.codegen.codegen_wasm` | AST → WAT |
+| `LLVMIRGenerator` | `lashon.codegen` | AST → LLVM IR (SSA) |
+| `REPL` | `lashon.runtime` | Interactive eval with persistent namespace |
+| `StdLib` | `lashon.runtime` | Built-in modules (io, math, string, etc.) |
+| `FFIBridge` | `lashon.runtime` | ctypes C + Python function bindings |
+| `ErrorLocalizer` | `lashon.tooling` | Localized error messages with context |
+| `LanguageConfig` | `lashon.config` | YAML/JSON language definitions |
+| `LanguageRuntime` | `lashon.runtime` | Config-driven keyword remapping |
+| `LanguageStudio` | `lashon.ide.studio` | Headless studio controller (project, grammar, run, generate) |
+| `LashonIDE` | `lashon.ide.studio_app` | Tkinter language-design workbench |
 
 ### GrammarBuilder API
 
@@ -71,9 +71,9 @@ When a grammar defines `statement <- IDENT "=" expr ";"` without a separate `ass
 
 | Command | Purpose | Module |
 |---------|---------|--------|
-| `parsercraft` | CLI with 30+ subcommands | `parsercraft.tooling.cli:main` |
-| `parsercraft-ide` | Tkinter IDE | `parsercraft.ide.app:main` |
-| `parsercraft-repl` | Interactive REPL | `parsercraft.runtime.repl:main` |
+| `lashon` | CLI with 30+ subcommands | `lashon.tooling.cli:main` |
+| `lashon-ide` | Tkinter IDE | `lashon.ide.app:main` |
+| `lashon-repl` | Interactive REPL | `lashon.runtime.repl:main` |
 
 ## Testing
 
@@ -105,8 +105,8 @@ Test files:
 ### Typical Pipeline Usage
 
 ```python
-from parsercraft.parser import GrammarParser, PEGInterpreter
-from parsercraft.codegen import transpile_and_exec
+from lashon.parser import GrammarParser, PEGInterpreter
+from lashon.codegen import transpile_and_exec
 
 parser = GrammarParser()
 grammar = parser.parse('program <- statement+\nstatement <- IDENT "=" expr ";"\nexpr <- NUMBER')
@@ -118,8 +118,8 @@ result = transpile_and_exec(ast)  # {'x': 42}
 ### Config-Driven Language (Legacy/Alternative)
 
 ```python
-from parsercraft.config import LanguageConfig
-from parsercraft.runtime.language_runtime import LanguageRuntime
+from lashon.config import LanguageConfig
+from lashon.runtime.language_runtime import LanguageRuntime
 
 config = LanguageConfig.load("my_lang.yaml")
 LanguageRuntime.load_config(config)
@@ -128,7 +128,7 @@ runtime = LanguageRuntime.get_instance()
 
 ### Adding a New Backend
 
-1. Create class in `src/parsercraft/codegen/`
+1. Create class in `src/lashon/codegen/`
 2. Implement `translate_source_ast(ast) -> str` method
 3. Handle node types: program, statement (with inline assignment detection), expr, term, factor, Number, Identifier, Operator
 4. Export from `codegen/__init__.py`
@@ -163,7 +163,7 @@ runtime = LanguageRuntime.get_instance()
 | Error messages | `tooling/error_localization.py` → `ErrorLocalizer` |
 | CLI | `tooling/cli.py` → `main()` |
 | Studio controller | `ide/studio.py` → `LanguageStudio` |
-| Studio window | `ide/studio_app.py` → `ParserCraftIDE` |
+| Studio window | `ide/studio_app.py` → `LashonIDE` |
 | Language config | `config/language_config.py` → `LanguageConfig` |
 | Module system | `runtime/module_system.py` → `ModuleManager` |
 | Incremental parse | `parser/incremental.py` → `IncrementalParser` |

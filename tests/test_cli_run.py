@@ -1,9 +1,9 @@
-"""Tests for ``parsercraft run``."""
+"""Tests for ``lashon run``."""
 
 import json
 import sys
 
-from parsercraft.tooling.cli import main
+from lashon.tooling.cli import main
 
 GRAMMAR_CONFIG = """\
 grammar:
@@ -18,7 +18,7 @@ grammar:
 
 
 def _run(monkeypatch, *argv):
-    monkeypatch.setattr(sys, "argv", ["parsercraft", *argv])
+    monkeypatch.setattr(sys, "argv", ["lashon", *argv])
     return main()
 
 

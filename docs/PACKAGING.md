@@ -1,30 +1,30 @@
 # Packaging and Distribution
 
-This page covers packaging **ParserCraft itself**, generating artifacts **for the
+This page covers packaging **Lashon itself**, generating artifacts **for the
 languages you build** (VS Code extensions, reference docs), and the local
 package registry/semver helpers.
 
 ---
 
-## ParserCraft distribution
+## Lashon distribution
 
 ### Layout
 
 ```
 pyproject.toml      PEP 621 metadata, entry points, package data, tool config
 MANIFEST.in         sdist-only extras (docs, configs, projects, samples)
-src/parsercraft/    the package
+src/lashon/    the package
 src/codex/          CodeEx IDE (legacy second IDE, `codex` entry point)
 ```
 
 There is no `setup.py`: packaging is fully declarative, and the version is
-single-sourced from `parsercraft.__version__` via
+single-sourced from `lashon.__version__` via
 `[tool.setuptools.dynamic]`.
 
 ### Build
 
 ```bash
-python -m build                 # dist/parsercraft-4.0.0-py3-none-any.whl + .tar.gz
+python -m build                 # dist/lashon-4.0.0-py3-none-any.whl + .tar.gz
 # or
 python -m pip wheel . -w dist
 ```
@@ -49,21 +49,21 @@ pip install -e .                # runtime only
 
 | Command | Target | Purpose |
 |---|---|---|
-| `parsercraft` | `parsercraft.tooling.cli:main` | full CLI |
-| `parsercraft-ide` | `parsercraft.ide.app:main` | Studio (Tkinter) |
-| `parsercraft-repl` | `parsercraft.runtime.repl:main` | REPL entry point |
+| `lashon` | `lashon.tooling.cli:main` | full CLI |
+| `lashon-ide` | `lashon.ide.app:main` | Studio (Tkinter) |
+| `lashon-repl` | `lashon.runtime.repl:main` | REPL entry point |
 | `codex` | `codex.codex:main` | CodeEx IDE (legacy, separate package) |
 
 ### Package data
 
-- `parsercraft`: `*.json`, `*.yaml`
-- `parsercraft.ide`: the packaged Aurora sample (`samples/aurora/**`)
+- `lashon`: `*.json`, `*.yaml`
+- `lashon.ide`: the packaged Aurora sample (`samples/aurora/**`)
 
 The Studio looks for sample projects in this order:
 
-1. `$PARSERCRAFT_SAMPLE_PROJECT` (if set)
+1. `$LASHON_SAMPLE_PROJECT` (if set)
 2. `<repo>/projects/aurora`
-3. `parsercraft/ide/samples/aurora` (installed wheel)
+3. `lashon/ide/samples/aurora` (installed wheel)
 
 `MANIFEST.in` additionally ships `docs/`, `configs/`, `demos/`, `projects/`, and
 `tests/` in the sdist so source distributions can run the suite.
@@ -81,8 +81,8 @@ The Studio looks for sample projects in this order:
 ```bash
 python -m build
 python -m venv /tmp/check && /tmp/check/bin/pip install dist/*.whl
-/tmp/check/bin/parsercraft list-presets
-/tmp/check/bin/python -c "from parsercraft.ide.studio import LanguageStudio; print(LanguageStudio().sample_project_path())"
+/tmp/check/bin/lashon list-presets
+/tmp/check/bin/python -c "from lashon.ide.studio import LanguageStudio; print(LanguageStudio().sample_project_path())"
 ```
 
 The second command must print a path inside the installed package — that proves
@@ -95,7 +95,7 @@ the Aurora sample shipped.
 ### Generate
 
 ```bash
-parsercraft extension --config projects/aurora/language.yaml \
+lashon extension --config projects/aurora/language.yaml \
   --output ./aurora-vscode --publisher my-org --version 1.0.0
 ```
 
@@ -115,8 +115,8 @@ The generator does **not** produce a compiled extension or a language-server
 entry point. To ship it:
 
 1. Add an `out/server.js` (or point `serverModule` elsewhere) that starts a
-   ParserCraft LSP process. A simple approach is a Node script that spawns
-   `parsercraft lsp --config language.yaml --stdio` and bridges streams, since
+   Lashon LSP process. A simple approach is a Node script that spawns
+   `lashon lsp --config language.yaml --stdio` and bridges streams, since
    the server's stdio loop is the supported transport.
 2. Add `package.json` dependencies (`vscode-languageclient`, `typescript`) and a
    `tsconfig.json`.
@@ -134,8 +134,8 @@ Language id and file extension are derived from the config name
 `DocumentationGenerator` renders a language reference from a `LanguageConfig`.
 
 ```python
-from parsercraft.config import LanguageConfig
-from parsercraft.packaging import DocumentationGenerator
+from lashon.config import LanguageConfig
+from lashon.packaging import DocumentationGenerator
 
 config = LanguageConfig.load("projects/aurora/language.yaml")
 docs = DocumentationGenerator()
@@ -162,8 +162,8 @@ explanation.
 
 ```python
 from pathlib import Path
-from parsercraft.packaging import PackageRegistry, Package
-from parsercraft.packaging.package_registry import Version
+from lashon.packaging import PackageRegistry, Package
+from lashon.packaging.package_registry import Version
 
 registry = PackageRegistry()
 
@@ -185,13 +185,13 @@ problems = registry.check_conflicts(deps)
 lock = registry.create_lock_file(deps)
 # {'version': '1.0', 'packages': {...}, 'timestamp': '...'}
 
-loaded = registry.load_lock_file("parsercraft.lock")
+loaded = registry.load_lock_file("lashon.lock")
 ```
 
 ### Version and constraints
 
 ```python
-from parsercraft.packaging.package_registry import Version
+from lashon.packaging.package_registry import Version
 
 v = Version.parse("1.2.3-beta.1")
 v.major, v.minor, v.patch, v.prerelease      # 1, 2, 3, 'beta.1'
@@ -243,12 +243,12 @@ touch `docs/`, `mkdocs.yml`, or `pyproject.toml`. The site landing page is
 
 ## Publishing a language (not a Python package)
 
-If you want to distribute a *language* rather than ParserCraft:
+If you want to distribute a *language* rather than Lashon:
 
 1. Ship a project directory like `projects/aurora`: `language.yaml`,
    `grammar.peg`, `samples/`, and a README.
-2. Users open it with `parsercraft-ide` (Studio) or run
-   `parsercraft repl language.yaml` / `parsercraft codegen-c ...`.
+2. Users open it with `lashon-ide` (Studio) or run
+   `lashon repl language.yaml` / `lashon codegen-c ...`.
 3. Optionally generate a VS Code extension (above) and a reference
    (`DocumentationGenerator`).
 4. Keep the grammar in one place. The Studio writes `grammar.peg` back into

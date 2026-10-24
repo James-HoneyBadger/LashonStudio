@@ -1,4 +1,4 @@
-// ParserCraft BASIC — a line-numbered BASIC dialect
+// Lashon BASIC — a line-numbered BASIC dialect
 //
 // Every line starts with a line number, which also acts as its label for GOTO.
 // Statements are newline-insensitive beyond that, so a line number is the only

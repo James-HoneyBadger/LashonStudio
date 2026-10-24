@@ -1,6 +1,6 @@
 # LSP and Debugging
 
-ParserCraft includes a language server (completions, hover, symbols,
+Lashon includes a language server (completions, hover, symbols,
 formatting), refactoring/formatting engines, a Debug Adapter Protocol handler,
 and a localized error catalog. This page documents what each piece actually
 does, including the gaps.
@@ -12,7 +12,7 @@ does, including the gaps.
 ### Starting it
 
 ```bash
-parsercraft lsp --config my_lang.yaml [--grammar grammar.peg] --stdio
+lashon lsp --config my_lang.yaml [--grammar grammar.peg] --stdio
 ```
 
 | Flag | Meaning |
@@ -50,7 +50,7 @@ position, e.g. `y = ;` on line 2 produces:
 {"range": {"start": {"line": 1, "character": 0},
            "end":   {"line": 1, "character": 1}},
  "message": "Unexpected input at line 2, column 1: 'y = ;'",
- "severity": 1, "code": "parse-error", "source": "ParserCraft"}
+ "severity": 1, "code": "parse-error", "source": "Lashon"}
 ```
 
 The rendered source snippet is stripped from the message so editors show a
@@ -92,9 +92,9 @@ When the open document is the grammar file itself, the server uses
 ### Programmatic use
 
 ```python
-from parsercraft.config import LanguageConfig
-from parsercraft.tooling.lsp import LSPServer
-from parsercraft.tooling.lsp.lsp_server import Position
+from lashon.config import LanguageConfig
+from lashon.tooling.lsp import LSPServer
+from lashon.tooling.lsp.lsp_server import Position
 
 server = LSPServer(LanguageConfig.load("my_lang.yaml"))
 server.initialize(root_path=".")
@@ -117,14 +117,14 @@ Behaviour notes:
 
 - `hover` resolves the **word at the cursor** (not just the character under it)
   and returns `None` outside a word or for negative/out-of-range positions.
-- Positions are zero-based LSP offsets; ParserCraft AST positions are 1-based,
+- Positions are zero-based LSP offsets; Lashon AST positions are 1-based,
   so conversions happen inside the server.
 - Completions draw from keywords, functions, and operators in the loaded config.
 
 ### Refactoring engine
 
 ```python
-from parsercraft.tooling.lsp.lsp_advanced import RefactoringEngine, CodeFormatter
+from lashon.tooling.lsp.lsp_advanced import RefactoringEngine, CodeFormatter
 
 refactor = RefactoringEngine()
 refactor.build_symbol_table(source)
@@ -142,13 +142,13 @@ from the end of the file backwards so offsets stay valid. The CLI
 ### Formatter
 
 ```python
-from parsercraft.tooling.lsp.lsp_advanced import CodeFormatter
+from lashon.tooling.lsp.lsp_advanced import CodeFormatter
 
 CodeFormatter(tab_size=4).format(source)
 ```
 
 The formatter normalises indentation and whitespace only; it is not a full
-pretty-printer. `parsercraft format` exposes it on the command line.
+pretty-printer. `lashon format` exposes it on the command line.
 
 ### Semantic highlighting
 
@@ -160,12 +160,12 @@ editor integrations, but is not advertised over stdio.
 
 ## Debug adapter (DAP)
 
-`parsercraft debug-launch FILE --config lang.yaml [--port 5678]` starts a real
+`lashon debug-launch FILE --config lang.yaml [--port 5678]` starts a real
 Debug Adapter Protocol server over TCP. It compiles the program with source
 maps, runs it in a worker thread, and pauses on language source lines.
 
 ```bash
-parsercraft debug-launch projects/aurora/samples/fizzbuzz.aur \
+lashon debug-launch projects/aurora/samples/fizzbuzz.aur \
   --config projects/aurora/language.yaml --port 5678
 ```
 
@@ -173,7 +173,7 @@ VS Code `launch.json`:
 
 ```json
 {
-  "type": "parsercraft",
+  "type": "lashon",
   "request": "launch",
   "name": "Debug Aurora",
   "program": "${workspaceFolder}/samples/fizzbuzz.aur",
@@ -237,7 +237,7 @@ Events: `initialized`, `stopped` (breakpoint/step/pause), `output`,
 `ErrorLocalizer` formats catalogued diagnostics with optional source context.
 
 ```python
-from parsercraft.tooling import ErrorLocalizer
+from lashon.tooling import ErrorLocalizer
 
 localizer = ErrorLocalizer()                 # locale="en"
 localizer.format("E001", got=";", expected=")")
@@ -307,13 +307,13 @@ use `line`/`col` in the header for precise navigation.
 
 ## Wiring a real editor
 
-1. Start `parsercraft lsp --config lang.yaml --stdio` from your extension and
+1. Start `lashon lsp --config lang.yaml --stdio` from your extension and
    complete the `initialize` handshake.
 2. For capabilities not yet served over stdio, run a small Python bridge (call
    `LSPServer` directly and forward results) or use the programmatic API from
    your extension's Node/Python host.
 3. Generate a TextMate grammar and language configuration with
-   `parsercraft extension --config lang.yaml`; see
+   `lashon extension --config lang.yaml`; see
    [PACKAGING.md](PACKAGING.md#vs-code-extension).
 4. Surface `TypeChecker` results as diagnostics (see
    [TYPE_SYSTEM.md](TYPE_SYSTEM.md)).

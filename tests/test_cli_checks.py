@@ -2,11 +2,11 @@
 
 import sys
 
-from parsercraft.tooling.cli import main
+from lashon.tooling.cli import main
 
 
 def _run(monkeypatch, *argv):
-    monkeypatch.setattr(sys, "argv", ["parsercraft", *argv])
+    monkeypatch.setattr(sys, "argv", ["lashon", *argv])
     return main()
 
 
@@ -118,7 +118,7 @@ def test_type_check_text_output(tmp_path, monkeypatch, capsys):
 
 
 def test_debug_launch_wires_dap_server(tmp_path, monkeypatch, capsys):
-    from parsercraft.tooling.debug import dap_server
+    from lashon.tooling.debug import dap_server
 
     program = tmp_path / "program.src"
     program.write_text("x = 1 ;\n", encoding="utf-8")

@@ -1,4 +1,4 @@
-(* Sorting — Pascal-Like via ParserCraft
+(* Sorting — Pascal-Like via Lashon
    Bubble-sort demonstration with step-by-step output.
    Demonstrates: ARRAY OF, FOR loops, nested BEGIN..END, swapping *)
 

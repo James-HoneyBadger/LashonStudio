@@ -4,15 +4,15 @@ import json
 
 import pytest
 
-from parsercraft.config import LanguageConfig
-from parsercraft.packaging.documentation_generator import DocumentationGenerator
-from parsercraft.packaging.package_registry import (
+from lashon.config import LanguageConfig
+from lashon.packaging.documentation_generator import DocumentationGenerator
+from lashon.packaging.package_registry import (
     Package,
     PackageRegistry,
     Version,
     VersionConstraint,
 )
-from parsercraft.packaging.vscode_integration import generate_vscode_extension
+from lashon.packaging.vscode_integration import generate_vscode_extension
 
 
 class TestVersion:
@@ -100,7 +100,7 @@ class TestGeneratedAssets:
         package_json = json.loads(
             (output / "package.json").read_text(encoding="utf-8")
         )
-        assert package_json["publisher"] == "parsercraft"
+        assert package_json["publisher"] == "lashon"
         assert (output / "language-configuration.json").exists()
         grammars = list((output / "syntaxes").glob("*.tmLanguage.json"))
         assert grammars
@@ -114,4 +114,4 @@ class TestGeneratedAssets:
         assert (output / "language.yaml").is_file()
         extension = (output / "extension.ts").read_text(encoding="utf-8")
         assert "TransportKind.stdio" in extension
-        assert "parsercraft" in extension
+        assert "lashon" in extension

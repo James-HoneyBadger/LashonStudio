@@ -3,8 +3,8 @@ requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "parsercraft"
-description = "ParserCraft - Custom programming language construction framework: PEG grammars, AST, Python/C/WASM/LLVM backends"
+name = "lashon"
+description = "Lashon Studio - custom programming language construction: PEG grammars, AST, Python/C/WASM/LLVM backends"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -44,30 +44,29 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/James-HoneyBadger/ParserCraft"
-Repository = "https://github.com/James-HoneyBadger/ParserCraft"
-Issues = "https://github.com/James-HoneyBadger/ParserCraft/issues"
+Homepage = "https://github.com/James-HoneyBadger/Lashon"
+Repository = "https://github.com/James-HoneyBadger/Lashon"
+Issues = "https://github.com/James-HoneyBadger/Lashon/issues"
 
 [project.scripts]
-parsercraft = "parsercraft.tooling.cli:main"
-parsercraft-ide = "parsercraft.ide.app:main"
-parsercraft-repl = "parsercraft.runtime.repl:main"
-codex = "codex.codex:main"
+lashon = "lashon.tooling.cli:main"
+lashon-ide = "lashon.ide.app:main"
+lashon-repl = "lashon.runtime.repl:main"
 
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools.packages.find]
-include = ["parsercraft*"]
+include = ["lashon*"]
 namespaces = false
 where = ["src"]
 
 [tool.setuptools.dynamic]
-version = { attr = "parsercraft.__version__" }
+version = { attr = "lashon.__version__" }
 
 [tool.setuptools.package-data]
-parsercraft = ["*.json", "*.yaml"]
-"parsercraft.ide" = [
+lashon = ["*.json", "*.yaml"]
+"lashon.ide" = [
     "samples/aurora/*.yaml",
     "samples/aurora/*.peg",
     "samples/aurora/*.md",
@@ -80,7 +79,7 @@ testpaths = ["tests"]
 addopts = "-ra"
 
 [tool.coverage.run]
-source = ["src/parsercraft", "src/codex"]
+source = ["src/lashon"]
 branch = true
 
 [tool.coverage.report]

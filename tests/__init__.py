@@ -1,1 +1,1 @@
-"""Tests for ParserCraft."""
+"""Tests for Lashon."""

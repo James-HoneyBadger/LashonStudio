@@ -6,9 +6,9 @@ socket dependency into the parsing core.
 
 Layers (lower may be imported by higher, never the reverse)::
 
-    core      parsercraft.ast · config · parser · codegen · types
-    app       parsercraft.runtime
-    adapters  parsercraft.tooling · ide · packaging
+    core      lashon.ast · config · parser · codegen · types
+    app       lashon.runtime
+    adapters  lashon.tooling · ide · packaging
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from pathlib import Path
 
 import pytest
 
-PACKAGE_ROOT = Path(__file__).resolve().parent.parent / "src" / "parsercraft"
+PACKAGE_ROOT = Path(__file__).resolve().parent.parent / "src" / "lashon"
 
 CORE = {"ast", "config", "parser", "codegen", "types"}
 APP = {"runtime"}
@@ -40,7 +40,7 @@ ALLOWED_ADAPTER_EDGES = {
 #: Libraries that only belong to a specific layer.
 FORBIDDEN = {
     "core": {"tkinter", "socket", "http", "webbrowser", "argparse"},
-    # Console entry points (``parsercraft-repl``) legitimately parse argv.
+    # Console entry points (``lashon-repl``) legitimately parse argv.
     "app": {"tkinter"},
     "adapters": set(),
 }
@@ -52,7 +52,7 @@ YAML_FORBIDDEN_PACKAGES = {"parser", "codegen", "ast", "types"}
 def _package_of(path: Path) -> str:
     """Return the layer-facing package name for a module.
 
-    Root-level modules (``parsercraft/ast.py``) are their own package so the
+    Root-level modules (``lashon/ast.py``) are their own package so the
     contracts treat them like the small core packages they are.
     """
     parts = path.relative_to(PACKAGE_ROOT).parts
@@ -65,7 +65,7 @@ def _module_name(path: Path) -> str:
     parts = list(path.relative_to(PACKAGE_ROOT).with_suffix("").parts)
     if parts[-1] == "__init__":
         parts.pop()
-    return ".".join(["parsercraft", *parts])
+    return ".".join(["lashon", *parts])
 
 
 def _resolve_relative(module: str, node: ast.ImportFrom) -> str:
@@ -101,7 +101,7 @@ def all_modules():
 
 def _target_package(imported: str) -> str | None:
     parts = imported.split(".")
-    if parts[0] != "parsercraft" or len(parts) < 2:
+    if parts[0] != "lashon" or len(parts) < 2:
         return None
     return parts[1]
 
@@ -167,9 +167,9 @@ def test_adapters_do_not_depend_on_each_other():
 def test_tooling_never_imports_tk_modules_directly():
     """The CLI and LSP must stay usable on a headless machine."""
     tk_modules = {
-        "parsercraft.ide.studio_app",
-        "parsercraft.ide.app",
-        "parsercraft.ide.editor",
+        "lashon.ide.studio_app",
+        "lashon.ide.app",
+        "lashon.ide.editor",
     }
 
     def bad(_source, imported):
@@ -178,7 +178,7 @@ def test_tooling_never_imports_tk_modules_directly():
     violations = [
         entry
         for entry in _violations(bad)
-        if entry.startswith("src/parsercraft/tooling")
+        if entry.startswith("src/lashon/tooling")
     ]
     assert not violations, (
         "tooling must not import Tk widgets:\n" + "\n".join(violations)
@@ -209,7 +209,7 @@ def test_parsing_core_stays_format_agnostic():
         for imported, line in iter_imports(path):
             if imported.split(".")[0] == "yaml":
                 relative = path.relative_to(PACKAGE_ROOT).as_posix()
-                violations.append(f"src/parsercraft/{relative}:{line} imports yaml")
+                violations.append(f"src/lashon/{relative}:{line} imports yaml")
     assert not violations, "\n".join(violations)
 
 
@@ -240,7 +240,7 @@ def test_no_import_cycles_between_top_level_packages():
 def test_public_packages_declare_all():
     for name in sorted(CORE | APP | ADAPTERS):
         init = PACKAGE_ROOT / name / "__init__.py"
-        if not init.is_file():  # single-module core packages (parsercraft/ast.py)
+        if not init.is_file():  # single-module core packages (lashon/ast.py)
             init = PACKAGE_ROOT / f"{name}.py"
         tree = ast.parse(init.read_text(encoding="utf-8"))
         declared = any(
@@ -251,4 +251,4 @@ def test_public_packages_declare_all():
             )
             for node in tree.body
         )
-        assert declared, f"parsercraft/{name}/__init__.py should declare __all__"
+        assert declared, f"lashon/{name}/__init__.py should declare __all__"

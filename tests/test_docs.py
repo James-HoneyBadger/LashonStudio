@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from parsercraft.codegen import transpile_and_exec
-from parsercraft.parser import GrammarParser, PEGInterpreter
+from lashon.codegen import transpile_and_exec
+from lashon.parser import GrammarParser, PEGInterpreter
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"

@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a defect in ParserCraft
+about: Report a defect in Lashon
 title: '[BUG] '
 labels: bug
 assignees: ''
@@ -18,7 +18,7 @@ A clear and concise description of what the bug is.
 # 2. The source code being parsed
 # 3. The code that triggers the bug
 
-from parsercraft.parser import GrammarParser, PEGInterpreter
+from lashon.parser import GrammarParser, PEGInterpreter
 
 grammar = GrammarParser().parse("""
     # ... your grammar here ...
@@ -44,10 +44,10 @@ Traceback (most recent call last):
 
 | Item | Value |
 |---|---|
-| ParserCraft version | (run `parsercraft --version`) |
+| Lashon version | (run `lashon --version`) |
 | Python version | (run `python --version`) |
 | Operating system | (e.g. Ubuntu 22.04, macOS 14, Windows 11) |
-| Install method | `pip install -e .` / `pip install parsercraft` |
+| Install method | `pip install -e .` / `pip install lashon` |
 
 ## Additional Context
 

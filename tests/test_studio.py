@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from parsercraft.ide.studio import (
+from lashon.ide.studio import (
     GRAMMAR_FILENAME,
     PROJECT_FILENAME,
     LanguageStudio,
@@ -171,8 +171,8 @@ class TestProjectLifecycle:
 
 
 def _packaged_sample_root() -> Path:
-    import parsercraft.ide
-    return Path(parsercraft.ide.__file__).parent / "samples" / "aurora"
+    import lashon.ide
+    return Path(lashon.ide.__file__).parent / "samples" / "aurora"
 
 
 def test_packaged_sample_is_in_sync():

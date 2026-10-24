@@ -4,19 +4,19 @@
 #   scripts/build_native.sh            # release build
 #
 # Requires a Rust toolchain (cargo) and a C linker. The resulting extension is
-# optional: parsercraft works without it.
+# optional: lashon works without it.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-crate="$root/crates/parsercraft-core"
-target="$root/src/parsercraft/parser"
+crate="$root/crates/lashon-core"
+target="$root/src/lashon/parser"
 
 cargo build --release --manifest-path "$crate/Cargo.toml" --features python
 
 so=""
 for candidate in \
-  "$root/target/release/libparsercraft_core.so" \
-  "$crate/target/release/libparsercraft_core.so"; do
+  "$root/target/release/liblashon_core.so" \
+  "$crate/target/release/liblashon_core.so"; do
   if [[ -f "$candidate" ]]; then
     so="$candidate"
     break
@@ -26,5 +26,5 @@ if [[ -z "$so" ]]; then
   echo "error: build produced no shared library" >&2
   exit 1
 fi
-cp "$so" "$target/parsercraft_native.so"
-echo "installed $(basename "$so") -> $target/parsercraft_native.so"
+cp "$so" "$target/lashon_native.so"
+echo "installed $(basename "$so") -> $target/lashon_native.so"

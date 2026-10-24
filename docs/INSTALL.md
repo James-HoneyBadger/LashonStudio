@@ -1,4 +1,4 @@
-# ParserCraft — Installation & Setup
+# Lashon — Installation & Setup
 
 > Version 4.0.0 · Python 3.10+
 
@@ -38,13 +38,13 @@ No compiler or build tools are required. All code generation backends produce so
 Clone the repository and install in editable mode so changes to source files take effect immediately:
 
 ```bash
-git clone https://github.com/James-HoneyBadger/ParserCraft.git
-cd ParserCraft
+git clone https://github.com/James-HoneyBadger/LashonStudioStudio.git
+cd Lashon
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"     # includes pytest + ruff
 ```
 
-This installs the `parsercraft`, `parsercraft-ide`, `parsercraft-repl`, and
+This installs the `lashon`, `lashon-ide`, `lashon-repl`, and
 `codex` entry-point commands. `pip install -e .` (without `[dev]`) is enough to
 run the CLI, Studio, and REPL; the tests can also run from a checkout without
 installing because `pyproject.toml` sets `pythonpath = ["src"]`.
@@ -56,10 +56,10 @@ installing because `pyproject.toml` sets `pythonpath = ["src"]`.
 For a clean, non-editable install:
 
 ```bash
-pip install parsercraft
+pip install lashon
 ```
 
-> **Note:** Until ParserCraft is published on PyPI, use the editable install from the cloned repository.
+> **Note:** Until Lashon is published on PyPI, use the editable install from the cloned repository.
 
 ---
 
@@ -80,8 +80,8 @@ pip install -e .
 ### Using `conda`
 
 ```bash
-conda create -n parsercraft python=3.12
-conda activate parsercraft
+conda create -n lashon python=3.12
+conda activate lashon
 pip install -e .
 ```
 
@@ -126,24 +126,24 @@ brew install python-tk
 After installation, confirm the entry points are available:
 
 ```bash
-parsercraft --version
-# parsercraft 4.0.0
+lashon --version
+# lashon 4.0.0
 
-parsercraft list-presets
+lashon list-presets
 # Lists: python_like, js_like, ruby_like, ...
 
-parsercraft-repl --help
+lashon-repl --help
 # Usage information for the REPL launcher
 
-parsercraft-ide --help
+lashon-ide --help
 # Studio launcher (requires a display)
 ```
 
 Quick smoke test from Python:
 
 ```python
-from parsercraft.parser import GrammarParser, PEGInterpreter
-from parsercraft.codegen import transpile_and_exec
+from lashon.parser import GrammarParser, PEGInterpreter
+from lashon.codegen import transpile_and_exec
 
 grammar = GrammarParser().parse(
     'program <- statement+\n'
@@ -180,7 +180,7 @@ Run with coverage (requires `pytest-cov`):
 
 ```bash
 pip install pytest-cov
-python -m pytest tests/ --cov=src/parsercraft --cov-report=term-missing
+python -m pytest tests/ --cov=src/lashon --cov-report=term-missing
 ```
 
 ---
@@ -193,7 +193,7 @@ All features are fully supported. `tkinter` may require a separate package (see 
 
 ### macOS
 
-All features are supported. If `parsercraft-ide` fails to start with a display error, ensure you are not running in a headless terminal session.
+All features are supported. If `lashon-ide` fails to start with a display error, ensure you are not running in a headless terminal session.
 
 ```bash
 # Confirm tkinter is available
@@ -217,7 +217,7 @@ git pull
 pip install -e .   # Re-installs if entry points changed
 
 # PyPI install (production)
-pip install --upgrade parsercraft
+pip install --upgrade lashon
 ```
 
 ---
@@ -225,32 +225,32 @@ pip install --upgrade parsercraft
 ## Uninstalling
 
 ```bash
-pip uninstall parsercraft
+pip uninstall lashon
 ```
 
 If installed in an editable mode, also remove the `.egg-link` or `__editable__` entry:
 
 ```bash
-pip uninstall parsercraft
-rm -rf src/parsercraft.egg-info
+pip uninstall lashon
+rm -rf src/lashon.egg-info
 ```
 
 ---
 
 ## Troubleshooting
 
-### `parsercraft: command not found`
+### `lashon: command not found`
 
 The script directory is not on your `PATH`. Check:
 
 ```bash
-python -m parsercraft.tooling.cli --version   # always works
+python -m lashon.tooling.cli --version   # always works
 ```
 
 Or activate your virtual environment:
 ```bash
 source .venv/bin/activate
-parsercraft --version
+lashon --version
 ```
 
 ### `ModuleNotFoundError: No module named 'yaml'`
@@ -267,7 +267,7 @@ See [IDE extras](#optional-dependencies) above.
 
 ### `ImportError` on Python 3.9 or older
 
-ParserCraft uses `match` statements (Python 3.10+) and `X | Y` union types (Python 3.10+). Upgrade to Python 3.10 or later.
+Lashon uses `match` statements (Python 3.10+) and `X | Y` union types (Python 3.10+). Upgrade to Python 3.10 or later.
 
 ### Tests fail with `ImportError`
 
@@ -293,4 +293,4 @@ On headless servers, set a display or use a remote desktop. The REPL and CLI do 
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — more failure modes.
 - [docs/index.md](index.md) — the full documentation index.
 
-*For further help, open an issue at [github.com/James-HoneyBadger/ParserCraft](https://github.com/James-HoneyBadger/ParserCraft/issues).*
+*For further help, open an issue at [github.com/James-HoneyBadger/LashonStudio](https://github.com/James-HoneyBadger/LashonStudioStudio/issues).*

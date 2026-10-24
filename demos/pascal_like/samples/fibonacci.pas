@@ -1,4 +1,4 @@
-(* Fibonacci — Pascal-Like via ParserCraft
+(* Fibonacci — Pascal-Like via Lashon
    Iterative Fibonacci using a WHILE loop.
    Demonstrates: VAR block, WHILE..DO, BEGIN..END blocks, WriteLn *)
 

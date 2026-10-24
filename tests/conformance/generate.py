@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from parsercraft.parser.grammar import GrammarParser, PEGInterpreter
+from lashon.parser.grammar import GrammarParser, PEGInterpreter
 
 ROOT = Path(__file__).resolve().parents[2]
 

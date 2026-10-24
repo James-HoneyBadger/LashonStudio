@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from parsercraft.config import LanguageConfig, list_presets
+from lashon.config import LanguageConfig, list_presets
 
 EXAMPLE_DIR = Path(__file__).resolve().parent.parent / "configs" / "examples"
 EXAMPLE_CONFIGS = (

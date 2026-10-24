@@ -1,6 +1,6 @@
 """Tests for the type-system layers."""
 
-from parsercraft.types import (
+from lashon.types import (
     GenericsTypeChecker,
     ProtocolTypeChecker,
     Type,
@@ -102,7 +102,7 @@ class TestTypeCheckerRegression:
     """Regression tests for literal inference and diagnostic locations."""
 
     def test_numeric_literal_is_not_treated_as_variable(self):
-        from parsercraft.config import LanguageConfig
+        from lashon.config import LanguageConfig
 
         checker = TypeChecker(LanguageConfig())
         env = TypeEnvironment()
@@ -110,7 +110,7 @@ class TestTypeCheckerRegression:
         assert checker.check_expression("3.5", env) == Type.float()
 
     def test_type_mismatch_reports_real_line_and_file(self, tmp_path):
-        from parsercraft.config import LanguageConfig
+        from lashon.config import LanguageConfig
 
         source = tmp_path / "program.src"
         source.write_text("x: int = 1\ny: str = 2\n", encoding="utf-8")
@@ -124,7 +124,7 @@ class TestTypeCheckerRegression:
         assert "int to str" in errors[0].message
 
     def test_boolean_literals_infer_bool(self):
-        from parsercraft.config import LanguageConfig
+        from lashon.config import LanguageConfig
 
         checker = TypeChecker(LanguageConfig())
         env = TypeEnvironment()

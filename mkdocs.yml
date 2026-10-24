@@ -1,8 +1,8 @@
-site_name: ParserCraft
+site_name: Lashon Studio
 site_description: A framework for building programming languages with PEG grammars
-site_url: https://james-honeybadger.github.io/ParserCraft/
-repo_url: https://github.com/James-HoneyBadger/ParserCraft
-repo_name: James-HoneyBadger/ParserCraft
+site_url: https://james-honeybadger.github.io/LashonStudio/
+repo_url: https://github.com/James-HoneyBadger/LashonStudioStudio
+repo_name: James-HoneyBadger/LashonStudio
 edit_uri: edit/main/docs/
 
 theme:
@@ -44,7 +44,7 @@ nav:
   - Language design:
       - Language development: LANGUAGE_DEVELOPMENT.md
       - Grammar reference: GRAMMAR_REFERENCE.md
-  - Using ParserCraft:
+  - Using Lashon:
       - User guide: USER_GUIDE.md
       - Studio: STUDIO_GUIDE.md
       - CLI reference: CLI_REFERENCE.md

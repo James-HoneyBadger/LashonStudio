@@ -1,13 +1,13 @@
 # Rust core
 
-ParserCraft's engine also exists as a Rust workspace. It is not a wrapper: the
+Lashon's engine also exists as a Rust workspace. It is not a wrapper: the
 grammar parser, the PEG engine, the four code generators, the evaluator, the
 language server, and the debug adapter are all implemented in Rust and run
 without a Python interpreter.
 
 ```bash
-cargo build --workspace --release     # target/release/parsercraft-rs
-parsercraft-rs run projects/basic/grammar.peg projects/basic/samples/fizzbuzz.bas
+cargo build --workspace --release     # target/release/lashon-rs
+lashon-rs run projects/basic/grammar.peg projects/basic/samples/fizzbuzz.bas
 ```
 
 ---
@@ -16,11 +16,11 @@ parsercraft-rs run projects/basic/grammar.peg projects/basic/samples/fizzbuzz.ba
 
 ```
 Cargo.toml                     workspace
-crates/parsercraft-core/       grammar · engine · ast · eval · backends/{c,python,wasm,llvm}
-crates/parsercraft-cli/        parsercraft-rs binary: commands, lsp, dap
+crates/lashon-core/       grammar · engine · ast · eval · backends/{c,python,wasm,llvm}
+crates/lashon-cli/        lashon-rs binary: commands, lsp, dap
 ```
 
-`parsercraft-core` has no I/O dependencies. PyO3 bindings live behind the
+`lashon-core` has no I/O dependencies. PyO3 bindings live behind the
 optional `python` feature, so plain binaries link without `libpython`.
 
 ---
@@ -31,14 +31,14 @@ optional `python` feature, so plain binaries link without `libpython`.
 |---|---|
 | Parse PEG text notation | `parse_peg_text` |
 | Match source, build an AST | `parse_to_ast`, `parse_document` |
-| Execute a program | `eval::run_program`, `parsercraft-rs run` |
-| Emit C | `backends::c`, `parsercraft-rs codegen-c` |
-| Emit Python | `backends::python`, `parsercraft-rs codegen-py` |
-| Emit WebAssembly | `backends::wasm`, `parsercraft-rs codegen-wasm` |
-| Emit LLVM IR | `backends::llvm`, `parsercraft-rs codegen-llvm` |
-| Language server (stdio) | `parsercraft-rs lsp` |
-| Debug adapter (stdio) | `parsercraft-rs dap` |
-| Validate / lint / scaffold / demo | `parsercraft-rs validate`, `lint`, `init`, `demo` |
+| Execute a program | `eval::run_program`, `lashon-rs run` |
+| Emit C | `backends::c`, `lashon-rs codegen-c` |
+| Emit Python | `backends::python`, `lashon-rs codegen-py` |
+| Emit WebAssembly | `backends::wasm`, `lashon-rs codegen-wasm` |
+| Emit LLVM IR | `backends::llvm`, `lashon-rs codegen-llvm` |
+| Language server (stdio) | `lashon-rs lsp` |
+| Debug adapter (stdio) | `lashon-rs dap` |
+| Validate / lint / scaffold / demo | `lashon-rs validate`, `lint`, `init`, `demo` |
 
 Still Python: language configs (YAML), the Tkinter Studio, editor packaging,
 and the `config`/`format`/`package-*` CLI verbs.
@@ -79,7 +79,7 @@ scripts/build_native.sh
 ```
 
 ```python
-from parsercraft.parser import PEGInterpreter
+from lashon.parser import PEGInterpreter
 PEGInterpreter(grammar, backend="auto")    # Rust when built and in scope
 PEGInterpreter(grammar, backend="native")  # require it
 ```
@@ -125,5 +125,5 @@ materialisation) is the fast path for execution.
 ## See also
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — layering and package map.
-- [CLI_REFERENCE.md](CLI_REFERENCE.md#rust-front-end-parsercraft-rs) — every command.
+- [CLI_REFERENCE.md](CLI_REFERENCE.md#rust-front-end-lashon-rs) — every command.
 - [CODEGEN_GUIDE.md](CODEGEN_GUIDE.md) — backend details.

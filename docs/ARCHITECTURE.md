@@ -284,6 +284,7 @@ crates/parsercraft-cli/     `parsercraft-rs` binary
 | C backend | Rust (`backends/c.rs`), output verified against the Python backend | done |
 | Python backend | Rust (`backends/python.rs`), emit-only; output verified by execution | done |
 | WASM/LLVM backends | Python only | **not ported** |
+| Program execution (evaluator) | Rust (`eval.rs`), observer hook ready for debugging | done |
 | LSP server | Rust (`crates/parsercraft-cli/src/lsp.rs`), stdio + grammar intelligence | done |
 | CLI, DAP, Studio, packaging | Python only | **not ported** |
 

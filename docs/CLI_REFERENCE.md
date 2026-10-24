@@ -607,6 +607,7 @@ parsercraft-rs validate grammar.peg     # rules, start rule, undefined-rule warn
 parsercraft-rs rules grammar.peg        # one rule name per line
 parsercraft-rs ast grammar.peg prog.aur # pretty JSON AST
 parsercraft-rs parse grammar.peg prog.aur  # exit 0/1, prints the first error
+parsercraft-rs run grammar.peg prog.aur    # executes natively, prints program output
 parsercraft-rs codegen-c grammar.peg prog.aur -o prog.c [--compile] [--run]
 parsercraft-rs codegen-py grammar.peg prog.aur -o prog.py [--run]
 parsercraft-rs version

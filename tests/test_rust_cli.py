@@ -370,3 +370,26 @@ def test_lsp_grammar_intelligence(lsp):
     labels = [item["label"] for item in completion["items"]]
     assert "program" in labels
     assert "IDENT" in labels
+
+
+@pytest.mark.parametrize("sample", ["hello.aur", "fibonacci.aur", "fizzbuzz.aur"])
+def test_rust_runner_matches_python_pipeline(sample):
+    """The Rust evaluator executes programs with no Python involved."""
+    source = SAMPLES / sample
+    completed = run("run", str(GRAMMAR), str(source))
+    assert completed.returncode == 0, completed.stderr
+
+    import io
+    from contextlib import redirect_stdout
+
+    from parsercraft.codegen.python_transpiler import PythonTranspiler
+    from parsercraft.parser import GrammarParser, PEGInterpreter
+
+    grammar = GrammarParser().parse(GRAMMAR.read_text(encoding="utf-8"))
+    ast = PEGInterpreter(grammar).parse(source.read_text(encoding="utf-8"))
+    code = PythonTranspiler().transpile(ast)
+    buffer = io.StringIO()
+    with redirect_stdout(buffer):
+        exec(compile(code, str(source), "exec"), {"__name__": "__main__"})  # noqa: S102
+
+    assert completed.stdout == buffer.getvalue()

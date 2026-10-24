@@ -9,12 +9,14 @@
 
 pub mod ast;
 pub mod backends;
+pub mod eval;
 pub mod engine;
 pub mod grammar;
 
 pub use grammar::{parse_peg_text, Grammar, Pattern, Rule};
 pub use ast::Ast;
 pub use engine::{parse_document, parse_to_ast};
+pub use eval::{run_program, Machine, Observer, Step, Value};
 
 /// Generate C source for a program.
 pub fn generate_c(grammar_text: &str, source: &str) -> Result<String, String> {

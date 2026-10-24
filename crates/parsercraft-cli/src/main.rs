@@ -10,7 +10,7 @@ use std::process::ExitCode;
 mod lsp;
 
 use parsercraft_core::{
-    generate_c, generate_llvm, generate_python, generate_wasm, parse_document,
+    eval::run_program, generate_c, generate_llvm, generate_python, generate_wasm, parse_document,
     parse_peg_text,
 };
 
@@ -22,6 +22,7 @@ usage:
   parsercraft-rs rules <grammar.peg>
   parsercraft-rs ast <grammar.peg> <program>
   parsercraft-rs parse <grammar.peg> <program>
+  parsercraft-rs run <grammar.peg> <program>
   parsercraft-rs codegen-c <grammar.peg> <program> [-o out.c] [--compile] [--run]
   parsercraft-rs codegen-py <grammar.peg> <program> [-o out.py] [--run]
   parsercraft-rs codegen-wasm <grammar.peg> <program> [-o out.wat]
@@ -43,6 +44,7 @@ fn main() -> ExitCode {
         "rules" => rules(args.get(1)),
         "ast" => ast(args.get(1), args.get(2)),
         "parse" => parse(args.get(1), args.get(2)),
+        "run" => run_program_cli(args.get(1), args.get(2)),
         "codegen-c" => codegen_c(&args[1..]),
         "codegen-py" => codegen_py(&args[1..]),
         "codegen-wasm" => codegen_wasm(&args[1..]),
@@ -388,4 +390,15 @@ fn lsp_command(args: &[String]) -> Result<(), String> {
         index += 1;
     }
     lsp::run(grammar.as_ref())
+}
+
+fn run_program_cli(grammar_path: Option<&String>, program_path: Option<&String>) -> Result<(), String> {
+    let grammar_text = read(grammar_path, "grammar")?;
+    let source = read(program_path, "program")?;
+    let grammar = parse_peg_text(&grammar_text)?;
+    let ast = parsercraft_core::parse_to_ast(&grammar, &source)
+        .map_err(|(message, _, _)| message)?;
+    let output = run_program(&ast).map_err(|error| error.to_string())?;
+    print!("{output}");
+    Ok(())
 }

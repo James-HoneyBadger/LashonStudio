@@ -287,7 +287,8 @@ crates/parsercraft-cli/     `parsercraft-rs` binary
 | Program execution (evaluator) | Rust (`eval.rs`), observer hook ready for debugging | done |
 | Debug adapter (DAP) | Rust (`crates/parsercraft-cli/src/dap.rs`) over the native evaluator | done |
 | LSP server | Rust (`crates/parsercraft-cli/src/lsp.rs`), stdio + grammar intelligence | done |
-| CLI commands, Studio, packaging | Python only | **not ported** |
+| Rust CLI: validate, rules, ast, parse, run, codegen-*, lsp, dap, init, lint, demo | Rust | done |
+| Python-only CLI verbs (`config`, `format`, `package-*`), Studio, packaging | Python | **not ported** |
 
 That split is deliberate: the core is where a native implementation pays for
 itself, and everything above it is I/O and glue that gains little from Rust.

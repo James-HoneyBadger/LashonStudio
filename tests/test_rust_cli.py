@@ -471,3 +471,62 @@ def test_dap_breakpoint_variables_and_continue(tmp_path):
         request("disconnect", {})
     finally:
         process.wait(timeout=5)
+
+
+def test_demo_walks_the_pipeline():
+    completed = run("demo")
+    assert completed.returncode == 0, completed.stderr
+    for stage in ("grammar", "ast", "python", "c", "wasm", "llvm", "run"):
+        assert stage in completed.stdout
+
+
+def test_init_scaffolds_a_runnable_project(tmp_path):
+    completed = run("init", "Pocket Calc", "-t", "calculator", "-d", str(tmp_path))
+    assert completed.returncode == 0, completed.stderr
+
+    root = tmp_path / "pocket-calc"
+    assert (root / "grammar.peg").is_file()
+    assert (root / "samples" / "hello.aur").is_file()
+    assert (root / "README.md").is_file()
+
+    executed = run(
+        "run", str(root / "grammar.peg"), str(root / "samples" / "hello.aur")
+    )
+    assert executed.returncode == 0, executed.stderr
+    assert executed.stdout.split() == ["84", "38"]
+
+
+def test_init_refuses_to_overwrite_without_force(tmp_path):
+    assert run("init", "Tiny", "-d", str(tmp_path)).returncode == 0
+    second = run("init", "Tiny", "-d", str(tmp_path))
+    assert second.returncode == 1
+    assert "already exists" in second.stderr
+
+    forced = run("init", "Tiny", "-d", str(tmp_path), "--force")
+    assert forced.returncode == 0
+
+
+def test_lint_reports_problems_and_exit_codes(tmp_path):
+    healthy = run("lint", str(GRAMMAR))
+    assert healthy.returncode == 0
+    assert "no problems" in healthy.stdout
+
+    broken = tmp_path / "broken.peg"
+    broken.write_text("program <- missing\n", encoding="utf-8")
+    failed = run("lint", str(broken))
+    assert failed.returncode == 1
+    assert "undefined rule 'missing'" in failed.stdout
+
+    as_json = run("lint", str(broken), "--json")
+    assert as_json.returncode == 1
+    payload = json.loads(as_json.stdout)
+    assert payload["ok"] is False
+    assert payload["problems"]
+
+
+def test_lint_checks_a_source_file(tmp_path):
+    program = tmp_path / "bad.aur"
+    program.write_text("x = ;\n", encoding="utf-8")
+    completed = run("lint", str(GRAMMAR), "--source", str(program))
+    assert completed.returncode == 1
+    assert "line 1" in completed.stdout

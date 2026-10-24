@@ -9,6 +9,7 @@ use std::process::ExitCode;
 
 mod dap;
 mod lsp;
+mod scaffold;
 
 use parsercraft_core::{
     eval::run_program, generate_c, generate_llvm, generate_python, generate_wasm, parse_document,
@@ -30,6 +31,9 @@ usage:
   parsercraft-rs codegen-llvm <grammar.peg> <program> [-o out.ll] [--compile] [--run]
   parsercraft-rs lsp [--grammar grammar.peg]
   parsercraft-rs dap --grammar grammar.peg --program prog.aur
+  parsercraft-rs init <name> [-d DIR] [-t aurora|calculator|minimal] [--force]
+  parsercraft-rs lint <grammar.peg> [--source prog.aur] [--json]
+  parsercraft-rs demo
   parsercraft-rs version
 ";
 
@@ -53,6 +57,9 @@ fn main() -> ExitCode {
         "codegen-llvm" => codegen_llvm(&args[1..]),
         "lsp" => lsp_command(&args[1..]),
         "dap" => dap_command(&args[1..]),
+        "init" => init_command(&args[1..]),
+        "lint" => lint_command(&args[1..]),
+        "demo" => scaffold::demo(),
         "help" | "--help" | "-h" | "" => {
             print!("{USAGE}");
             Ok(())
@@ -63,7 +70,9 @@ fn main() -> ExitCode {
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(message) => {
-            eprintln!("{message}");
+            if !message.is_empty() {
+                eprintln!("{message}");
+            }
             ExitCode::FAILURE
         }
     }
@@ -428,4 +437,106 @@ fn dap_command(args: &[String]) -> Result<(), String> {
         &grammar.ok_or("missing --grammar")?,
         &program.ok_or("missing --program")?,
     )
+}
+
+fn init_command(args: &[String]) -> Result<(), String> {
+    let mut name: Option<String> = None;
+    let mut directory = std::path::PathBuf::from(".");
+    let mut template = "aurora".to_string();
+    let mut force = false;
+
+    let mut index = 0;
+    while index < args.len() {
+        match args[index].as_str() {
+            "-d" | "--directory" => {
+                index += 1;
+                directory = std::path::PathBuf::from(args.get(index).ok_or("missing directory")?);
+            }
+            "-t" | "--template" => {
+                index += 1;
+                template = args.get(index).ok_or("missing template")?.clone();
+            }
+            "--force" => force = true,
+            other if other.starts_with('-') => {
+                return Err(format!("unknown option '{other}'"))
+            }
+            other if name.is_none() => name = Some(other.to_string()),
+            other => return Err(format!("unexpected argument '{other}'")),
+        }
+        index += 1;
+    }
+
+    let name = name.ok_or("missing project name")?;
+    let root = scaffold::init(&name, &directory, &template, force)?;
+    println!("created {} (template: {template})", root.display());
+    println!("  grammar.peg");
+    println!("  samples/hello.aur");
+    println!("  README.md");
+    println!("
+next:");
+    println!("  parsercraft-rs run {}/grammar.peg {}/samples/hello.aur", root.display(), root.display());
+    Ok(())
+}
+
+fn lint_command(args: &[String]) -> Result<(), String> {
+    let mut grammar_path: Option<String> = None;
+    let mut source_path: Option<String> = None;
+    let mut as_json = false;
+
+    let mut index = 0;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--source" | "-s" => {
+                index += 1;
+                source_path = args.get(index).cloned();
+            }
+            "--json" => as_json = true,
+            other if other.starts_with('-') => {
+                return Err(format!("unknown option '{other}'"))
+            }
+            other => grammar_path = Some(other.to_string()),
+        }
+        index += 1;
+    }
+
+    let grammar_path = grammar_path.ok_or("missing grammar path")?;
+    let grammar_text = std::fs::read_to_string(&grammar_path)
+        .map_err(|error| format!("cannot read {grammar_path}: {error}"))?;
+    let grammar = parse_peg_text(&grammar_text)?;
+
+    let mut problems: Vec<String> = grammar
+        .undefined_references()
+        .into_iter()
+        .map(|(owner, missing)| format!("rule '{owner}' references undefined rule '{missing}'"))
+        .collect();
+
+    if let Some(path) = source_path {
+        let source = std::fs::read_to_string(&path)
+            .map_err(|error| format!("cannot read {path}: {error}"))?;
+        if let Err((message, _, _)) = parsercraft_core::parse_to_ast(&grammar, &source) {
+            problems.push(message);
+        }
+    }
+
+    if as_json {
+        let document = serde_json::json!({
+            "ok": problems.is_empty(),
+            "rules": grammar.rules.len(),
+            "problems": problems,
+        });
+        println!("{document}");
+    } else if problems.is_empty() {
+        println!("{}: {} rules, no problems", grammar_path, grammar.rules.len());
+    } else {
+        println!("{}: {} rule(s)", grammar_path, grammar.rules.len());
+        for problem in &problems {
+            println!("  error: {problem}");
+        }
+    }
+
+    if problems.is_empty() {
+        Ok(())
+    } else {
+        Err(String::new())
+    }
 }

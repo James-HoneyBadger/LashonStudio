@@ -393,3 +393,81 @@ def test_rust_runner_matches_python_pipeline(sample):
         exec(compile(code, str(source), "exec"), {"__name__": "__main__"})  # noqa: S102
 
     assert completed.stdout == buffer.getvalue()
+
+
+def test_dap_breakpoint_variables_and_continue(tmp_path):
+    program = tmp_path / "loop.aur"
+    program.write_text(
+        "i = 0 ;\nx = 2 ;\nwhile i < 2 {\n  i = i + 1 ;\n  print i ;\n}\n",
+        encoding="utf-8",
+    )
+    process = subprocess.Popen(
+        [str(BINARY), "dap", "--grammar", str(GRAMMAR), "--program", str(program)],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    sequence = 0
+
+    def send(command, arguments=None):
+        nonlocal sequence
+        sequence += 1
+        message = {"seq": sequence, "type": "request", "command": command}
+        if arguments is not None:
+            message["arguments"] = arguments
+        body = json.dumps(message).encode()
+        process.stdin.write(f"Content-Length: {len(body)}\r\n\r\n".encode() + body)
+        process.stdin.flush()
+        return sequence
+
+    def read():
+        headers = {}
+        while True:
+            line = process.stdout.readline()
+            assert line, "adapter closed the connection"
+            if line in (b"\r\n", b"\n"):
+                break
+            key, _, value = line.decode().partition(":")
+            headers[key.lower()] = value.strip()
+        return json.loads(process.stdout.read(int(headers["content-length"])))
+
+    def request(command, arguments=None):
+        seq = send(command, arguments)
+        while True:
+            message = read()
+            if message.get("type") == "response" and message.get("request_seq") == seq:
+                return message
+
+    try:
+        capabilities = request("initialize", {"adapterID": "parsercraft"})
+        assert capabilities["success"] is True
+        assert capabilities["body"]["supportsConfigurationDoneRequest"] is True
+
+        verified = request(
+            "setBreakpoints",
+            {
+                "source": {"path": str(program)},
+                "breakpoints": [{"line": 4}],
+            },
+        )
+        assert verified["body"]["breakpoints"][0]["verified"] is True
+
+        request("configurationDone", {})
+        stopped = read()
+        assert stopped["event"] == "stopped"
+
+        stack = request("stackTrace", {"threadId": 1})
+        assert stack["body"]["stackFrames"][0]["line"] == 4
+
+        request("scopes", {"frameId": 0})
+        variables = request("variables", {"variablesReference": 1})
+        values = {v["name"]: v["value"] for v in variables["body"]["variables"]}
+        assert values["i"] == "0"
+
+        request("continue", {"threadId": 1})
+        stopped_again = read()
+        assert stopped_again["event"] == "stopped"
+
+        request("disconnect", {})
+    finally:
+        process.wait(timeout=5)

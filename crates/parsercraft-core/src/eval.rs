@@ -204,24 +204,10 @@ impl<'a> Machine<'a> {
         locals: &mut HashMap<String, Value>,
     ) -> Result<Flow, RuntimeError> {
         self.tick()?;
-        if matches!(
-            node.node_type.as_str(),
-            "statement"
-                | "Statement"
-                | "assignment"
-                | "Assignment"
-                | "print_stmt"
-                | "PrintStmt"
-                | "return_stmt"
-                | "ReturnStmt"
-                | "if_stmt"
-                | "IfStmt"
-                | "while_stmt"
-                | "WhileStmt"
-                | "expr_stmt"
-                | "ExprStmt"
-        ) && node.line > 0
-        {
+        // One stop per source statement: the `statement` rule node is the
+        // outermost wrapper, so notifying only there avoids duplicate pauses
+        // when its children share the same line.
+        if matches!(node.node_type.as_str(), "statement" | "Statement") && node.line > 0 {
             if let Some(observer) = self.observer.as_mut() {
                 let frame = Frame {
                     function: "main",

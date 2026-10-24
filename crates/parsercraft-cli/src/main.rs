@@ -7,6 +7,7 @@
 use std::path::Path;
 use std::process::ExitCode;
 
+mod dap;
 mod lsp;
 
 use parsercraft_core::{
@@ -28,6 +29,7 @@ usage:
   parsercraft-rs codegen-wasm <grammar.peg> <program> [-o out.wat]
   parsercraft-rs codegen-llvm <grammar.peg> <program> [-o out.ll] [--compile] [--run]
   parsercraft-rs lsp [--grammar grammar.peg]
+  parsercraft-rs dap --grammar grammar.peg --program prog.aur
   parsercraft-rs version
 ";
 
@@ -50,6 +52,7 @@ fn main() -> ExitCode {
         "codegen-wasm" => codegen_wasm(&args[1..]),
         "codegen-llvm" => codegen_llvm(&args[1..]),
         "lsp" => lsp_command(&args[1..]),
+        "dap" => dap_command(&args[1..]),
         "help" | "--help" | "-h" | "" => {
             print!("{USAGE}");
             Ok(())
@@ -401,4 +404,28 @@ fn run_program_cli(grammar_path: Option<&String>, program_path: Option<&String>)
     let output = run_program(&ast).map_err(|error| error.to_string())?;
     print!("{output}");
     Ok(())
+}
+
+fn dap_command(args: &[String]) -> Result<(), String> {
+    let mut grammar: Option<String> = None;
+    let mut program: Option<String> = None;
+    let mut index = 0;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--grammar" | "-g" => {
+                index += 1;
+                grammar = args.get(index).cloned();
+            }
+            "--program" | "-p" => {
+                index += 1;
+                program = args.get(index).cloned();
+            }
+            other => return Err(format!("unknown option '{other}'")),
+        }
+        index += 1;
+    }
+    dap::run(
+        &grammar.ok_or("missing --grammar")?,
+        &program.ok_or("missing --program")?,
+    )
 }

@@ -173,14 +173,17 @@ class PythonTranspiler(StatementEmitter, ControlFlowEmitter, ExpressionEmitter):
             result = runtime + "\n\n" + result
 
         # Auto-prepend imports for modules referenced by generated code
-        if self._imports_needed:
-            imports = "\n".join(
-                f"import {m}" for m in sorted(self._imports_needed))
+        modules = sorted(m for m in self._imports_needed if m != "turtle")
+        if modules:
+            imports = "\n".join(f"import {m}" for m in modules)
             result = imports + "\n\n" + result
 
-        # Inject CGA color helper when turtle is used
+        # Turtle statements draw on the host's canvas when there is one, and on
+        # a headless recorder otherwise, so a program never needs a screen.
         if "turtle" in self._imports_needed:
-            cga_helper = (
+            header = (
+                "from lashon.runtime.graphics import attach as _lashon_attach\n"
+                "turtle = _lashon_attach()\n"
                 "_CGA_PALETTE = {\n"
                 "    0: '#000000', 1: '#0000AA',"
                 " 2: '#00AA00', 3: '#00AAAA',\n"
@@ -196,8 +199,7 @@ class PythonTranspiler(StatementEmitter, ControlFlowEmitter, ExpressionEmitter):
                 " return _CGA_PALETTE.get(c, '#AAAAAA')\n"
                 "    return c\n"
             )
-            result_parts = result.split("\n", 1)
-            result = result_parts[0] + "\n" + cga_helper + result_parts[1]
+            result = header + "\n" + result
 
         if self.options.wrap_in_main:
             # Re-indent everything under if __name__
@@ -277,15 +279,23 @@ def transpile_to_python(ast: SourceAST,
 def transpile_and_exec(ast: SourceAST,
                        keyword_map: Optional[Dict[str, str]] = None,
                        function_map: Optional[Dict[str, str]] = None,
-                       globals_dict: Optional[Dict[str, Any]] = None
+                       globals_dict: Optional[Dict[str, Any]] = None,
+                       graphics: Any = None
                        ) -> Dict[str, Any]:
     """Transpile and execute, returning the user-visible namespace.
 
     Dunder entries injected by ``exec`` (notably ``__builtins__``) are
     filtered out so the result only contains program-defined names plus
     anything supplied via ``globals_dict``.
+
+    Pass a :class:`lashon.runtime.graphics.Graphics` as ``graphics`` to
+    capture whatever the program draws.
     """
     code = transpile_to_python(ast, keyword_map, function_map)
     ns = globals_dict if globals_dict is not None else {}
-    exec(code, ns)  # noqa: S102  # pylint: disable=exec-used
+    if graphics is None:
+        exec(code, ns)  # noqa: S102  # pylint: disable=exec-used
+    else:
+        with graphics.active():
+            exec(code, ns)  # noqa: S102  # pylint: disable=exec-used
     return {key: value for key, value in ns.items() if not key.startswith("__")}

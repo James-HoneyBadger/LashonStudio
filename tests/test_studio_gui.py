@@ -229,3 +229,36 @@ def test_theme_menu_persists_the_choice(tmp_path, monkeypatch):
     finally:
         application.destroy()
         studio_app._apply_palette(theme.DEFAULT)
+
+
+LOGO_ROOT = Path(__file__).resolve().parent.parent / "projects" / "logo"
+
+
+def test_canvas_tab_paints_what_the_program_draws():
+    application = LashonIDE(str(LOGO_ROOT))
+    try:
+        application.update()
+        assert application.output_tabs.tab(
+            application.output_tabs.index("end") - 1, "text"
+        ) == "AST"
+        application.source_editor.set_text(
+            (LOGO_ROOT / "samples" / "spiral.logo").read_text(encoding="utf-8")
+        )
+        application._run_program()
+        application.update()
+
+        assert application.studio.last_graphics.strokes() > 10
+        assert len(application.graphics_canvas.find_all()) > 10
+        selected = application.output_tabs.tab(
+            application.output_tabs.select(), "text"
+        )
+        assert selected == "Canvas"
+    finally:
+        application.destroy()
+
+
+def test_canvas_stays_empty_for_text_programs(app):
+    app._run_program()
+    app.update()
+    assert app.studio.last_graphics.is_empty()
+    assert app.output_tabs.tab(app.output_tabs.select(), "text") == "Console"

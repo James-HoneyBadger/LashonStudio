@@ -29,6 +29,7 @@ not runnable programs.
 | Look up a CLI command | [CLI_REFERENCE.md](CLI_REFERENCE.md) |
 | Understand a backend | [CODEGEN_GUIDE.md](CODEGEN_GUIDE.md) |
 | Use the REPL, stdlib, FFI, or modules | [RUNTIME_GUIDE.md](RUNTIME_GUIDE.md) |
+| Give a language a drawing canvas | [GRAPHICS.md](GRAPHICS.md) |
 | Understand types, generics, protocols | [TYPE_SYSTEM.md](TYPE_SYSTEM.md) |
 | Integrate an editor or debugger | [LSP_AND_DEBUGGING.md](LSP_AND_DEBUGGING.md) |
 | Ship a language or extension | [PACKAGING.md](PACKAGING.md) |

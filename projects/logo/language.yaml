@@ -1,0 +1,42 @@
+name: Logo
+version: "1.0.0"
+description: "A drawing language: turtle graphics rendered on the Studio canvas."
+author: "Lashon Studio"
+target_interpreter: python
+source_extension: ".logo"
+
+keywords:
+  repeat: "for"
+  forward: "turtle.forward"
+  back: "turtle.backward"
+  left: "turtle.left"
+  right: "turtle.right"
+  penup: "turtle.penup"
+  pendown: "turtle.pendown"
+  home: "turtle.home"
+  circle: "turtle.circle"
+  cls: "turtle.clear"
+  say: "print"
+
+syntax_options:
+  single_line_comment: "//"
+  require_semicolons: true
+  statement_terminator: ";"
+
+grammar:
+  start: program
+  skip_whitespace: true
+  comments:
+    - "//.*"
+  rules:
+    program: "statement+"
+    statement: "repeat_stmt / turtle_move / turtle_turn / turtle_pen / turtle_pos / cls_stmt / color_stmt / say_stmt"
+    repeat_stmt: "'REPEAT' NUMBER statement* 'END'"
+    turtle_move: "('FORWARD' / 'FD' / 'BACK' / 'BK') expr ';'"
+    turtle_turn: "('LEFT' / 'LT' / 'RIGHT' / 'RT') expr ';'"
+    turtle_pen: "('PENUP' / 'PU' / 'PENDOWN' / 'PD' / 'HOME') ';'"
+    turtle_pos: "('SETXY' expr ',' expr / 'SETCOLOR' expr / 'CIRCLE' expr) ';'"
+    cls_stmt: "'CLS' ';'"
+    color_stmt: "'COLOR' expr ';'"
+    say_stmt: "('SAY' / 'PRINT') STRING ';'"
+    expr: "NUMBER"

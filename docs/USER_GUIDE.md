@@ -293,6 +293,7 @@ Command sets differ (`:` for grammar, `.` for config):
 | `:backends` | — | C / WASM / LLVM line counts for the last AST |
 | `:load FILE` / `:save FILE` | `.save FILE` | read or write a source file |
 | `:time` | `.time` | toggle per-line timing |
+| `:canvas` | — | drawing surface: `:canvas`, `ascii`, `save FILE`, `show`, `clear` |
 | `:vars` / `:reset` | `.vars` / `.clear` | inspect or clear the namespace |
 
 Both REPLs keep history between sessions, and the grammar REPL completes

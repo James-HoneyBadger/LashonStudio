@@ -1,0 +1,19 @@
+// Logo — a drawing language built with Lashon Studio.
+//
+// The rule names below are the contract with the Python backend: a rule named
+// turtle_move becomes turtle.forward(...), turtle_turn becomes turtle.left(...)
+// and so on. Rename them and the drawing stops.
+
+program     <- statement+
+statement   <- repeat_stmt / turtle_move / turtle_turn / turtle_pen / turtle_pos / cls_stmt / color_stmt / say_stmt
+
+repeat_stmt <- 'REPEAT' NUMBER statement* 'END'
+turtle_move <- ('FORWARD' / 'FD' / 'BACK' / 'BK') expr ';'
+turtle_turn <- ('LEFT' / 'LT' / 'RIGHT' / 'RT') expr ';'
+turtle_pen  <- ('PENUP' / 'PU' / 'PENDOWN' / 'PD' / 'HOME') ';'
+turtle_pos  <- ('SETXY' expr ',' expr / 'SETCOLOR' expr / 'CIRCLE' expr) ';'
+cls_stmt    <- 'CLS' ';'
+color_stmt  <- 'COLOR' expr ';'
+say_stmt    <- ('SAY' / 'PRINT') STRING ';'
+
+expr        <- NUMBER

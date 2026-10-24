@@ -277,6 +277,7 @@ readiness checks.
 ```bash
 lashon run FILE [--config CONFIG | --grammar GRAMMAR]
                      [--json] [--show-python] [--watch]
+                     [--canvas OUT.svg] [--ascii-canvas]
 ```
 
 Parses `FILE` with the supplied grammar and executes the transpiled Python.
@@ -285,11 +286,13 @@ Parses `FILE` with the supplied grammar and executes the transpiled Python.
 |---|---|
 | `--config`, `-c` | language config whose `grammar.rules` defines the language |
 | `--grammar`, `-g` | PEG file; overrides `--config` |
-| `--json` | print `{"variables": {...}}` to stdout; program output goes to stderr |
+| `--json` | print `{"variables": {...}, "canvas": {...}}` to stdout; program output goes to stderr |
 | `--show-python` | print generated Python to stderr before running |
 | `--sandbox` | run in an isolated subprocess with CPU/memory/file limits (POSIX) |
 | `--sandbox-timeout` | wall-clock timeout for sandbox mode (default 10s) |
 | `--watch` | re-run whenever the program, config, or grammar changes |
+| `--canvas FILE` | write whatever the program drew to an SVG file |
+| `--ascii-canvas` | print a text preview of the drawing to stderr |
 
 A grammar is required; without `--config`/`--grammar` the command exits 1.
 Exit code is 1 for parse, IO, and runtime errors.
@@ -302,6 +305,10 @@ lashon run program.aur --grammar grammar.peg --json
 # {"variables": {"x": 21, "y": 42}}
 
 lashon run program.aur --config lang.yaml --sandbox
+
+# drawing languages (see GRAPHICS.md)
+lashon run projects/logo/samples/spiral.logo \
+  --config projects/logo/language.yaml --canvas spiral.svg
 ```
 
 `--watch` polls file modification times every 0.5 s and re-runs on change;
@@ -329,7 +336,9 @@ Command sets differ:
 - **Config-driven REPL:** `.help`, `.info`, `.keywords`, `.functions`, `.vars`,
   `.clear`, `.debug`, `.time`, `.save FILE`, `.exit`.
 - **Grammar REPL (`--grammar`):** `:help`, `:ast`, `:py`, `:vars`, `:grammar`,
-  `:load`, `:save`, `:doc RULE`, `:backends`, `:time`, `:reset`, `:quit`.
+  `:load`, `:save`, `:doc RULE`, `:backends`, `:time`, `:reset`, `:quit`,
+  `:canvas` (`:canvas ascii|save FILE|show|clear`). `lashon-repl --canvas`
+  opens a drawing window beside the prompt.
 
 Both REPLs persist history (`~/.lashon_repl_history`,
 `~/.lashon_history`). The grammar REPL also offers tab completion for

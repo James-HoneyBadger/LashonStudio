@@ -1,0 +1,11 @@
+// circles.logo — circles centred ahead of the pen
+CLS ;
+COLOR 14 ;
+CIRCLE 60 ;
+SETXY 0 , 0 ;
+COLOR 12 ;
+CIRCLE 40 ;
+SETXY 0 , 0 ;
+COLOR 9 ;
+CIRCLE 20 ;
+SAY "circles" ;

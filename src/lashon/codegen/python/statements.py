@@ -312,8 +312,9 @@ class StatementEmitter:
             self._line(f"turtle.{func}({args})")
 
     def _emit_cls(self, _node: SourceAST) -> None:
-        """CLS → clear screen"""
-        self._line("# CLS (clear screen)")
+        """CLS → clear the canvas"""
+        self._imports_needed.add("turtle")
+        self._line("turtle.clear()")
 
     def _emit_color(self, node: SourceAST) -> None:
         """COLOR expr → set turtle pen color via CGA palette."""

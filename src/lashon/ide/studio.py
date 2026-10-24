@@ -35,10 +35,14 @@ from lashon.parser.grammar import (
     PEGNodeType,
     SourceAST,
 )
+from lashon.runtime.graphics import Graphics, capture
 
 PROJECT_FILENAME = "language.yaml"
 GRAMMAR_FILENAME = "grammar.peg"
 SAMPLES_DIR = "samples"
+#: Extensions that never hold a sample program.
+NON_SAMPLE_EXTENSIONS = (".yaml", ".yml", ".json", ".peg", ".md", ".txt")
+#: Fallback list, used when a project does not declare ``source_extension``.
 SAMPLE_EXTENSIONS = (".aur", ".lang", ".src", ".pcr")
 
 _STARTER_RULES: Dict[str, str] = {
@@ -243,30 +247,55 @@ class StudioProject:
         return data
 
     @staticmethod
-    def _find_sample(root: Path) -> Optional[Path]:
-        samples_dir = root / SAMPLES_DIR
+    def _collect_samples(samples_dir: Path,
+                         extension: Optional[str] = None) -> List[Path]:
+        """Sample programs in ``samples_dir``.
+
+        A project may name its own ``source_extension`` (``.logo``, ``.bas``);
+        without one, every file that is not configuration or prose counts.
+        """
         if not samples_dir.is_dir():
-            return None
-        samples = sorted(
-            p for p in samples_dir.iterdir()
-            if p.is_file() and p.suffix.lower() in SAMPLE_EXTENSIONS
-        )
+            return []
+        files = [p for p in samples_dir.iterdir() if p.is_file()]
+        if extension:
+            wanted = "." + extension.lstrip(".").lower()
+            chosen = [p for p in files if p.suffix.lower() == wanted]
+        else:
+            chosen = [
+                p for p in files
+                if p.suffix.lower() in SAMPLE_EXTENSIONS
+            ]
+            if not chosen:
+                chosen = [
+                    p for p in files
+                    if p.suffix.lower() and
+                    p.suffix.lower() not in NON_SAMPLE_EXTENSIONS
+                ]
+        return sorted(chosen)
+
+    @staticmethod
+    def _find_sample(root: Path) -> Optional[Path]:
+        extension = None
+        config_path = root / PROJECT_FILENAME
+        if config_path.is_file():
+            try:
+                data = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+            except (OSError, yaml.YAMLError):
+                data = None
+            if isinstance(data, dict):
+                extension = data.get("source_extension")
+        samples = StudioProject._collect_samples(root / SAMPLES_DIR, extension)
         if not samples:
             return None
         for sample in samples:
-            if sample.stem.lower() == "hello":
+            if sample.stem.lower() in ("hello", "main"):
                 return sample
         return samples[0]
 
     def sample_files(self) -> List[Path]:
         """List all sample programs in the project."""
-        samples_dir = self.root / SAMPLES_DIR
-        if not samples_dir.is_dir():
-            return []
-        return sorted(
-            p for p in samples_dir.iterdir()
-            if p.is_file() and p.suffix.lower() in SAMPLE_EXTENSIONS
-        )
+        extension = self.config.get("source_extension")
+        return self._collect_samples(self.root / SAMPLES_DIR, extension)
 
     def language_config(self) -> LanguageConfig:
         """Build a :class:`LanguageConfig` from the project config."""
@@ -332,6 +361,7 @@ class LanguageStudio:
         self.interpreter: Optional[PEGInterpreter] = None
         self.current_source: str = ""
         self.last_python: str = ""
+        self.last_graphics: Graphics = Graphics()
         self._grammar_dirty = True
 
     # -- project lifecycle -------------------------------------------------
@@ -584,8 +614,11 @@ class LanguageStudio:
         namespace: Dict[str, Any] = {}
         stdout = io.StringIO()
         stderr = io.StringIO()
+        graphics = Graphics()
+        self.last_graphics = graphics
         try:
-            with redirect_stdout(stdout), redirect_stderr(stderr):
+            with redirect_stdout(stdout), redirect_stderr(stderr), \
+                    capture(graphics):
                 exec(python_code, namespace)  # noqa: S102
         except Exception as error:
             elapsed = (time.perf_counter() - start) * 1000

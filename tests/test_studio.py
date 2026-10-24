@@ -263,3 +263,26 @@ def test_palette_can_be_switched_before_building_widgets(tmp_path, monkeypatch):
         assert studio_app.PALETTE.name == "dark"
     finally:
         studio_app._apply_palette(theme.DEFAULT)
+
+
+LOGO_ROOT = Path(__file__).resolve().parent.parent / "projects" / "logo"
+
+
+def test_project_can_declare_its_own_sample_extension():
+    project = StudioProject.from_path(LOGO_ROOT)
+    assert project.sample_path is not None
+    assert project.sample_path.suffix == ".logo"
+    assert project.sample_path.stem == "hello"
+    assert [p.name for p in project.sample_files()] == [
+        "circles.logo", "hello.logo", "spiral.logo", "square.logo",
+    ]
+
+
+def test_logo_project_runs_and_draws():
+    control = LanguageStudio()
+    control.open_project(LOGO_ROOT)
+    assert control.validate_grammar().ok
+    result = control.run()
+    assert result.ok, result.error
+    assert control.last_graphics.strokes() == 4
+    assert "hello, Logo" in result.text

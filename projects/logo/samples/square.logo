@@ -1,0 +1,5 @@
+// square.logo — the smallest thing worth drawing
+CLS ;
+COLOR 10 ;
+REPEAT 4 FD 100 ; RT 90 ; END
+SAY "square" ;

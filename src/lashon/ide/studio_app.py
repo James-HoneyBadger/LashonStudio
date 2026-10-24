@@ -25,6 +25,7 @@ from typing import Any, Dict, Optional
 import yaml
 
 from lashon.ide import settings
+from lashon.ide.canvas_view import render
 from lashon.ide.editor import CodeEditor
 from lashon.ide.studio import (
     LanguageStudio,
@@ -426,6 +427,23 @@ class LashonIDE(tk.Tk):
                              ("error", RED), ("warning", YELLOW),
                              ("command", ACCENT)):
             self.console.tag_configure(level, foreground=color)
+
+        canvas_frame = tk.Frame(self.output_tabs, bg=BG)
+        self.output_tabs.add(canvas_frame, text="Canvas")
+        self.graphics_canvas = tk.Canvas(
+            canvas_frame, bg=PANEL, highlightthickness=0,
+        )
+        self.graphics_canvas.pack(fill="both", expand=True)
+        self.graphics_canvas.bind(
+            "<Configure>", lambda _event: self._redraw_canvas()
+        )
+        self.canvas_hint = tk.Label(
+            canvas_frame,
+            text="Drawing statements paint here — FORWARD, LEFT, SETXY, "
+                 "CIRCLE, PENUP, CLS…",
+            bg=PANEL, fg=MUTED, font=UI_FONT,
+        )
+        self.canvas_hint.place(relx=0.5, rely=0.5, anchor="center")
 
         variables_frame = tk.Frame(self.output_tabs, bg=BG)
         self.output_tabs.add(variables_frame, text="Variables")
@@ -885,9 +903,26 @@ class LashonIDE(tk.Tk):
         parse_result = self.studio.parse(self.source_editor.get_text())
         if parse_result.ok:
             self._fill_ast(parse_result.value)
-        self.output_tabs.select(0)
+        self._redraw_canvas()
+        if self.studio.last_graphics.is_empty():
+            self.output_tabs.select(0)
+        else:
+            self.output_tabs.select(1)
+            self.canvas_hint.place_forget()
+            self._log(self.studio.last_graphics.summary(), "info")
         self._log(f"Finished in {result.elapsed_ms:.1f} ms", "success")
         self._set_status("Run complete", "success")
+
+    def _redraw_canvas(self) -> None:
+        """Replay the last run's drawing onto the Canvas tab."""
+        canvas = getattr(self, "graphics_canvas", None)
+        if canvas is None:
+            return
+        render(canvas, self.studio.last_graphics, PALETTE)
+        if self.studio.last_graphics.is_empty():
+            self.canvas_hint.place(relx=0.5, rely=0.5, anchor="center")
+        else:
+            self.canvas_hint.place_forget()
 
     def _generate_all(self) -> None:
         if self.project is None or not self._sync_documents():

@@ -96,11 +96,26 @@ on a small laptop screen.
 | **Grammar editor** | PEG rules; validation runs 800 ms after typing stops |
 | **Language editor** | YAML: metadata, keywords, operators, syntax options |
 | **Console** | Timestamped output, timings, errors, backend summaries |
+| **Canvas** | Live drawing surface: turtle statements paint here after every run |
 | **Variables** | Namespace after a run |
 | **Python / C / WASM / LLVM IR** | Generated output |
 | **Pipeline** | Live status for Grammar → Parse → Run → Python/C/WASM/LLVM: `○` idle, `✓` passed, `✗` failed |
 | **Problems** | Errors and warnings; double-click a row to jump to the code |
 | **AST** | Expandable syntax tree |
+
+### The Canvas tab
+
+Anything the program draws lands on the **Canvas** tab, between Console and
+Variables. The Studio repaints it after each run, switches to it when the
+program actually drew something, and logs a summary such as
+`canvas: 37 strokes, 89×77 units`. Text-only programs stay on the Console, and
+an empty canvas shows a hint naming the statements that would fill it
+(`FORWARD`, `LEFT`, `SETXY`, `CIRCLE`, `PENUP`, `CLS`…).
+
+Drawing is a runtime feature, not a code-generation one, so it works for any
+grammar that uses the turtle statement names. `projects/logo` is the worked
+example; [GRAPHICS.md](GRAPHICS.md) documents the vocabulary and the export
+formats (SVG, ASCII, JSON).
 
 Failed parses and grammar validation open the **Problems** tab automatically.
 The offending line is underlined in the editor with a red squiggle, and

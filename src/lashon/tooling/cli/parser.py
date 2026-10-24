@@ -517,6 +517,14 @@ Examples:
         "--watch", action="store_true",
         help="Re-run when the source or grammar changes",
     )
+    run_parser.add_argument(
+        "--canvas", metavar="FILE",
+        help="Write whatever the program draws to FILE (.svg)",
+    )
+    run_parser.add_argument(
+        "--ascii-canvas", action="store_true",
+        help="Print a text preview of the drawing",
+    )
 
     # Code generation commands
     codegen_c_parser = subparsers.add_parser(

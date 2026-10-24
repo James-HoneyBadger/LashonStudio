@@ -51,7 +51,7 @@ Issues = "https://github.com/James-HoneyBadger/Lashon/issues"
 [project.scripts]
 lashon = "lashon.tooling.cli:main"
 lashon-ide = "lashon.ide.app:main"
-lashon-repl = "lashon.runtime.repl:main"
+lashon-repl = "lashon.ide.repl_app:main"
 
 [tool.setuptools]
 include-package-data = true

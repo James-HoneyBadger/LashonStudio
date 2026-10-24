@@ -7,6 +7,21 @@ All notable changes to Lashon. This project follows
 
 ### Added
 
+- **Drawing canvas.** Turtle-style statements (`turtle_move`, `turtle_turn`,
+  `turtle_pen`, `turtle_pos`, `cls_stmt`) now record into
+  `lashon.runtime.graphics.Graphics` instead of opening Python's `turtle`
+  window, so a language can draw anywhere — a display is optional:
+  - **Studio**: new **Canvas** tab that repaints after every run and opens
+    itself when the program drew something.
+  - **REPL**: `:canvas`, `:canvas ascii|save FILE|show|clear`, and
+    `lashon-repl --canvas` for a live window beside the prompt.
+  - **CLI**: `lashon run --canvas out.svg`, `--ascii-canvas`, and a `canvas`
+    object in `--json` output.
+  - **New project** `projects/logo`: a Logo dialect with four drawing samples,
+    wired to the canvas through a declared `source_extension: ".logo"`.
+- **Per-project `source_extension`**, so the Studio and `sample_files()` pick up
+  samples named `.logo`, `.bas`, or anything else instead of only the built-in
+  extension list.
 - **CRT-styled Studio** with three palettes (green phosphor, amber, neutral
   dark) selected with `--theme` or `LASHON_THEME`, modelled on the retro
   workbench look of Time Warp Studio but scaled to a language workbench.

@@ -1,0 +1,8 @@
+// spiral.logo — a square spiral, one side longer each turn
+CLS ;
+COLOR 11 ;
+REPEAT 24 FD 60 ; RT 90 ; END
+FD 20 ;
+RT 45 ;
+REPEAT 12 FD 40 ; RT 60 ; END
+SAY "spiral" ;

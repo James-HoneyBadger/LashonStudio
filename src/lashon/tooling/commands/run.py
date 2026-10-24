@@ -14,6 +14,7 @@ from typing import Any
 
 from lashon.codegen import transpile_and_exec, transpile_to_python
 from lashon.parser import PEGInterpreter
+from lashon.runtime.graphics import Graphics
 from lashon.tooling.commands.common import load_grammar
 
 
@@ -125,15 +126,23 @@ def _run_once(args) -> int:
             code = transpile_to_python(ast)
             return _run_sandboxed(code, args.sandbox_timeout)
 
+        canvas = Graphics()
         if args.json:
             # Keep stdout valid JSON by sending program output to stderr.
             with contextlib.redirect_stdout(sys.stderr):
-                namespace = transpile_and_exec(ast)
-            json.dump({"variables": _json_safe(namespace)}, sys.stdout)
+                namespace = transpile_and_exec(ast, graphics=canvas)
+            json.dump(
+                {
+                    "variables": _json_safe(namespace),
+                    "canvas": canvas.to_dict(),
+                },
+                sys.stdout,
+            )
             sys.stdout.write("\n")
         else:
-            transpile_and_exec(ast)
+            transpile_and_exec(ast, graphics=canvas)
 
+        _report_canvas(args, canvas)
         return 0
 
     except (SyntaxError, ValueError, OSError, ImportError) as error:
@@ -145,6 +154,22 @@ def _run_once(args) -> int:
             file=sys.stderr,
         )
         return 1
+
+
+
+def _report_canvas(args, canvas: Graphics) -> None:
+    """Write or describe the drawing, when the program made one."""
+    target = getattr(args, "canvas", None)
+    ascii_preview = getattr(args, "ascii_canvas", False)
+    if canvas.is_empty():
+        if target:
+            print("Nothing was drawn.", file=sys.stderr)
+        return
+    if target:
+        Path(target).write_text(canvas.to_svg(), encoding="utf-8")
+        print(f"{canvas.summary()} → {target}", file=sys.stderr)
+    if ascii_preview:
+        print(canvas.to_ascii(), file=sys.stderr)
 
 
 def _stamps(args) -> tuple:

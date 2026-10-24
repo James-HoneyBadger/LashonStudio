@@ -1,0 +1,5 @@
+// hello.logo — draw the smallest thing that proves the canvas works
+CLS ;
+COLOR 10 ;
+REPEAT 4 FD 60 ; RT 90 ; END
+SAY "hello, Logo" ;

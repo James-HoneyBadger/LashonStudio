@@ -27,6 +27,7 @@ from lashon.parser.grammar import (
     SourceAST,
     grammar_from_config,
 )
+from lashon.runtime.graphics import Graphics, capture
 
 
 class REPL:
@@ -58,6 +59,8 @@ class REPL:
         ":doc <rule>": "Show a grammar rule",
         ":backends": "Generate C, WASM, and LLVM IR for the last AST",
         ":time": "Toggle timing information",
+        ":canvas": "Show the drawing; :canvas save <file.svg>, :canvas show, "
+                   ":canvas ascii, :canvas clear",
     }
 
     def __init__(
@@ -80,6 +83,9 @@ class REPL:
         self._last_python: str = ""
         self.timing = False
         self.history_file = Path.home() / ".lashon_history"
+        self.graphics = Graphics()
+        #: A GUI front end may install a host to show the drawing.
+        self.canvas_host: Any = None
 
     @staticmethod
     def _default_grammar() -> Grammar:
@@ -284,7 +290,8 @@ class REPL:
             return
 
         try:
-            exec(python_code, self.namespace)  # noqa: S102
+            with capture(self.graphics):
+                exec(python_code, self.namespace)  # noqa: S102
         except Exception as e:
             print(f"Runtime error: {e}", file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
@@ -292,6 +299,16 @@ class REPL:
             if self.timing:
                 elapsed = (time.perf_counter() - started) * 1000
                 print(f"[time] {elapsed:.2f} ms", file=sys.stderr)
+            self._refresh_canvas()
+
+    def _refresh_canvas(self) -> None:
+        """Repaint the drawing window, when a front end provides one."""
+        if self.canvas_host is None:
+            return
+        try:
+            self.canvas_host.refresh(self.graphics)
+        except Exception:  # pylint: disable=broad-exception-caught
+            self.canvas_host = None
 
     def _handle_command(self, cmd: str) -> bool:
         """Handle a REPL special command. Returns True if handled."""
@@ -411,12 +428,62 @@ class REPL:
             print(f"LLVM: {len(ir.splitlines())} lines")
             return True
 
+        if command == ":canvas":
+            return self._handle_canvas(parts[1].strip() if len(parts) > 1 else "")
+
         print(f"Unknown command: {cmd}. Type :help for available commands.")
         return True
 
+    def _handle_canvas(self, argument: str) -> bool:
+        """Inspect, save, or display the drawing surface."""
+        if argument.startswith("clear"):
+            self.graphics = Graphics()
+            print("Canvas cleared.")
+            return True
+        if argument.startswith("save"):
+            parts = argument.split(maxsplit=1)
+            target = Path(parts[1]) if len(parts) > 1 else Path("canvas.svg")
+            try:
+                target.write_text(self.graphics.to_svg(), encoding="utf-8")
+            except OSError as error:
+                print(f"Could not save canvas: {error}", file=sys.stderr)
+            else:
+                print(f"Saved {self.graphics.strokes()} strokes to {target}")
+            return True
+        if argument.startswith("ascii"):
+            print(self.graphics.to_ascii())
+            return True
+        if argument.startswith("show"):
+            self._show_canvas()
+            return True
+        print(f"{self.graphics.summary()}")
+        print("  :canvas ascii | save <file.svg> | show | clear")
+        return True
 
-def main():
-    """CLI entry point for the REPL."""
+    def show_canvas(self) -> None:
+        """Ask the front end to display the drawing."""
+        if self.canvas_host is None:
+            print(
+                "No drawing window here — run lashon-repl (or press "
+                ":canvas ascii for a preview).",
+                file=sys.stderr,
+            )
+            print(self.graphics.to_ascii())
+            return
+        try:
+            self.canvas_host.show(self.graphics)
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            print(f"Could not open a canvas window: {error}", file=sys.stderr)
+            print(self.graphics.to_ascii())
+
+    def _show_canvas(self) -> bool:
+        self.show_canvas()
+        return True
+
+
+def run_repl(argv: Optional[list[str]] = None,
+             canvas_host: Any = None) -> int:
+    """Parse arguments and run the read-eval-print loop."""
     import argparse
 
     parser = argparse.ArgumentParser(
@@ -431,15 +498,32 @@ def main():
         default=">>> ",
         help="REPL prompt string",
     )
+    parser.add_argument(
+        "--canvas", action="store_true",
+        help="Open a drawing window beside the prompt (needs a GUI entry "
+             "point and a display)",
+    )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if args.config:
         repl = REPL.from_config_file(args.config, prompt=args.prompt)
     else:
         repl = REPL(prompt=args.prompt)
 
+    if canvas_host is not None:
+        repl.canvas_host = canvas_host
+
+    if args.canvas:
+        repl.show_canvas()
+
     repl.run()
+    return 0
+
+
+def main() -> None:
+    """CLI entry point for the headless REPL."""
+    raise SystemExit(run_repl())
 
 
 if __name__ == "__main__":

@@ -47,7 +47,7 @@ Traceback (most recent call last):
 | Lashon version | (run `lashon --version`) |
 | Python version | (run `python --version`) |
 | Operating system | (e.g. Ubuntu 22.04, macOS 14, Windows 11) |
-| Install method | `pip install -e .` / `pip install lashon` |
+| Install method | `pip install -e .` / `pip install ParserCraft` |
 
 ## Additional Context
 

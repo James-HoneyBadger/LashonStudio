@@ -156,3 +156,14 @@ def test_entry_points_cover_every_documented_command():
     assert 'lashon = "lashon.tooling.cli:main"' in pyproject
     assert 'lashon-ide = "lashon.ide.app:main"' in pyproject
     assert 'lashon-repl = "lashon.ide.repl_app:main"' in pyproject
+
+
+def test_distribution_name_and_import_package_are_documented():
+    """The PyPI distribution keeps the original name; the package is `lashon`."""
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'name = "ParserCraft"' in pyproject
+
+    install = (ROOT / "docs" / "INSTALL.md").read_text(encoding="utf-8")
+    assert "pip install ParserCraft" in install
+    assert "pip install lashon\n" not in install
+    assert "import package is `lashon`" in install

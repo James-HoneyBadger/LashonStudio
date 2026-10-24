@@ -12,6 +12,7 @@ package registry/semver helpers.
 
 ```
 pyproject.toml      PEP 621 metadata, entry points, package data, tool config
+                    (distribution `ParserCraft`, import package `lashon`)
 MANIFEST.in         sdist-only extras (docs, configs, projects, samples)
 Cargo.toml          Rust workspace (lashon-core, lashon-cli)
 src/lashon/         the package
@@ -25,7 +26,7 @@ single-sourced from `lashon.__version__` via
 ### Build
 
 ```bash
-python -m build                 # dist/lashon-5.0.0-py3-none-any.whl + .tar.gz
+python -m build                 # dist/parsercraft-5.0.0-py3-none-any.whl + .tar.gz
 # or
 python -m pip wheel . -w dist
 ```

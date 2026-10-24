@@ -230,7 +230,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install lashon pytest
+      - run: pip install ParserCraft pytest
       - run: lashon lint language.yaml
       - run: lashon validate language.yaml --grammar
       - run: lashon run samples/{project.sample_path.name} --config language.yaml

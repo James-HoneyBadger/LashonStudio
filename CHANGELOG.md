@@ -38,6 +38,18 @@ All notable changes to Lashon. This project follows
 - **View → Theme** menu and a persisted `studio.json` preference, so the chosen
   phosphor survives restarts.
 
+### Changed
+
+- **The PyPI distribution is `ParserCraft`; the package is `lashon`.** The
+  project keeps its original distribution name for continuity with the
+  registry, while imports, commands, and docs stay on `lashon`:
+
+  ```bash
+  pip install ParserCraft      # provides `import lashon`, lashon-ide, lashon-repl
+  ```
+
+  `parsercraft` remains as the deprecated compatibility shim.
+
 ### Fixed
 
 - **Line-numbered programs now run on the Python pipeline.** `lashon run`,
@@ -97,9 +109,7 @@ All notable changes to Lashon. This project follows
 - Dead `codex` console script and coverage path, left over from the package
   deleted in 4.0.0.
 
-## [Unreleased]
-
-### Changed
+### Changed — engineering pass
 
 - **Modular core**: `parser/grammar.py` split into `model` / `peg_parser` /
   `interpreter` / `builder` / `defaults`; `python_transpiler.py` split into
@@ -121,7 +131,7 @@ All notable changes to Lashon. This project follows
   in place; whitespace skipping no longer slices the source. ~146 → ~315 KB/s
   on the 2,000-line benchmark.
 
-### Added
+### Added — engineering pass
 
 - **BASIC sample project** (`projects/basic`): a line-numbered dialect defined
   only by a grammar — `LET`, `PRINT`, `IF/THEN/ELSE`, `GOTO`, `WHILE/WEND`,

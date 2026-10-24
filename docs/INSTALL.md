@@ -56,10 +56,15 @@ installing because `pyproject.toml` sets `pythonpath = ["src"]`.
 For a clean, non-editable install:
 
 ```bash
-pip install lashon
+pip install ParserCraft
 ```
 
-> **Note:** Until Lashon is published on PyPI, use the editable install from the cloned repository.
+That installs the `lashon` package, the `lashon`/`lashon-ide`/`lashon-repl`
+commands, and the `parsercraft` compatibility shim. (The PyPI distribution keeps
+the project's original name; the import package is `lashon`.)
+
+> **Note:** Until the distribution is published on PyPI, use the editable
+> install from the cloned repository.
 
 ---
 

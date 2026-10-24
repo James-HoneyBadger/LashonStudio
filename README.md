@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-456%20passing-brightgreen.svg)](tests/)
-[![Version](https://img.shields.io/badge/version-4.0.0-informational.svg)](pyproject.toml)
+[![Version](https://img.shields.io/badge/version-5.0.0-informational.svg)](pyproject.toml)
 
 Lashon is a full-stack programming language construction framework. Define a PEG grammar — either in text notation or via a fluent Python API — and immediately get a working parser, an abstract syntax tree, and code generators targeting Python, C, WebAssembly, and LLVM IR. Add a config-driven REPL, a Language Server Protocol implementation, a DAP debugger, and a Tkinter IDE, and you have everything needed to design, implement, and ship a custom language from a single Python package.
 
@@ -85,7 +85,7 @@ Start with a grammar. Get a working language. Ship it anywhere.
 ### Installation
 
 ```bash
-git clone https://github.com/James-HoneyBadger/LashonStudioStudio.git
+git clone https://github.com/James-HoneyBadger/LashonStudio.git
 cd Lashon
 pip install -e .
 ```

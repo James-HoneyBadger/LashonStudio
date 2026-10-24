@@ -271,7 +271,7 @@ Python 3.10+ required.
 
 ## Conclusion
 
-Lashon v4.0.0 is **production-ready** for its core use-case: defining PEG
+Lashon v5.0.0 is **production-ready** for its core use-case: defining PEG
 grammars, parsing source code, and generating output in Python, C, WebAssembly,
 or LLVM IR. All 335 tests pass. Remaining work is architectural (CLI
 decomposition and convergence of the legacy config-driven parser) rather than

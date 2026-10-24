@@ -1,5 +1,5 @@
 """
-Lashon v4.0.0 — Custom Programming Language Construction Framework
+Lashon v5.0.0 — Custom Programming Language Construction Framework
 =======================================================================
 
 Lashon provides a complete stack for designing, implementing, and
@@ -53,7 +53,7 @@ Documentation
 - docs/TUTORIAL.md       — Step-by-step tutorials
 """
 
-__version__ = "4.0.0"
+__version__ = "5.0.0"
 __author__ = "James-HoneyBadger"
 
 __all__ = ["LanguageConfig", "LanguageRuntime"]

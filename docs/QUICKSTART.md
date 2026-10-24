@@ -10,7 +10,7 @@ Get from “nothing installed” to a running custom language in about ten minut
 ## 1. Install
 
 ```bash
-git clone https://github.com/James-HoneyBadger/LashonStudioStudio.git
+git clone https://github.com/James-HoneyBadger/LashonStudio.git
 cd Lashon
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate

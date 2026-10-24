@@ -454,7 +454,7 @@ calls native code. See
 during review. Run `python -m pytest -q`; all should pass.
 
 **Where do I report bugs?** Open an issue at
-`https://github.com/James-HoneyBadger/LashonStudioStudio/issues` with the grammar, a
+`https://github.com/James-HoneyBadger/LashonStudio/issues` with the grammar, a
 minimal source file, the command, and the full message.
 
 ---

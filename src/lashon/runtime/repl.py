@@ -41,7 +41,7 @@ class REPL:
     """
 
     BANNER = (
-        "Lashon REPL v4.0.0\n"
+        "Lashon REPL v5.0.0\n"
         "Type :help for commands, :quit to exit.\n"
     )
 

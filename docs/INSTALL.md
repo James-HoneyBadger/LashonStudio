@@ -38,7 +38,7 @@ No compiler or build tools are required. All code generation backends produce so
 Clone the repository and install in editable mode so changes to source files take effect immediately:
 
 ```bash
-git clone https://github.com/James-HoneyBadger/LashonStudioStudio.git
+git clone https://github.com/James-HoneyBadger/LashonStudio.git
 cd Lashon
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"     # includes pytest + ruff
@@ -293,4 +293,4 @@ On headless servers, set a display or use a remote desktop. The REPL and CLI do 
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — more failure modes.
 - [docs/index.md](index.md) — the full documentation index.
 
-*For further help, open an issue at [github.com/James-HoneyBadger/LashonStudio](https://github.com/James-HoneyBadger/LashonStudioStudio/issues).*
+*For further help, open an issue at [github.com/James-HoneyBadger/LashonStudio](https://github.com/James-HoneyBadger/LashonStudio/issues).*

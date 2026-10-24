@@ -1,6 +1,6 @@
 # Lashon Studio Documentation
 
-> Version 4.0.0 · Python 3.10+ · [Project README](https://github.com/James-HoneyBadger/LashonStudioStudio/blob/main/README.md)
+> Version 5.0.0 · Python 3.10+ · [Project README](https://github.com/James-HoneyBadger/LashonStudio/blob/main/README.md)
 
 Lashon is a programming-language construction framework. You define a PEG
 grammar, Lashon builds a packrat parser and AST, and code generators emit
@@ -64,7 +64,7 @@ not runnable programs.
 
 ### Path 4 — “I want to contribute”
 
-1. [CONTRIBUTING.md](https://github.com/James-HoneyBadger/LashonStudioStudio/blob/main/CONTRIBUTING.md) — setup, tests, style, PRs.
+1. [CONTRIBUTING.md](https://github.com/James-HoneyBadger/LashonStudio/blob/main/CONTRIBUTING.md) — setup, tests, style, PRs.
 2. [ARCHITECTURE.md](ARCHITECTURE.md) — module boundaries.
 3. [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — known failure modes.
 
@@ -116,7 +116,7 @@ Source text ─────────────────► PEGInterprete
 - **`python`** code blocks assume `lashon` is importable (`pip install -e .`).
 - **File paths** are relative to the repository root unless stated otherwise.
 - **“Verified”** examples are exercised by the test suite or were executed while
-  writing these documents against v4.0.0.
+  writing these documents against v5.0.0.
 - Output shown after `# →` is illustrative; timings vary.
 
 ---
@@ -128,12 +128,12 @@ implementation wins — please open an issue or a PR with the correction. The
 suite is intentionally explicit about **limitations** (for example, the stdio
 LSP only handles a subset of requests); see
 [TROUBLESHOOTING.md](TROUBLESHOOTING.md) and
-[PROJECT_ANALYSIS.md](https://github.com/James-HoneyBadger/LashonStudioStudio/blob/main/PROJECT_ANALYSIS.md).
+[PROJECT_ANALYSIS.md](https://github.com/James-HoneyBadger/LashonStudio/blob/main/PROJECT_ANALYSIS.md).
 
 ---
 
 ## Versioning
 
 Documents track the `4.x` line. Breaking API changes are recorded in
-[CHANGELOG.md](https://github.com/James-HoneyBadger/LashonStudioStudio/blob/main/CHANGELOG.md). The `4.0.0` documentation set was regenerated
+[CHANGELOG.md](https://github.com/James-HoneyBadger/LashonStudio/blob/main/CHANGELOG.md). The `4.0.0` documentation set was regenerated
 alongside the Studio release.

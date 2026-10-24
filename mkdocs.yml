@@ -1,7 +1,7 @@
 site_name: Lashon Studio
 site_description: A framework for building programming languages with PEG grammars
 site_url: https://james-honeybadger.github.io/LashonStudio/
-repo_url: https://github.com/James-HoneyBadger/LashonStudioStudio
+repo_url: https://github.com/James-HoneyBadger/LashonStudio
 repo_name: James-HoneyBadger/LashonStudio
 edit_uri: edit/main/docs/
 

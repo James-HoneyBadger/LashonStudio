@@ -57,7 +57,7 @@ lashon-repl = "lashon.runtime.repl:main"
 include-package-data = true
 
 [tool.setuptools.packages.find]
-include = ["lashon*"]
+include = ["lashon*", "parsercraft*"]
 namespaces = false
 where = ["src"]
 

@@ -3,6 +3,29 @@
 All notable changes to Lashon. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [5.0.0] - renamed to Lashon Studio
+
+### Changed
+
+- **The project is now Lashon Studio** (`lashon` for short). The Python
+  package, console scripts, Rust crates, binary, PyO3 module, environment
+  variables, docs, and GitHub repository all follow the new name:
+  `lashon`, `lashon-ide`, `lashon-repl`, `lashon-rs`, `lashon-core`,
+  `lashon-cli`, `LASHON_*`, `James-HoneyBadger/LashonStudio`.
+- `pip install lashon`; `import lashon`; `lashon run grammar.peg prog.bas`.
+
+### Added
+
+- **`parsercraft` compatibility shim**: importing the old package emits a
+  `DeprecationWarning` and aliases every submodule (`from
+  parsercraft.parser import GrammarParser` still works). It is planned to be
+  removed in the release after next.
+
+### Removed
+
+- Dead `codex` console script and coverage path, left over from the package
+  deleted in 4.0.0.
+
 ## [Unreleased]
 
 ### Changed

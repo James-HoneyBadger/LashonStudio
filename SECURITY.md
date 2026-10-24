@@ -12,7 +12,7 @@
 Do **not** open a public issue for security problems. Report privately via
 GitHub Security Advisories:
 
-<https://github.com/James-HoneyBadger/LashonStudioStudio/security/advisories/new>
+<https://github.com/James-HoneyBadger/LashonStudio/security/advisories/new>
 
 Include:
 

@@ -10,7 +10,7 @@ review checklist. For architecture and API context, see
 ## Setup
 
 ```bash
-git clone https://github.com/James-HoneyBadger/LashonStudioStudio.git
+git clone https://github.com/James-HoneyBadger/LashonStudio.git
 cd Lashon
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
@@ -144,7 +144,7 @@ Include:
 4. Expected vs actual behaviour.
 
 Open issues at
-<https://github.com/James-HoneyBadger/LashonStudioStudio/issues>. For security reports,
+<https://github.com/James-HoneyBadger/LashonStudio/issues>. For security reports,
 follow [SECURITY.md](SECURITY.md) instead of filing a public issue.
 
 ---

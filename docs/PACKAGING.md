@@ -116,6 +116,45 @@ accident:
 python -c "import zipfile,sys; print('\n'.join(zipfile.ZipFile(sys.argv[1]).namelist()[:20]))" dist/*.whl
 ```
 
+### Publishing to PyPI
+
+`.github/workflows/release.yml` builds, publishes, and attaches the artifacts to
+a GitHub Release when a `v*` tag is pushed (or on manual dispatch). The first
+run establishes everything you need to know about the registry side:
+
+| Claim PyPI matches on | Value for this repository |
+|---|---|
+| PyPI project | `ParserCraft` (the distribution name in `pyproject.toml`) |
+| Owner / repository | `James-HoneyBadger/LashonStudio` |
+| Workflow | `.github/workflows/release.yml` |
+| Environment | `pypi` |
+
+The publisher is **not** configured automatically. On PyPI, add a
+*trusted publisher* (or a pending one, for a project that does not exist yet)
+with exactly those values, then re-run the tag build:
+
+```bash
+gh workflow run release.yml --ref v5.0.0     # no new tag needed
+gh run watch                                 # build → publish → release
+```
+
+Without the publisher, the `publish` job fails with
+
+```
+invalid-publisher: valid token, but no corresponding publisher
+```
+
+— the build and the GitHub Release still succeed, so a failed publish never
+costs you the artifacts. Manual fallback with an API token:
+
+```bash
+python -m build && twine check dist/*
+twine upload dist/*
+```
+
+A version number can only be uploaded once. If a publish half-fails, bump the
+version and tag again rather than reusing `5.0.0`.
+
 ---
 
 ## VS Code extension

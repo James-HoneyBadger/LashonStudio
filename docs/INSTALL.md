@@ -164,7 +164,7 @@ print("Installation OK")
 python -m pytest tests/ -v
 ```
 
-Expected output: **371 tests passed**. The suite covers grammar parsing, all
+Expected output: **456 tests passed**. The suite covers grammar parsing, all
 four code-generation backends (including compile-and-run checks for C and LLVM
 when toolchains are present), REPL, stdlib, FFI, error localization, incremental
 parsing, types, modules, LSP, packaging, the debug adapter, and the Studio

@@ -4,7 +4,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-371%20passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-456%20passing-brightgreen.svg)](tests/)
 [![Version](https://img.shields.io/badge/version-4.0.0-informational.svg)](pyproject.toml)
 
 ParserCraft is a full-stack programming language construction framework. Define a PEG grammar — either in text notation or via a fluent Python API — and immediately get a working parser, an abstract syntax tree, and code generators targeting Python, C, WebAssembly, and LLVM IR. Add a config-driven REPL, a Language Server Protocol implementation, a DAP debugger, and a Tkinter IDE, and you have everything needed to design, implement, and ship a custom language from a single Python package.
@@ -437,7 +437,7 @@ python -m pytest tests/ -v
 python -m pytest -q --cov --cov-fail-under=43
 ```
 
-371 tests covering grammar parsing, all four code-generation backends (with
+456 tests covering grammar parsing, all four code-generation backends (with
 compile-and-run checks for C and LLVM), REPL, stdlib, FFI, error localization,
 incremental parsing, types, modules, LSP, packaging, the debug adapter, and the
 Studio controller/GUI.

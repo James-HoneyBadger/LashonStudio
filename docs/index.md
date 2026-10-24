@@ -34,6 +34,7 @@ not runnable programs.
 | Ship a language or extension | [PACKAGING.md](PACKAGING.md) |
 | Read the API | [TECHNICAL_REFERENCE.md](TECHNICAL_REFERENCE.md) |
 | Understand internals | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| Use or extend the Rust core | [RUST_CORE.md](RUST_CORE.md) |
 | Fix a problem | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) |
 
 ---

@@ -4,7 +4,7 @@ ParserCraft is a Python framework for defining languages with PEG grammars,
 parsing source into an AST, and generating output for several targets. This
 page describes how the pieces fit together so you can extend them safely.
 
-Version 4.0.0, ~20,800 lines of library code, 371 tests.
+Version 4.0.0, ~20,800 lines of Python plus a Rust core crate, 456 tests.
 
 ---
 

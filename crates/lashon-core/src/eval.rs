@@ -309,6 +309,8 @@ impl<'a> Machine<'a> {
                 }
                 Ok(Flow::Normal)
             }
+            "break_stmt" | "BreakStmt" => Ok(Flow::Break),
+            "continue_stmt" | "ContinueStmt" => Ok(Flow::Continue),
             "return_stmt" | "ReturnStmt" => {
                 let value = match node
                     .children
@@ -718,6 +720,36 @@ mod tests {
             run("i = 0 ;\nwhile i < 3 {\n  i = i + 1 ;\n}\nprint i ;\n"),
             "3\n"
         );
+    }
+
+    const LOOP_GRAMMAR: &str = "program <- statement+
+statement <- while_stmt / break_stmt / continue_stmt / assignment / print_stmt
+while_stmt <- 'while' comparison block
+block <- '{' statement* '}'
+break_stmt <- 'break' ';'
+continue_stmt <- 'continue' ';'
+assignment <- IDENT '=' expr ';'
+print_stmt <- 'print' expr ';'
+comparison <- expr ('<' / '>' / '==') expr
+expr <- NUMBER / IDENT
+";
+
+    fn run_with(grammar: &str, source: &str) -> String {
+        let grammar = parse_peg_text(grammar).expect("grammar");
+        let ast = parse_to_ast(&grammar, source).expect("parse");
+        run_program(&ast).expect("run")
+    }
+
+    #[test]
+    fn break_leaves_the_loop_body_early() {
+        let source = "i = 1 ;\nn = 0 ;\nwhile i < 2 {\n  n = 7 ;\n  break ;\n}\nprint n ;\n";
+        assert_eq!(run_with(LOOP_GRAMMAR, source), "7\n");
+    }
+
+    #[test]
+    fn continue_skips_the_rest_of_the_body() {
+        let source = "i = 0 ;\nwhile i < 3 {\n  i = 3 ;\n  continue ;\n  i = 9 ;\n}\nprint i ;\n";
+        assert_eq!(run_with(LOOP_GRAMMAR, source), "3\n");
     }
 
     #[test]

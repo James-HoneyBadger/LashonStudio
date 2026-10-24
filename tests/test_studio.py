@@ -287,3 +287,16 @@ def test_logo_project_runs_and_draws():
     assert result.ok, result.error
     assert control.last_graphics.strokes() == 4
     assert "hello, Logo" in result.text
+
+
+BASIC_ROOT = Path(__file__).resolve().parent.parent / "projects" / "basic"
+
+
+def test_basic_project_opens_and_runs_in_the_studio():
+    control = LanguageStudio()
+    project = control.open_project(BASIC_ROOT)
+    assert project.sample_path is not None
+    assert project.sample_path.suffix == ".bas"
+    result = control.run()
+    assert result.ok, result.error
+    assert result.text.strip()

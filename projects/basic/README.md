@@ -24,13 +24,25 @@ literals, and parentheses.
 
 ## Run it
 
+Both engines run this dialect and produce identical output:
+
 ```bash
-lashon-rs run grammar.peg samples/hello.bas
+# Rust core (no Python needed)
 lashon-rs run grammar.peg samples/countdown.bas
-lashon-rs run grammar.peg samples/fizzbuzz.bas
+lashon-rs codegen-c grammar.peg samples/countdown.bas --compile --run
 lashon-rs lint grammar.peg --source samples/fizzbuzz.bas
-lashon-rs ast grammar.peg samples/hello.bas
+
+# Python pipeline (CLI, Studio, REPL)
+lashon run samples/countdown.bas --config language.yaml
+lashon-ide projects/basic
+lashon repl --grammar grammar.peg
 ```
+
+`language.yaml` mirrors the grammar so the Studio can open the project. Because
+Python has no `goto`, the Python backend compiles a numbered program into a
+program-counter loop (`def _lashon_numbered_program(): while _pc is not None:`)
+while C keeps `L10:` labels and `goto` and LLVM IR emits one basic block per
+line. All three produce the same output.
 
 Expected output:
 

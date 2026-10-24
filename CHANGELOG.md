@@ -40,6 +40,18 @@ All notable changes to Lashon. This project follows
 
 ### Fixed
 
+- **Line-numbered programs now run on the Python pipeline.** `lashon run`,
+  the Studio, and the REPL emitted each BASIC line number as a bare statement
+  and produced `if X > 0:` with no body, so `projects/basic` only worked
+  through the Rust core. The Python backend compiles a numbered program into a
+  program-counter loop, and `IF … THEN GOTO` becomes a branch that sets it.
+  All three BASIC samples now print identical output from the interpreter,
+  compiled C, and compiled LLVM IR.
+- Added `projects/basic/language.yaml` (grammar + `.bas` samples) so the BASIC
+  project opens in the Studio like the others.
+- The Rust evaluator implements `break` and `continue` (loops already handled
+  them, but nothing ever produced the flow), which also clears the last
+  compiler warning.
 - **`--theme` now takes effect.** The palette used to be resolved at import
   time, so the flag set the environment variable but the window still opened in
   green. Palettes are resolved per window now, and the choice can also be made

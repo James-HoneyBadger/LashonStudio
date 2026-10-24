@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
 from lashon.ast import SourceAST
 
 
@@ -9,8 +11,158 @@ class StatementEmitter:
     """Turns statement AST nodes into Python source text."""
 
     def _emit_program(self, node: SourceAST) -> None:
+        lines = [c for c in node.children if c.node_type == "line"]
+        others = [
+            c for c in node.children
+            if c.node_type not in ("line", "Operator")
+        ]
+        if lines and not others:
+            self._emit_numbered_program(lines)
+            return
         for child in node.children:
             self._emit_node(child)
+
+    # -- line-numbered programs -----------------------------------------
+
+    @staticmethod
+    def _line_number(node: SourceAST) -> Optional[int]:
+        """The number a ``line`` node starts with, if any."""
+        for child in node.children:
+            if child.node_type in ("Number", "NUMBER"):
+                try:
+                    return int(float(child.value))
+                except (TypeError, ValueError):
+                    return None
+        return None
+
+    @staticmethod
+    def _line_statement(node: SourceAST) -> Optional[SourceAST]:
+        """The statement a ``line`` node carries, if any."""
+        for child in node.children:
+            if child.node_type not in ("Number", "NUMBER", "Operator"):
+                return child
+        return None
+
+    def _emit_rem(self, node: SourceAST) -> None:
+        """REM comment → a Python comment."""
+        text = node.value if isinstance(node.value, str) else ""
+        self._line(f"# {text}".rstrip())
+
+    def _emit_line(self, node: SourceAST) -> None:
+        """A ``line`` outside a numbered program: emit just its statement."""
+        statement = self._line_statement(node)
+        if statement is not None:
+            self._emit_node(statement)
+
+    def _emit_numbered_program(self, lines: list[SourceAST]) -> None:
+        """Emit a BASIC-style program as a program-counter loop.
+
+        Python has no ``goto``, so every line becomes one branch of a
+        ``while`` over a synthetic program counter. Variables stay local to the
+        generated function, which is then merged back into the namespace the
+        callers report.
+        """
+        entries: list[tuple[int, Optional[SourceAST], Optional[int]]] = []
+        for line in lines:
+            number = self._line_number(line)
+            if number is not None:
+                entries.append((number, self._line_statement(line), None))
+        if not entries:
+            return
+
+        numbered = [
+            (number, statement,
+             entries[index + 1][0] if index + 1 < len(entries) else None)
+            for index, (number, statement, _) in enumerate(entries)
+        ]
+
+        self._line("def _lashon_numbered_program():")
+        self.indent_level += 1
+        self._line(f"_pc = {numbered[0][0]}")
+        self._line("while _pc is not None:")
+        self.indent_level += 1
+        for index, (number, statement, next_number) in enumerate(numbered):
+            keyword = "if" if index == 0 else "elif"
+            self._line(f"{keyword} _pc == {number}:")
+            self.indent_level += 1
+            self._emit_numbered_statement(statement, next_number)
+            self.indent_level -= 1
+        self._line("else:")
+        self.indent_level += 1
+        self._line("_pc = None")
+        self.indent_level -= 1
+        self.indent_level -= 1
+        self._line(
+            "return {name: value for name, value in locals().items() "
+            "if not name.startswith('_')}"
+        )
+        self.indent_level -= 1
+        self._line("globals().update(_lashon_numbered_program())")
+
+    def _emit_numbered_statement(self, statement: Optional[SourceAST],
+                                 next_number: Optional[int]) -> None:
+        """Emit one BASIC statement, then fall through or jump."""
+        if statement is None:
+            self._line(self._advance(next_number))
+            return
+
+        while statement.node_type in ("statement", "Statement"):
+            inner = [
+                child for child in statement.children
+                if child.node_type != "Operator"
+            ]
+            if len(inner) != 1:
+                break
+            statement = inner[0]
+
+        kind = statement.node_type
+        if kind in ("goto_stmt", "GotoStmt"):
+            target = self._line_number(statement)
+            self._line(
+                f"_pc = {target}" if target is not None else "_pc = None"
+            )
+            return
+        if kind in ("end_stmt", "EndStmt"):
+            self._line("_pc = None")
+            return
+        if kind in ("rem_stmt", "RemStmt"):
+            self._line(self._advance(next_number))
+            return
+        if kind in ("if_stmt", "IfStmt"):
+            self._emit_numbered_if(statement, next_number)
+            return
+
+        self._emit_node(statement)
+        self._line(self._advance(next_number))
+
+    def _emit_numbered_if(self, statement: SourceAST,
+                          next_number: Optional[int]) -> None:
+        """IF condition THEN statement [ELSE statement]."""
+        parts = [
+            child for child in statement.children
+            if child.node_type != "Operator"
+        ]
+        if not parts:
+            self._line(self._advance(next_number))
+            return
+        condition = self._expr_to_str(parts[0])
+        self._line(f"if {condition}:")
+        self.indent_level += 1
+        self._emit_numbered_statement(
+            parts[1] if len(parts) > 1 else None, next_number
+        )
+        self.indent_level -= 1
+        self._line("else:")
+        self.indent_level += 1
+        if len(parts) > 2:
+            self._emit_numbered_statement(parts[2], next_number)
+        else:
+            self._line(self._advance(next_number))
+        self.indent_level -= 1
+
+    @staticmethod
+    def _advance(next_number: Optional[int]) -> str:
+        return "_pc = None" if next_number is None else f"_pc = {next_number}"
 
     def _emit_assignment(self, node: SourceAST) -> None:
         """Emit: target = value

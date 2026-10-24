@@ -1,0 +1,43 @@
+name: BASIC
+version: "1.0.0"
+description: "A line-numbered BASIC dialect: GOTO, IF/THEN, WHILE/WEND."
+author: "Lashon Studio"
+target_interpreter: python
+source_extension: ".bas"
+
+keywords:
+  let: "let"
+  print: "print"
+  if: "if"
+  then: "then"
+  else: "else"
+  goto: "goto"
+  while: "while"
+  wend: "wend"
+  end: "end"
+  rem: "rem"
+
+syntax_options:
+  single_line_comment: "REM"
+  require_semicolons: false
+  statement_terminator: "\\n"
+
+grammar:
+  start: program
+  skip_whitespace: true
+  rules:
+    program: "line+"
+    line: "NUMBER !'WEND' statement"
+    statement: "rem_stmt / let_stmt / print_stmt / if_stmt / goto_stmt / while_stmt / end_stmt / assign_stmt"
+    rem_stmt: "'REM' [^\\n]*"
+    let_stmt: "'LET' IDENT '=' expr"
+    assign_stmt: "IDENT '=' expr"
+    print_stmt: "'PRINT' expr ((',' / ';') expr)*"
+    if_stmt: "'IF' comparison 'THEN' statement ('ELSE' statement)?"
+    goto_stmt: "'GOTO' NUMBER"
+    while_stmt: "'WHILE' comparison line* NUMBER? 'WEND'"
+    end_stmt: "'END'"
+    comparison: "expr (('=' / '<>' / '<=' / '>=' / '<' / '>') expr)?"
+    expr: "term (('+' / '-') term)*"
+    term: "factor (('*' / '/' / '%') factor)*"
+    factor: "NUMBER / STRING / IDENT / '(' expr ')'"

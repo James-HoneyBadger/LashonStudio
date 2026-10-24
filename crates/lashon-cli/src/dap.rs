@@ -5,7 +5,7 @@
 //! pausing inside the observer until a `continue`/`next` request arrives.
 
 use std::collections::HashSet;
-use std::io::{BufRead, Read, Write};
+use std::io::{BufRead, Write};
 use std::sync::{mpsc, Arc, Condvar, Mutex};
 
 use lashon_core::eval::{Frame, Machine, Observer, Step};

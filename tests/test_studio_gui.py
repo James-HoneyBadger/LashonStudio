@@ -137,3 +137,40 @@ def test_quick_open_lists_project_files(app):
     assert toplevels, "quick open should open"
     assert toplevels[0].title() == "Quick Open"
     toplevels[0].destroy()
+
+
+def test_pipeline_panel_tracks_each_stage(app):
+    assert set(app.pipeline_labels) == {
+        "Grammar", "Parse", "Run", "Python", "C", "WASM", "LLVM IR"
+    }
+    # Loading the sample project validates its grammar, so only later stages
+    # are guaranteed idle at startup.
+    assert app.pipeline_labels["Run"].cget("text").startswith("○")
+    assert app.pipeline_labels["WASM"].cget("text").startswith("○")
+
+    app._validate_grammar()
+    app.update()
+    assert app.pipeline_labels["Grammar"].cget("text").startswith("✓")
+
+    app._run_program()
+    app.update()
+    assert app.pipeline_labels["Run"].cget("text").startswith("✓")
+
+    app._generate_all()
+    app.update()
+    for stage in ("Python", "C", "WASM", "LLVM IR"):
+        assert app.pipeline_labels[stage].cget("text").startswith("✓")
+
+    app.source_editor.set_text("x = ;\n")
+    app._parse_source()
+    app.update()
+    assert app.pipeline_labels["Parse"].cget("text").startswith("✗")
+
+
+def test_theme_palettes_are_distinct():
+    from lashon.ide import theme
+
+    assert theme.names() == ["green", "amber", "dark"]
+    accents = {theme.get_palette(name).accent for name in theme.names()}
+    assert len(accents) == 3
+    assert theme.get_palette("nonsense").name == "green"

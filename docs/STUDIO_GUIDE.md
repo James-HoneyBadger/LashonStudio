@@ -15,6 +15,20 @@ the `LanguageStudio` API or the CLI instead.
 
 ---
 
+## Themes
+
+The workbench is styled like a CRT-era machine: near-black background, one
+bright phosphor accent, dim phosphor for secondary text, monospace for code.
+Three palettes ship — pick one at startup:
+
+```bash
+lashon-ide projects/aurora                  # green phosphor (default)
+lashon-ide projects/aurora --theme amber
+lashon-ide projects/aurora --theme dark     # neutral, for long sessions
+```
+
+`LASHON_THEME=amber` does the same from the environment.
+
 ## 1. Layout
 
 ```
@@ -45,6 +59,7 @@ the `LanguageStudio` API or the CLI instead.
 | **Console** | Timestamped output, timings, errors, backend summaries |
 | **Variables** | Namespace after a run |
 | **Python / C / WASM / LLVM IR** | Generated output |
+| **Pipeline** | Live status for Grammar → Parse → Run → Python/C/WASM/LLVM: `○` idle, `✓` passed, `✗` failed |
 | **Problems** | Errors and warnings; double-click a row to jump to the code |
 | **AST** | Expandable syntax tree |
 

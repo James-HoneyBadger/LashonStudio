@@ -3,6 +3,16 @@
 All notable changes to Lashon. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **CRT-styled Studio** with three palettes (green phosphor, amber, neutral
+  dark) selected with `--theme` or `LASHON_THEME`, modelled on the retro
+  workbench look of Time Warp Studio but scaled to a language workbench.
+- **Pipeline panel** in the sidebar tracking Grammar → Parse → Run →
+  Python/C/WASM/LLVM with live `○ / ✓ / ✗` state.
+
 ## [5.0.0] - renamed to Lashon Studio
 
 ### Changed

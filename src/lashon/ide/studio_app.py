@@ -10,6 +10,10 @@ module only wires it to Tkinter widgets.
 
 from __future__ import annotations
 
+# ---------------------------------------------------------------------------
+# Palette
+# ---------------------------------------------------------------------------
+import os
 import re
 import tkinter as tk
 from datetime import datetime
@@ -25,26 +29,30 @@ from lashon.ide.studio import (
     StudioProject,
     StudioResult,
 )
+from lashon.ide.theme import (
+    MONO_FONT,
+    TITLE_FONT,
+    UI_FONT,
+    UI_FONT_BOLD,
+    get_palette,
+)
+from lashon.ide.theme import (
+    names as theme_names,
+)
 
-# ---------------------------------------------------------------------------
-# Palette
-# ---------------------------------------------------------------------------
-BG = "#0d1117"
-PANEL = "#161b22"
-PANEL_ALT = "#21262d"
-BORDER = "#30363d"
-FG = "#c9d1d9"
-MUTED = "#8b949e"
-ACCENT = "#58a6ff"
-GREEN = "#3fb950"
-RED = "#f85149"
-YELLOW = "#d29922"
+PALETTE = get_palette(os.environ.get("LASHON_THEME"))
+BG = PALETTE.bg
+PANEL = PALETTE.panel
+PANEL_ALT = PALETTE.panel_alt
+BORDER = PALETTE.border
+FG = PALETTE.fg
+MUTED = PALETTE.muted
+ACCENT = PALETTE.accent
+GREEN = PALETTE.green
+RED = PALETTE.red
+YELLOW = PALETTE.yellow
 
-UI_FONT = ("DejaVu Sans", 10)
-UI_FONT_BOLD = ("DejaVu Sans", 10, "bold")
-TITLE_FONT = ("DejaVu Sans", 17, "bold")
-MONO_FONT = ("Courier New", 10)
-
+STAGES = ("Grammar", "Parse", "Run", "Python", "C", "WASM", "LLVM IR")
 BACKENDS = ("python", "c", "wasm", "llvm")
 BACKEND_TITLES = {
     "python": "Python",
@@ -294,6 +302,23 @@ class LashonIDE(tk.Tk):
                                          selectmode="browse")
         self.project_tree.pack(fill="both", expand=True, padx=8)
         self.project_tree.bind("<<TreeviewSelect>>", self._open_tree_item)
+
+        tk.Frame(parent, bg=BORDER, height=1).pack(fill="x", padx=12,
+                                                  pady=10)
+        tk.Label(parent, text="PIPELINE", bg=PANEL, fg=MUTED,
+                 font=("DejaVu Sans", 9, "bold"), anchor="w").pack(
+            fill="x", padx=14, pady=(0, 6)
+        )
+        self.pipeline_labels: Dict[str, tk.Label] = {}
+        stages = tk.Frame(parent, bg=PANEL)
+        stages.pack(fill="x", padx=14)
+        for stage in STAGES:
+            label = tk.Label(
+                stages, text=f"○  {stage}", bg=PANEL, fg=MUTED,
+                anchor="w", font=MONO_FONT,
+            )
+            label.pack(fill="x")
+            self.pipeline_labels[stage] = label
 
         tk.Frame(parent, bg=BORDER, height=1).pack(fill="x", padx=12,
                                                   pady=10)
@@ -702,12 +727,14 @@ class LashonIDE(tk.Tk):
         if result.ok:
             self.source_editor.set_keywords(self.studio.highlight_keywords())
             self._update_project_info()
+            self._set_stage("Grammar", "ok")
             self._set_status(
                 f"Grammar OK — {result.elapsed_ms:.1f} ms", "success"
             )
             if log_success:
                 self._log(result.text, "success")
             return True
+        self._set_stage("Grammar", "error")
         self._show_grammar_problems(result)
         for diagnostic in result.diagnostics:
             self._log(diagnostic.message, "error")
@@ -724,6 +751,7 @@ class LashonIDE(tk.Tk):
             self._report_failure(result, "Parse failed")
             return
         self._fill_ast(result.value)
+        self._set_stage("Parse", "ok")
         self.output_tabs.select(6)
         self._log(
             f"Parse OK — {result.elapsed_ms:.1f} ms", "success"
@@ -743,6 +771,7 @@ class LashonIDE(tk.Tk):
             return
 
         self._set_code("python", self.studio.last_python)
+        self._set_stage("Run", "ok")
         self._fill_variables(result.value or {})
         parse_result = self.studio.parse(self.source_editor.get_text())
         if parse_result.ok:
@@ -762,6 +791,7 @@ class LashonIDE(tk.Tk):
                 for warning in result.warnings:
                     text = f"// WARNING: {warning}\n{text}"
                 self._set_code(backend, text)
+                self._set_stage(BACKEND_TITLES[backend], "ok")
             else:
                 self._set_code(backend, f"// {backend} generation failed\n"
                                        f"// {result.error}")
@@ -795,6 +825,8 @@ class LashonIDE(tk.Tk):
             if diagnostic.message != result.error:
                 messages.append(diagnostic.message)
 
+        self._set_stage("Parse", "error")
+        self._set_stage("Run", "error")
         for message in messages:
             line, column = _error_position(message)
             if line is not None:
@@ -905,6 +937,22 @@ class LashonIDE(tk.Tk):
         self.detail_label.config(
             text=f"{prefix}  ·  Ln {line}, Col {int(column) + 1}"
         )
+
+    # ------------------------------------------------------------------
+    # Pipeline stages
+    # ------------------------------------------------------------------
+
+    def _set_stage(self, stage: str, state: str) -> None:
+        """Mark a pipeline stage idle (○), passing (✓) or failing (✗)."""
+        marks = {"idle": ("○", MUTED), "ok": ("✓", GREEN), "error": ("✗", RED)}
+        mark, colour = marks.get(state, marks["idle"])
+        label = self.pipeline_labels.get(stage)
+        if label is not None:
+            label.config(text=f"{mark}  {stage}", fg=colour)
+
+    def _reset_stages(self, *stages: str) -> None:
+        for stage in stages:
+            self._set_stage(stage, "idle")
 
     def _set_status(self, text: str, level: str = "info") -> None:
         colors = {"info": FG, "success": GREEN, "error": RED,
@@ -1063,7 +1111,14 @@ def main() -> None:
     parser.add_argument(
         "source", nargs="?", default=None, help="Source file to open",
     )
+    parser.add_argument(
+        "--theme", choices=theme_names(), default=None,
+        help="Palette: green (default), amber, or dark",
+    )
     args = parser.parse_args()
+
+    if args.theme:
+        os.environ["LASHON_THEME"] = args.theme
 
     app = LashonIDE(args.project, args.source)
     app.mainloop()

@@ -1,6 +1,7 @@
 """Tests for package versioning, registry, and generated documentation."""
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -115,3 +116,43 @@ class TestGeneratedAssets:
         extension = (output / "extension.ts").read_text(encoding="utf-8")
         assert "TransportKind.stdio" in extension
         assert "lashon" in extension
+
+
+ROOT = Path(__file__).resolve().parent.parent
+REPOSITORY = "https://github.com/James-HoneyBadger/LashonStudio"
+
+
+def test_metadata_points_at_the_current_repository():
+    """A rename once left a 404 behind in the published metadata."""
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'Homepage = "' + REPOSITORY + '"' in pyproject
+    assert 'Repository = "' + REPOSITORY + '"' in pyproject
+    assert REPOSITORY + "/issues" in pyproject
+    assert "James-HoneyBadger/Lashon\"" not in pyproject
+
+    cargo = (ROOT / "Cargo.toml").read_text(encoding="utf-8")
+    assert f'repository = "{REPOSITORY}"' in cargo
+
+    extension = (
+        ROOT / "src" / "lashon" / "packaging" / "vscode_integration.py"
+    ).read_text(encoding="utf-8")
+    assert REPOSITORY + "/issues" in extension
+
+
+def test_sdist_manifest_ships_every_sample_language():
+    """`projects/basic` and `projects/logo` lost their samples once."""
+    manifest = (ROOT / "MANIFEST.in").read_text(encoding="utf-8")
+    project_line = [
+        line for line in manifest.splitlines()
+        if line.startswith("recursive-include projects")
+    ]
+    assert project_line, "MANIFEST.in must ship projects/"
+    for suffix in (".yaml", ".peg", ".aur", ".bas", ".logo"):
+        assert suffix in project_line[0], suffix
+
+
+def test_entry_points_cover_every_documented_command():
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'lashon = "lashon.tooling.cli:main"' in pyproject
+    assert 'lashon-ide = "lashon.ide.app:main"' in pyproject
+    assert 'lashon-repl = "lashon.ide.repl_app:main"' in pyproject

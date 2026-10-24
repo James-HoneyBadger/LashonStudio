@@ -13,8 +13,9 @@ package registry/semver helpers.
 ```
 pyproject.toml      PEP 621 metadata, entry points, package data, tool config
 MANIFEST.in         sdist-only extras (docs, configs, projects, samples)
-src/lashon/    the package
-src/codex/          CodeEx IDE (legacy second IDE, `codex` entry point)
+Cargo.toml          Rust workspace (lashon-core, lashon-cli)
+src/lashon/         the package
+src/parsercraft/    pre-5.0 compatibility shim (aliases parsercraft.* → lashon.*)
 ```
 
 There is no `setup.py`: packaging is fully declarative, and the version is
@@ -24,7 +25,7 @@ single-sourced from `lashon.__version__` via
 ### Build
 
 ```bash
-python -m build                 # dist/lashon-4.0.0-py3-none-any.whl + .tar.gz
+python -m build                 # dist/lashon-5.0.0-py3-none-any.whl + .tar.gz
 # or
 python -m pip wheel . -w dist
 ```
@@ -51,8 +52,16 @@ pip install -e .                # runtime only
 |---|---|---|
 | `lashon` | `lashon.tooling.cli:main` | full CLI |
 | `lashon-ide` | `lashon.ide.app:main` | Studio (Tkinter) |
-| `lashon-repl` | `lashon.runtime.repl:main` | REPL entry point |
-| `codex` | `codex.codex:main` | CodeEx IDE (legacy, separate package) |
+| `lashon-repl` | `lashon.ide.repl_app:main` | REPL with a canvas host |
+
+`lashon-repl` points at the IDE adapter rather than
+`lashon.runtime.repl:main`, because the REPL core stays free of Tkinter (a
+test in `tests/test_architecture.py` enforces that) while the adapter adds
+`:canvas show` and `--canvas`. The headless entry point still exists:
+
+```bash
+python -m lashon.runtime.repl --config language.yaml
+```
 
 ### Package data
 
@@ -65,8 +74,19 @@ The Studio looks for sample projects in this order:
 2. `<repo>/projects/aurora`
 3. `lashon/ide/samples/aurora` (installed wheel)
 
-`MANIFEST.in` additionally ships `docs/`, `configs/`, `demos/`, `projects/`, and
-`tests/` in the sdist so source distributions can run the suite.
+`projects/logo` (the drawing language) and `projects/basic` ship in the **sdist**
+only — a wheel install gets Aurora, because the other projects live outside the
+package tree. `MANIFEST.in` ships `docs/`, `configs/`, `demos/`, `projects/`, and
+`tests/` so a source distribution can run the suite; project sources are
+included for `.yaml .json .peg .aur .bas .logo .lang .src .md`.
+
+A project declares its own sample suffix, which is how `.bas` and `.logo`
+samples are discovered:
+
+```yaml
+# language.yaml
+source_extension: ".logo"     # samples/*.logo; any non-config file if omitted
+```
 
 ### Requirements
 
@@ -83,10 +103,17 @@ python -m build
 python -m venv /tmp/check && /tmp/check/bin/pip install dist/*.whl
 /tmp/check/bin/lashon list-presets
 /tmp/check/bin/python -c "from lashon.ide.studio import LanguageStudio; print(LanguageStudio().sample_project_path())"
+/tmp/check/bin/python -c "import parsercraft"        # shim still resolves
 ```
 
-The second command must print a path inside the installed package — that proves
-the Aurora sample shipped.
+The third command must print a path inside the installed package — that proves
+the Aurora sample shipped. Check the archive itself when a new top-level
+directory appears under `src/`, since a stray package is easy to ship by
+accident:
+
+```bash
+python -c "import zipfile,sys; print('\n'.join(zipfile.ZipFile(sys.argv[1]).namelist()[:20]))" dist/*.whl
+```
 
 ---
 

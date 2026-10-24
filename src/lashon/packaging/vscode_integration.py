@@ -381,7 +381,7 @@ Language settings can be customized in `.vscode/settings.json`:
 ## Support
 
 For issues or feature requests, visit:
-https://github.com/James-HoneyBadger/Lashon/issues
+https://github.com/James-HoneyBadger/LashonStudio/issues
 """
 
 

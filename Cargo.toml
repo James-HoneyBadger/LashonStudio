@@ -6,7 +6,7 @@ members = ["crates/lashon-core", "crates/lashon-cli"]
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/James-HoneyBadger/Lashon"
+repository = "https://github.com/James-HoneyBadger/LashonStudio"
 
 [profile.release]
 lto = true

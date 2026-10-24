@@ -44,9 +44,10 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/James-HoneyBadger/Lashon"
-Repository = "https://github.com/James-HoneyBadger/Lashon"
-Issues = "https://github.com/James-HoneyBadger/Lashon/issues"
+Homepage = "https://github.com/James-HoneyBadger/LashonStudio"
+Repository = "https://github.com/James-HoneyBadger/LashonStudio"
+Issues = "https://github.com/James-HoneyBadger/LashonStudio/issues"
+Documentation = "https://james-honeybadger.github.io/LashonStudio/"
 
 [project.scripts]
 lashon = "lashon.tooling.cli:main"

@@ -11,7 +11,7 @@ name = "lashon_core"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-pyo3 = { version = "0.26", features = ["extension-module", "abi3-py310"], optional = true }
+pyo3 = { version = "0.29", features = ["extension-module", "abi3-py310"], optional = true }
 serde_json = "1"
 
 [features]

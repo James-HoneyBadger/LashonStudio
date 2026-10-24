@@ -52,6 +52,16 @@ LIFTOFF!
 3. The LSP and linter work on the same grammar, so diagnostics inside the
    dialect come from the same rules.
 
-Line-numbered control flow is interpreted by the Rust core; the Python
-transpiler and the C/WASM/LLVM backends target structured languages and do not
-support `GOTO,` so this dialect is run — not transpiled.
+## Compiling to C
+
+The C backend understands the dialect too — line numbers become labels and
+`GOTO` becomes `goto`:
+
+```bash
+parsercraft-rs codegen-c grammar.peg samples/countdown.bas -o countdown.c --run
+```
+
+All three samples produce byte-identical output through the interpreter and
+through the generated C. The Python/WASM/LLVM backends target structured
+languages and do not emit `goto`, so those targets are not available for this
+dialect.

@@ -216,6 +216,16 @@ compiler diagnostics (and debuggers) point at your language's source lines
 instead of the generated C. The `CCodeGenerator(source_map=True,
 source_file="prog.aur")` API does the same from Python.
 
+### Line-numbered languages
+
+Line numbers become C labels and `GOTO` becomes `goto`, so a BASIC-style
+dialect compiles as well as runs:
+
+```bash
+parsercraft-rs codegen-c projects/basic/grammar.peg \
+    projects/basic/samples/countdown.bas -o countdown.c --run
+```
+
 ### Limitations
 
 - Integer-only type inference: every expression is `int` unless it is a string

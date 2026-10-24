@@ -567,3 +567,25 @@ def test_basic_reports_undefined_goto_targets(tmp_path):
     completed = run("run", str(BASIC / "grammar.peg"), str(program))
     assert completed.returncode == 1
     assert "undefined line 999" in completed.stderr
+
+
+@pytest.mark.parametrize("sample", ["hello.bas", "countdown.bas", "fizzbuzz.bas"])
+def test_basic_compiles_to_c_with_matching_output(sample, tmp_path):
+    """A GOTO-based dialect compiles to C and behaves like the interpreter."""
+    compiler = shutil.which("cc") or shutil.which("gcc")
+    if compiler is None:
+        pytest.skip("no C compiler available")
+
+    source = BASIC / "samples" / sample
+    output = tmp_path / source.with_suffix(".c").name
+    compiled = run(
+        "codegen-c", str(BASIC / "grammar.peg"), str(source),
+        "-o", str(output), "--compile",
+    )
+    assert compiled.returncode == 0, compiled.stderr
+
+    produced = subprocess.run(
+        [str(output.with_suffix(".out"))], capture_output=True, text=True, check=True
+    ).stdout
+    interpreted = run("run", str(BASIC / "grammar.peg"), str(source))
+    assert produced == interpreted.stdout

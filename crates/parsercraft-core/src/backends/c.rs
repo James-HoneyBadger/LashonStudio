@@ -71,7 +71,7 @@ fn render(node: &Ast) -> String {
             for (index, operand) in operands.iter().enumerate() {
                 parts.push(render(operand));
                 if let Some(operator) = operators.get(index) {
-                    parts.push(value_text(operator));
+                    parts.push(c_operator(&value_text(operator)).to_string());
                 }
             }
             parts.join(" ")
@@ -130,6 +130,50 @@ impl Generator {
                     self.emit(child);
                 }
             }
+            "line" | "Line" => {
+                if let Some(number) = ast
+                    .children
+                    .iter()
+                    .find(|child| child.node_type == "Number")
+                    .and_then(|child| child.value.as_ref().and_then(|v| v.as_i64()))
+                {
+                    self.body.push(format!("L{number}:"));
+                }
+                if let Some(statement) = ast
+                    .children
+                    .iter()
+                    .find(|child| child.node_type != "Number")
+                {
+                    self.emit(statement);
+                }
+            }
+            "goto_stmt" | "GotoStmt" => {
+                if let Some(target) = ast
+                    .children
+                    .iter()
+                    .find(|child| child.node_type == "Number")
+                    .and_then(|child| child.value.as_ref().and_then(|v| v.as_i64()))
+                {
+                    self.body.push(format!("goto L{target};"));
+                }
+            }
+            "rem_stmt" | "RemStmt" => {}
+            "end_stmt" | "EndStmt" => self.body.push("return 0;".to_string()),
+            "let_stmt" | "LetStmt" | "assign_stmt" | "AssignStmt" => {
+                let children: Vec<&Ast> =
+                    ast.children.iter().filter(|c| !is_operator(c)).collect();
+                if children.len() >= 2 {
+                    let name = render(children[0]);
+                    let value = render(children[1]);
+                    if self.declared.contains(&name) {
+                        self.body.push(format!("{} = {};", name, value));
+                    } else {
+                        let c_type = infer_type(children[1]);
+                        self.body.push(format!("{} {} = {};", c_type, name, value));
+                        self.declared.push(name);
+                    }
+                }
+            }
             "statement" | "Statement" => {
                 if let Some((target, value)) = inline_assignment(ast) {
                     let name = render(target);
@@ -163,12 +207,37 @@ impl Generator {
                 }
             }
             "print_stmt" | "PrintStmt" => {
-                let args: Vec<&Ast> =
-                    ast.children.iter().filter(|c| !is_operator(c)).collect();
-                if let Some(arg) = args.first() {
-                    let value = render(arg);
-                    let format = if value.starts_with('"') { "%s" } else { "%d" };
-                    self.body.push(format!("printf(\"{}\\n\", {});", format, value));
+                let args: Vec<&Ast> = ast
+                    .children
+                    .iter()
+                    .filter(|child| {
+                        !(is_operator(child)
+                            && matches!(
+                                child.value.as_ref().and_then(|v| v.as_str()),
+                                Some("PRINT" | "print" | ";" | ",")
+                            ))
+                    })
+                    .collect();
+                if !args.is_empty() {
+                    let mut formats = vec![];
+                    let mut values = vec![];
+                    for arg in args {
+                        if let Some(text) = string_leaf(arg) {
+                            let _ = text;
+                            formats.push("%s");
+                        } else {
+                            let value = render(arg);
+                            formats.push(if value.starts_with('"') { "%s" } else { "%d" });
+                            values.push(value);
+                            continue;
+                        }
+                        values.push(render(arg));
+                    }
+                    self.body.push(format!(
+                        "printf(\"{}\\n\", {});",
+                        formats.join(" "),
+                        values.join(", ")
+                    ));
                 }
             }
             "return_stmt" | "ReturnStmt" => {
@@ -198,6 +267,18 @@ impl Generator {
                     .filter(|child| matches!(child.node_type.as_str(), "block" | "Block"))
                     .copied()
                     .collect();
+                if blocks.is_empty() {
+                    self.body.push(format!("if ({}) {{", condition));
+                    if let Some(then_branch) = children.get(1) {
+                        self.emit(then_branch);
+                    }
+                    if let Some(else_branch) = children.get(2) {
+                        self.body.push("} else {".to_string());
+                        self.emit(else_branch);
+                    }
+                    self.body.push("}".to_string());
+                    return;
+                }
                 self.body.push(format!("if ({}) {{", condition));
                 if let Some(first) = blocks.first() {
                     for stmt in &first.children {
@@ -305,6 +386,31 @@ impl Generator {
         lines.push("}".to_string());
         lines.join("\n")
     }
+}
+
+/// Map language operators onto their C spelling.
+fn c_operator(operator: &str) -> &str {
+    match operator {
+        "=" => "==",
+        "<>" => "!=",
+        other => other,
+    }
+}
+
+fn string_leaf(node: &Ast) -> Option<String> {
+    if node.node_type == "String" {
+        return node.value.as_ref().and_then(|v| v.as_str()).map(str::to_string);
+    }
+    if matches!(
+        node.node_type.as_str(),
+        "expr" | "term" | "factor" | "primary"
+    ) {
+        let children: Vec<&Ast> = node.children.iter().filter(|c| !is_operator(c)).collect();
+        if children.len() == 1 {
+            return string_leaf(children[0]);
+        }
+    }
+    None
 }
 
 fn inline_assignment(ast: &Ast) -> Option<(&Ast, &Ast)> {

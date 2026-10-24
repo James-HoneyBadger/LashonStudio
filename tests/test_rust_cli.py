@@ -589,3 +589,29 @@ def test_basic_compiles_to_c_with_matching_output(sample, tmp_path):
     ).stdout
     interpreted = run("run", str(BASIC / "grammar.peg"), str(source))
     assert produced == interpreted.stdout
+
+
+@pytest.mark.parametrize("sample", ["hello.bas", "countdown.bas", "fizzbuzz.bas"])
+def test_basic_compiles_to_llvm_with_matching_output(sample, tmp_path):
+    """GOTO maps onto LLVM basic blocks, so the dialect compiles here too."""
+    compiler = shutil.which("clang")
+    if compiler is None:
+        pytest.skip("no clang available")
+
+    source = BASIC / "samples" / sample
+    output = tmp_path / source.with_suffix(".ll").name
+    compiled = run(
+        "codegen-llvm", str(BASIC / "grammar.peg"), str(source), "-o", str(output)
+    )
+    assert compiled.returncode == 0, compiled.stderr
+
+    binary = output.with_suffix(".out")
+    subprocess.run(
+        [compiler, "-O1", "-o", str(binary), str(output)],
+        check=True, capture_output=True,
+    )
+    produced = subprocess.run(
+        [str(binary)], capture_output=True, text=True, check=True
+    ).stdout
+    interpreted = run("run", str(BASIC / "grammar.peg"), str(source))
+    assert produced == interpreted.stdout

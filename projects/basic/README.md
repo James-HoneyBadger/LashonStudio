@@ -52,16 +52,17 @@ LIFTOFF!
 3. The LSP and linter work on the same grammar, so diagnostics inside the
    dialect come from the same rules.
 
-## Compiling to C
+## Compiling to native code
 
-The C backend understands the dialect too — line numbers become labels and
-`GOTO` becomes `goto`:
+Line numbers become labels, so both native backends understand the dialect:
 
 ```bash
-parsercraft-rs codegen-c grammar.peg samples/countdown.bas -o countdown.c --run
+parsercraft-rs codegen-c    grammar.peg samples/countdown.bas -o countdown.c --run
+parsercraft-rs codegen-llvm grammar.peg samples/countdown.bas -o countdown.ll --run
 ```
 
-All three samples produce byte-identical output through the interpreter and
-through the generated C. The Python/WASM/LLVM backends target structured
-languages and do not emit `goto`, so those targets are not available for this
-dialect.
+C uses labels plus `goto`; LLVM IR uses one basic block per line number and
+`br label %L30`. All three samples produce byte-identical output through the
+interpreter, the generated C, and the generated LLVM IR. The Python and WASM
+backends target structured languages and do not emit unstructured jumps, so
+those two targets are not available for this dialect.

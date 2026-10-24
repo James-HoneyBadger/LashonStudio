@@ -218,8 +218,9 @@ source_file="prog.aur")` API does the same from Python.
 
 ### Line-numbered languages
 
-Line numbers become C labels and `GOTO` becomes `goto`, so a BASIC-style
-dialect compiles as well as runs:
+Line numbers become C labels and `GOTO` becomes `goto`; the LLVM backend uses
+one basic block per line and `br label %L30`. A BASIC-style dialect therefore
+compiles as well as runs:
 
 ```bash
 parsercraft-rs codegen-c projects/basic/grammar.peg \

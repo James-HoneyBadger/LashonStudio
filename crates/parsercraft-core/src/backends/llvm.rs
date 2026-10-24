@@ -5,6 +5,7 @@
 //! strings), `if`/`else`, `while`, and returns.
 
 use serde_json::Value;
+use serde_json::Value as Json;
 
 use crate::ast::Ast;
 
@@ -54,8 +55,8 @@ fn binary_instruction(operator: &str) -> Option<&'static str> {
 
 fn comparison_instruction(operator: &str) -> Option<&'static str> {
     Some(match operator {
-        "==" => "eq",
-        "!=" => "ne",
+        "==" | "=" => "eq",
+        "!=" | "<>" => "ne",
         "<" => "slt",
         "<=" => "sle",
         ">" => "sgt",
@@ -270,7 +271,71 @@ impl Compiler {
                 }
             }
             "function_def" | "FunctionDef" => {}
+            "rem_stmt" | "RemStmt" => {}
+            "end_stmt" | "EndStmt" => {
+                self.push("ret i32 0");
+                self.current.terminated = true;
+            }
+            "goto_stmt" | "GotoStmt" => {
+                if let Some(target) = node
+                    .children
+                    .iter()
+                    .find(|child| child.node_type == "Number")
+                    .and_then(|child| child.value.as_ref().and_then(Json::as_i64))
+                {
+                    self.push(format!("br label %L{target}"));
+                    self.current.terminated = true;
+                }
+            }
+            "let_stmt" | "LetStmt" | "assign_stmt" | "AssignStmt" => {
+                let children: Vec<&Ast> =
+                    node.children.iter().filter(|c| !is_operator(c)).collect();
+                if children.len() >= 2 {
+                    self.assign(children[0], children[1]);
+                }
+            }
             "print_stmt" | "PrintStmt" => {
+                let args: Vec<&Ast> = node
+                    .children
+                    .iter()
+                    .filter(|child| {
+                        !(is_operator(child)
+                            && matches!(
+                                child.value.as_ref().and_then(Json::as_str),
+                                Some("PRINT" | "print" | ";" | ",")
+                            ))
+                    })
+                    .collect();
+                if args.len() > 1 {
+                    let mut specs: Vec<String> = vec![];
+                    let mut values: Vec<String> = vec![];
+                    for arg in &args {
+                        if let Some(text) = string_leaf(arg) {
+                            let global = self.string_global(&text);
+                            specs.push("%s".to_string());
+                            values.push(format!("ptr {global}"));
+                        } else if let Some(value) = self.expression(arg) {
+                            specs.push("%d".to_string());
+                            values.push(format!("i32 {value}"));
+                        }
+                    }
+                    if specs.is_empty() {
+                        return;
+                    }
+                    let visible = specs.join(" ");
+                    let width = visible.len() + 2;
+                    let name = format!("@.fmt.{}", self.formats.len());
+                    self.formats.push((name.clone(), "custom".to_string()));
+                    self.globals.push(format!(
+                        "{name} = private unnamed_addr constant [{width} x i8] c\"{visible}\\0A\\00\""
+                    ));
+                    let result = self.temp();
+                    self.push(format!(
+                        "{result} = call i32 (ptr, ...) @printf(ptr {name}, {})",
+                        values.join(", ")
+                    ));
+                    return;
+                }
                 for arg in children_without_operators(node) {
                     if arg.node_type == "String"
                         || (matches!(arg.node_type.as_str(), "expr" | "factor" | "term")
@@ -325,6 +390,26 @@ impl Compiler {
                     "br i1 {condition}, label %{then_label}, label %{}",
                     if has_else { else_label.clone() } else { end_label.clone() }
                 ));
+                if blocks.is_empty() {
+                    self.push(format!("{then_label}:"));
+                    if let Some(then_branch) = children.get(1) {
+                        self.statement(then_branch);
+                    }
+                    if !self.current.terminated {
+                        self.push(format!("br label %{end_label}"));
+                    }
+                    self.current.terminated = false;
+                    if let Some(else_branch) = children.get(2) {
+                        self.push(format!("{else_label}:"));
+                        self.statement(else_branch);
+                        if !self.current.terminated {
+                            self.push(format!("br label %{end_label}"));
+                        }
+                        self.current.terminated = false;
+                    }
+                    self.push(format!("{end_label}:"));
+                    return;
+                }
                 self.push(format!("{then_label}:"));
                 if let Some(first) = blocks.first() {
                     for child in &first.children {
@@ -381,6 +466,49 @@ impl Compiler {
                 }
             }
         }
+    }
+
+    /// Emit `main`. Line-numbered programs become one basic block per line so
+    /// `GOTO` can branch to the label; everything else runs sequentially.
+    fn emit_main(&mut self, top_level: &[&Ast]) {
+        let numbered: Vec<(i64, &Ast)> = top_level
+            .iter()
+            .filter(|node| node.node_type == "line")
+            .filter_map(|node| {
+                let label = node
+                    .children
+                    .iter()
+                    .find(|child| child.node_type == "Number")
+                    .and_then(|child| child.value.as_ref().and_then(Json::as_i64))?;
+                let statement = node
+                    .children
+                    .iter()
+                    .find(|child| child.node_type != "Number")?;
+                Some((label, statement))
+            })
+            .collect();
+
+        if numbered.is_empty() {
+            for statement in top_level {
+                self.statement(statement);
+            }
+            return;
+        }
+
+        let first = numbered[0].0;
+        self.push(format!("br label %L{first}"));
+        for (index, (label, statement)) in numbered.iter().enumerate() {
+            self.push(format!("L{label}:"));
+            self.current.terminated = false;
+            self.statement(statement);
+            if !self.current.terminated {
+                match numbered.get(index + 1) {
+                    Some((next, _)) => self.push(format!("br label %L{next}")),
+                    None => self.push("ret i32 0".to_string()),
+                }
+            }
+        }
+        self.current.terminated = true;
     }
 
     fn assign(&mut self, target: &Ast, value: &Ast) {
@@ -506,9 +634,7 @@ pub fn generate_llvm(ast: &Ast) -> String {
         name: "main".to_string(),
         ..Default::default()
     };
-    for statement in top_level {
-        compiler.statement(statement);
-    }
+    compiler.emit_main(&top_level);
     if !compiler.current.terminated {
         compiler.push("ret i32 0");
     }

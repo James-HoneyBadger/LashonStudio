@@ -211,3 +211,18 @@ def test_ide_entry_point_explains_missing_display(monkeypatch, capsys):
     message = capsys.readouterr().err
     assert "needs a graphical display" in message
     assert "lashon run" in message
+
+
+def test_theme_feeds_the_editor_and_headers():
+    from lashon.ide import theme
+
+    green = theme.get_palette("green")
+    colors = theme.editor_colors(green)
+    assert colors["background"] == green.bg
+    assert colors["keyword"] == green.accent
+    assert colors["error"] == green.red
+    assert {"gutter_bg", "gutter_fg"} <= set(colors)
+
+    header = theme.rule("PIPELINE", width=24)
+    assert header.startswith("── PIPELINE ")
+    assert len(header) == 24
